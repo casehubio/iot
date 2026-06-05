@@ -1,0 +1,34 @@
+#!/bin/bash
+# pre-push hook: always prompt for /git-squash review before pushing.
+# Pattern-based candidate detection is insufficient — run full AI analysis every time.
+# Bypass with: git push --no-verify
+
+remote="$1"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  # Skip branch deletions
+  [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    base=$(git rev-parse --verify origin/main 2>/dev/null || git rev-parse --verify origin/master 2>/dev/null || echo "")
+    [ -z "$base" ] && continue
+    range="$base..$local_sha"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  total=$(git log --oneline "$range" 2>/dev/null | wc -l | tr -d ' ')
+  [ "$total" -eq 0 ] && continue
+
+  echo ""
+  echo "╔══════════════════════════════════════════════════════════╗"
+  echo "║  Pre-push: $total commit(s) about to push               "
+  echo "╠══════════════════════════════════════════════════════════╣"
+  echo "║  Run /git-squash to review history before pushing,      ║"
+  echo "║  or use --no-verify to skip.                            ║"
+  echo "╚══════════════════════════════════════════════════════════╝"
+  echo ""
+  exit 1
+done
+
+exit 0
