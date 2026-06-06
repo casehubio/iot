@@ -43,6 +43,30 @@ mvn --batch-mode deploy -DskipTests
 
 Protocols shared across all modules live in the **casehub garden** (`../garden/docs/protocols/`). Do not write protocol files in this repo.
 
+## Artifact Locations
+
+| Skill | Writes to |
+|-------|-----------|
+| brainstorming (specs) | `docs/superpowers/specs/` |
+| writing-plans (plans) | workspace `plans/` |
+| handover | workspace `HANDOFF.md` |
+| idea-log | workspace `IDEAS.md` |
+| design-snapshot | workspace `snapshots/` |
+| adr | `docs/adr/` |
+| write-blog | workspace `blog/` |
+
+## Routing
+
+| Artifact   | Destination | Notes |
+|------------|-------------|-------|
+| adr        | project     | lands in `docs/adr/` |
+| blog       | workspace   | staged here; published via publish-blog |
+| design     | project     | |
+| snapshots  | workspace   | |
+| specs      | project     | lands in `docs/superpowers/specs/` |
+| plans      | workspace   | |
+| handover   | workspace   | |
+
 ## Work Tracking
 
 **Issue tracking:** enabled  
