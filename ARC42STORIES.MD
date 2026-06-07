@@ -62,7 +62,7 @@ PREFIX: `IOT` (issues only — foundation-tier modules use issue refs directly)
 | Java version | Java 21 | Language features; ecosystem-wide alignment |
 | Framework | Quarkus 3.x | CDI, REST client, WebSocket client, SSE |
 | Build tool | Maven (system `mvn`, no wrapper) | Ecosystem-wide convention |
-| Async model | Mutiny `Uni<>` | Quarkus native reactive; provider operations are I/O-bound |
+| Async model | Blocking SPIs; reactive variant deferred | Provider operations are I/O-bound but run in `@Blocking` context (startup or request handler); reactive `Uni<>` variant added when a reactive consumer exists |
 | GroupId | `io.casehub` | Ecosystem-wide; publishes before casehub-life in build order |
 
 ### Architectural
@@ -137,7 +137,7 @@ C4Context
 | Layer | Concern | Module | Character |
 |---|---|---|---|
 | L1 | Device Type System | iot-api | Pure Java — types, enums, value objects. Zero framework dependency. |
-| L2 | SPI & Registry | iot-api | CDI contracts, Uni<> async, default implementations |
+| L2 | SPI & Registry | iot-api | CDI contracts (blocking SPIs), @DefaultBean CdiDeviceRegistry |
 | L3 | Home Assistant | iot-homeassistant | REST + WebSocket provider + supplement types |
 | L4 | OpenHAB | iot-openhab | REST + SSE + semantic model + state cache + supplement types |
 | L5 | Test Harness | iot-testing | Mock provider, fixture devices, event publisher |
@@ -174,7 +174,7 @@ C4Container
 
   Container_Boundary(b2, "Layer: SPI & Registry (L2)") {
     Container(provider, "DeviceProvider SPI", "CDI", "discover() + dispatch() + status()")
-    Container(registry, "DeviceRegistry + CdiDeviceRegistry", "CDI", "findById + findByClass + findAll + refresh")
+    Container(registry, "DeviceRegistry + CdiDeviceRegistry", "CDI", "findById + findByClass + findByTenancyId + findAll + refresh")
     Container(events, "StateChangeEvent + DeviceCommand", "Java records", "Platform-agnostic event and command model")
   }
 
@@ -284,15 +284,16 @@ sequenceDiagram
   participant HA as HomeAssistantProvider
   participant OH as OpenHABProvider
 
-  CDI->>Reg: @PostConstruct
+  CDI->>Reg: @Observes StartupEvent
+  Reg->>Reg: refresh() [synchronized]
   Reg->>HA: discover()
   HA->>HA: GET /api/states → map entities
-  HA-->>Reg: Uni<List<DeviceEntity>>
+  HA-->>Reg: List<DeviceEntity>
   Reg->>OH: discover()
   OH->>OH: GET /rest/items?tags=Equipment → map Equipment Groups
-  OH-->>Reg: Uni<List<DeviceEntity>>
-  Reg->>Reg: merge into device map (keyed by deviceId)
-  Note over Reg: findById, findByClass, findAll ready
+  OH-->>Reg: List<DeviceEntity>
+  Reg->>Reg: build new map, volatile swap
+  Note over Reg: findById, findByClass, findByTenancyId, findAll ready
 ```
 
 ### Scenario 4 — OpenHAB State Cache Coalescing
@@ -539,8 +540,8 @@ L1 and L2 appear in C1–C4: foundational — real platform data in C3/C4 may su
 
 | Layer | Delta |
 |---|---|
-| L1 Device Type System | High — DeviceEntity base, DeviceClass enum, 10 typed subclasses, Temperature, ThermostatMode |
-| L2 SPI & Registry | High — DeviceProvider, DeviceRegistry, CdiDeviceRegistry, NoOpDeviceRegistry, StateChangeEvent, DeviceCommand, CommandResult, ProviderStatus, ProviderStatusEvent |
+| L1 Device Type System | High — DeviceEntity base with builders, DeviceClass enum, 10 typed subclasses with CAP_ constants, SensorType enum, Temperature, ThermostatMode |
+| L2 SPI & Registry | High — DeviceProvider (blocking), DeviceRegistry (with findByTenancyId), CdiDeviceRegistry (volatile swap + event observation), StateChangeEvent, DeviceCommand (with action constants + factories), CommandResult, ProviderStatus, ProviderStatusEvent |
 
 ---
 
@@ -764,15 +765,14 @@ Not closed here: actual platform providers (L3/L4), test mocks (L5), bridge rela
 
 #### Key files (planned)
 
-- `iot-api/src/main/java/io/casehub/iot/api/DeviceProvider.java` — SPI: providerId(), discover(), dispatch(), status()
-- `iot-api/src/main/java/io/casehub/iot/api/DeviceRegistry.java` — SPI: findById(), findByClass(), findAll(), refresh()
+- `iot-api/src/main/java/io/casehub/iot/api/spi/DeviceProvider.java` — SPI: providerId(), discover() → List, dispatch() → CommandResult, status()
+- `iot-api/src/main/java/io/casehub/iot/api/spi/DeviceRegistry.java` — SPI: findById(), findByClass(), findByTenancyId(), findAll(), refresh()
 - `iot-api/src/main/java/io/casehub/iot/api/StateChangeEvent.java` — record: before, after, changedCapabilities, occurredAt, providerId
-- `iot-api/src/main/java/io/casehub/iot/api/DeviceCommand.java` — record: targetDeviceId, action, parameters, dispatchedBy, correlationId
+- `iot-api/src/main/java/io/casehub/iot/api/DeviceCommand.java` — record with ACTION_ constants + static factories: turnOn, turnOff, setTemperature, lock, unlock, setPosition, setVolume
 - `iot-api/src/main/java/io/casehub/iot/api/CommandResult.java` — enum: SENT, FAILED, TIMEOUT
 - `iot-api/src/main/java/io/casehub/iot/api/ProviderStatus.java` — enum: CONNECTED, CONNECTING, DISCONNECTED
 - `iot-api/src/main/java/io/casehub/iot/api/ProviderStatusEvent.java` — record: providerId, previousStatus, currentStatus
-- `iot-api/src/main/java/io/casehub/iot/spi/CdiDeviceRegistry.java` — @ApplicationScoped @DefaultBean; discovers providers via @Any Instance<DeviceProvider>
-- `iot-api/src/main/java/io/casehub/iot/spi/NoOpDeviceRegistry.java` — @ApplicationScoped @DefaultBean; empty registry for test/tutorial
+- `iot-api/src/main/java/io/casehub/iot/spi/CdiDeviceRegistry.java` — @ApplicationScoped @DefaultBean; volatile map swap + @ObservesAsync StateChangeEvent for freshness
 
 #### Key wiring
 
