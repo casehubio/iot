@@ -124,4 +124,28 @@ class ToBuilderTest {
         assertThat(modified.numericValue()).hasValue(new BigDecimal("22"));
         assertThat(modified.unit()).hasValue("C");
     }
+
+    @Test
+    void presenceSensorToBuilderRoundTrip() {
+        var original = PresenceSensor.builder()
+            .deviceId("p1").deviceClass(DeviceClass.PRESENCE_SENSOR).label("Presence")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .present(false).lastSeen(NOW).build();
+        var copy = original.toBuilder().build();
+        assertThat(copy.isPresent()).isFalse();
+        assertThat(copy.lastSeen()).isEqualTo(NOW);
+        assertThat(copy).isInstanceOf(PresenceSensor.class);
+    }
+
+    @Test
+    void powerSensorToBuilderRoundTrip() {
+        var original = PowerSensor.builder()
+            .deviceId("ps1").deviceClass(DeviceClass.POWER_SENSOR).label("Power")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .power(new BigDecimal("100")).energy(new BigDecimal("50")).build();
+        var copy = original.toBuilder().build();
+        assertThat(copy.power()).isEqualByComparingTo(new BigDecimal("100"));
+        assertThat(copy.energy()).isEqualByComparingTo(new BigDecimal("50"));
+        assertThat(copy).isInstanceOf(PowerSensor.class);
+    }
 }

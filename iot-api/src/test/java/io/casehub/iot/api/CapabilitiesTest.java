@@ -126,4 +126,30 @@ class CapabilitiesTest {
         assertThat(caps.get(SensorDevice.CAP_NUMERIC_VALUE)).isNull();
         assertThat(caps.get(SensorDevice.CAP_BINARY_VALUE)).isNull();
     }
+
+    @Test
+    void presenceSensorCapabilities() {
+        var device = PresenceSensor.builder()
+            .deviceId("p1").deviceClass(DeviceClass.PRESENCE_SENSOR).label("Presence")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .present(true).lastSeen(NOW).build();
+        var caps = device.capabilities();
+        assertThat(caps).containsEntry(DeviceEntity.CAP_AVAILABLE, true);
+        assertThat(caps).containsEntry(PresenceSensor.CAP_PRESENT, true);
+        assertThat(caps).containsEntry(PresenceSensor.CAP_LAST_SEEN, NOW);
+        assertThat(caps).hasSize(3);
+    }
+
+    @Test
+    void powerSensorCapabilities() {
+        var device = PowerSensor.builder()
+            .deviceId("ps1").deviceClass(DeviceClass.POWER_SENSOR).label("Power")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .power(new BigDecimal("100")).energy(new BigDecimal("50")).build();
+        var caps = device.capabilities();
+        assertThat(caps).containsEntry(DeviceEntity.CAP_AVAILABLE, true);
+        assertThat(caps).containsEntry(PowerSensor.CAP_POWER, new BigDecimal("100"));
+        assertThat(caps).containsEntry(PowerSensor.CAP_ENERGY, new BigDecimal("50"));
+        assertThat(caps).hasSize(3);
+    }
 }

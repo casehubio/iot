@@ -1,6 +1,7 @@
 package io.casehub.iot.api;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Objects;
 
 public class PresenceSensor extends DeviceEntity {
@@ -23,6 +24,21 @@ public class PresenceSensor extends DeviceEntity {
 
     public Instant lastSeen() {
         return lastSeen;
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_PRESENT, present);
+        caps.put(CAP_LAST_SEEN, lastSeen);
+        return caps;
+    }
+
+    public PresenceSensor.Builder toBuilder() {
+        return PresenceSensor.builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .present(present).lastSeen(lastSeen);
     }
 
     public static Builder builder() {
