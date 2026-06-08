@@ -50,7 +50,7 @@ class TemperatureTest {
     }
 
     @Test
-    void differentScaleNotEqualToDifferentValue() {
+    void differentValueNotEqual() {
         var a = new Temperature(new BigDecimal("21"), Temperature.TemperatureUnit.CELSIUS);
         var b = new Temperature(new BigDecimal("22"), Temperature.TemperatureUnit.CELSIUS);
         assertThat(a).isNotEqualTo(b);
