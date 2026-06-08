@@ -176,4 +176,39 @@ class CapabilitiesTest {
         assertThat(caps).containsEntry(CoverDevice.CAP_MOVING, false);
         assertThat(caps).hasSize(3);
     }
+
+    @Test
+    void mediaPlayerDeviceCapabilities() {
+        var device = MediaPlayerDevice.builder()
+            .deviceId("mp1").deviceClass(DeviceClass.MEDIA_PLAYER).label("Player")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .playing(true).volume(80).build();
+        var caps = device.capabilities();
+        assertThat(caps).containsEntry(DeviceEntity.CAP_AVAILABLE, true);
+        assertThat(caps).containsEntry(MediaPlayerDevice.CAP_PLAYING, true);
+        assertThat(caps).containsEntry(MediaPlayerDevice.CAP_VOLUME, 80);
+        assertThat(caps).hasSize(3);
+    }
+
+    @Test
+    void mediaPlayerNullVolumeIncludedAsNull() {
+        var device = MediaPlayerDevice.builder()
+            .deviceId("mp1").deviceClass(DeviceClass.MEDIA_PLAYER).label("Player")
+            .available(true).lastUpdated(NOW).tenancyId("t1").playing(false).build();
+        assertThat(device.capabilities()).containsKey(MediaPlayerDevice.CAP_VOLUME);
+        assertThat(device.capabilities().get(MediaPlayerDevice.CAP_VOLUME)).isNull();
+    }
+
+    @Test
+    void fanDeviceCapabilities() {
+        var device = FanDevice.builder()
+            .deviceId("f1").deviceClass(DeviceClass.FAN).label("Fan")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .on(true).speed(3).build();
+        var caps = device.capabilities();
+        assertThat(caps).containsEntry(DeviceEntity.CAP_AVAILABLE, true);
+        assertThat(caps).containsEntry(FanDevice.CAP_ON, true);
+        assertThat(caps).containsEntry(FanDevice.CAP_SPEED, 3);
+        assertThat(caps).hasSize(3);
+    }
 }

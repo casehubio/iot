@@ -1,5 +1,6 @@
 package io.casehub.iot.api;
 
+import java.util.Map;
 import java.util.Optional;
 
 public class FanDevice extends DeviceEntity {
@@ -22,6 +23,21 @@ public class FanDevice extends DeviceEntity {
 
     public Optional<Integer> speed() {
         return Optional.ofNullable(speed);
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_ON, on);
+        caps.put(CAP_SPEED, speed);
+        return caps;
+    }
+
+    public FanDevice.Builder toBuilder() {
+        return FanDevice.builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .on(on).speed(speed);
     }
 
     public static Builder builder() {

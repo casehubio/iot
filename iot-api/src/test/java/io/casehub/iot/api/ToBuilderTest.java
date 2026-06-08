@@ -171,4 +171,27 @@ class ToBuilderTest {
         assertThat(opened.isMoving()).isFalse();
         assertThat(opened).isInstanceOf(CoverDevice.class);
     }
+
+    @Test
+    void mediaPlayerDeviceToBuilderModifyVolume() {
+        var original = MediaPlayerDevice.builder()
+            .deviceId("mp1").deviceClass(DeviceClass.MEDIA_PLAYER).label("Player")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .playing(true).volume(80).build();
+        MediaPlayerDevice modified = original.toBuilder().volume(60).build();
+        assertThat(modified.volume()).hasValue(60);
+        assertThat(modified.isPlaying()).isTrue();
+        assertThat(modified).isInstanceOf(MediaPlayerDevice.class);
+    }
+
+    @Test
+    void fanDeviceToBuilderModifySpeed() {
+        var original = FanDevice.builder()
+            .deviceId("f1").deviceClass(DeviceClass.FAN).label("Fan")
+            .available(true).lastUpdated(NOW).tenancyId("t1").on(true).speed(3).build();
+        FanDevice modified = original.toBuilder().speed(5).build();
+        assertThat(modified.speed()).hasValue(5);
+        assertThat(modified.isOn()).isTrue();
+        assertThat(modified).isInstanceOf(FanDevice.class);
+    }
 }
