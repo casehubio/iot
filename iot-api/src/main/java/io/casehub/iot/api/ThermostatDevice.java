@@ -1,5 +1,6 @@
 package io.casehub.iot.api;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class ThermostatDevice extends DeviceEntity {
@@ -29,6 +30,24 @@ public class ThermostatDevice extends DeviceEntity {
 
     public ThermostatMode mode() {
         return mode;
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_CURRENT_TEMPERATURE, currentTemperature);
+        caps.put(CAP_TARGET_TEMPERATURE, targetTemperature);
+        caps.put(CAP_MODE, mode);
+        return caps;
+    }
+
+    public ThermostatDevice.Builder toBuilder() {
+        return new Builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .currentTemperature(currentTemperature)
+            .targetTemperature(targetTemperature)
+            .mode(mode);
     }
 
     public static Builder builder() {

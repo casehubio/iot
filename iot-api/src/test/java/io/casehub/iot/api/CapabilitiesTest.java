@@ -1,6 +1,7 @@
 package io.casehub.iot.api;
 
 import org.junit.jupiter.api.Test;
+import java.math.BigDecimal;
 import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -81,6 +82,22 @@ class CapabilitiesTest {
         assertThat(caps.get(LightDevice.CAP_BRIGHTNESS)).isNull();
         assertThat(caps).containsKey(LightDevice.CAP_COLOR_TEMP);
         assertThat(caps.get(LightDevice.CAP_COLOR_TEMP)).isNull();
+        assertThat(caps).hasSize(4);
+    }
+
+    @Test
+    void thermostatDeviceCapabilities() {
+        var current = new Temperature(new BigDecimal("21"), Temperature.TemperatureUnit.CELSIUS);
+        var target = new Temperature(new BigDecimal("22"), Temperature.TemperatureUnit.CELSIUS);
+        var device = ThermostatDevice.builder()
+            .deviceId("th1").deviceClass(DeviceClass.THERMOSTAT).label("Thermostat")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .currentTemperature(current).targetTemperature(target).mode(ThermostatMode.HEAT).build();
+        var caps = device.capabilities();
+        assertThat(caps).containsEntry(DeviceEntity.CAP_AVAILABLE, true);
+        assertThat(caps).containsEntry(ThermostatDevice.CAP_CURRENT_TEMPERATURE, current);
+        assertThat(caps).containsEntry(ThermostatDevice.CAP_TARGET_TEMPERATURE, target);
+        assertThat(caps).containsEntry(ThermostatDevice.CAP_MODE, ThermostatMode.HEAT);
         assertThat(caps).hasSize(4);
     }
 }
