@@ -5,13 +5,13 @@ import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
@@ -39,6 +39,9 @@ class CdiDeviceRegistryTest {
     @Inject
     DeviceRegistry registry;
 
+    @Inject
+    Event<StateChangeEvent> events;
+
     @Test
     void discoversDevicesAtStartup() {
         assertThat(registry.findAll()).hasSize(2);
@@ -61,16 +64,18 @@ class CdiDeviceRegistryTest {
     }
 
     @Test
-    void stateChangeUpdatesRegistry() {
-        var before = registry.findById("sw1").orElseThrow();
-        var after = SwitchDevice.builder().deviceId("sw1").deviceClass(DeviceClass.SWITCH)
-            .label("Switch").available(true).lastUpdated(Instant.now()).tenancyId("t1").on(false).build();
+    void stateChangeUpdatesRegistry() throws Exception {
+        var before = (SwitchDevice) registry.findById("sw1").orElseThrow();
+        var after = before.toBuilder().on(false).lastUpdated(Instant.now()).build();
 
-        ((CdiDeviceRegistry) registry).onStateChange(
-            new StateChangeEvent(before, after, Set.of(SwitchDevice.CAP_ON), Instant.now(), "test"));
+        events.fireAsync(new StateChangeEvent(
+            before, after,
+            StateChangeEvent.deriveChangedCapabilities(before, after),
+            Instant.now(), "test"))
+        .toCompletableFuture().join();
 
-        var updated = registry.findById("sw1").orElseThrow();
-        assertThat(((SwitchDevice) updated).isOn()).isFalse();
+        var updated = (SwitchDevice) registry.findById("sw1").orElseThrow();
+        assertThat(updated.isOn()).isFalse();
     }
 
     @Test
