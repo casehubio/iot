@@ -99,4 +99,29 @@ class ToBuilderTest {
         assertThat(modified.targetTemperature()).isEqualTo(newTarget);
         assertThat(modified.currentTemperature()).isEqualTo(current);
     }
+
+    @Test
+    void sensorDeviceToBuilderPreservesUnit() {
+        var original = SensorDevice.builder()
+            .deviceId("s1").deviceClass(DeviceClass.SENSOR).label("Sensor")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .sensorType(SensorType.TEMPERATURE)
+            .numericValue(new BigDecimal("21.5")).unit("C").build();
+        var copy = original.toBuilder().build();
+        assertThat(copy.unit()).hasValue("C");
+        assertThat(copy.numericValue()).hasValue(new BigDecimal("21.5"));
+        assertThat(copy.sensorType()).isEqualTo(SensorType.TEMPERATURE);
+    }
+
+    @Test
+    void sensorDeviceToBuilderModifyNumericValue() {
+        var original = SensorDevice.builder()
+            .deviceId("s1").deviceClass(DeviceClass.SENSOR).label("Sensor")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .sensorType(SensorType.TEMPERATURE)
+            .numericValue(new BigDecimal("21")).unit("C").build();
+        SensorDevice modified = original.toBuilder().numericValue(new BigDecimal("22")).build();
+        assertThat(modified.numericValue()).hasValue(new BigDecimal("22"));
+        assertThat(modified.unit()).hasValue("C");
+    }
 }

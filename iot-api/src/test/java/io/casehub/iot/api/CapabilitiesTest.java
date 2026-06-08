@@ -100,4 +100,30 @@ class CapabilitiesTest {
         assertThat(caps).containsEntry(ThermostatDevice.CAP_MODE, ThermostatMode.HEAT);
         assertThat(caps).hasSize(4);
     }
+
+    @Test
+    void sensorDeviceCapabilitiesExcludesUnit() {
+        var device = SensorDevice.builder()
+            .deviceId("s1").deviceClass(DeviceClass.SENSOR).label("Sensor")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .sensorType(SensorType.TEMPERATURE)
+            .numericValue(new BigDecimal("21.5")).unit("C").build();
+        var caps = device.capabilities();
+        assertThat(caps).containsEntry(DeviceEntity.CAP_AVAILABLE, true);
+        assertThat(caps).containsKey(SensorDevice.CAP_NUMERIC_VALUE);
+        assertThat(caps).containsKey(SensorDevice.CAP_BINARY_VALUE);
+        assertThat(caps).doesNotContainKey("unit");
+        assertThat(caps).hasSize(3);
+    }
+
+    @Test
+    void sensorDeviceCapabilitiesNullValues() {
+        var device = SensorDevice.builder()
+            .deviceId("s1").deviceClass(DeviceClass.SENSOR).label("Sensor")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .sensorType(SensorType.MOTION).build();
+        var caps = device.capabilities();
+        assertThat(caps.get(SensorDevice.CAP_NUMERIC_VALUE)).isNull();
+        assertThat(caps.get(SensorDevice.CAP_BINARY_VALUE)).isNull();
+    }
 }

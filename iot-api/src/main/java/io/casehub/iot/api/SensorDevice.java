@@ -1,13 +1,13 @@
 package io.casehub.iot.api;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 public class SensorDevice extends DeviceEntity {
 
     public static final String CAP_NUMERIC_VALUE = "numericValue";
-    public static final String CAP_UNIT = "unit";
     public static final String CAP_BINARY_VALUE = "binaryValue";
 
     private final SensorType sensorType;
@@ -37,6 +37,21 @@ public class SensorDevice extends DeviceEntity {
 
     public Optional<Boolean> binaryValue() {
         return Optional.ofNullable(binaryValue);
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_NUMERIC_VALUE, numericValue);
+        caps.put(CAP_BINARY_VALUE, binaryValue);
+        return caps;
+    }
+
+    public SensorDevice.Builder toBuilder() {
+        return SensorDevice.builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .sensorType(sensorType).numericValue(numericValue).unit(unit).binaryValue(binaryValue);
     }
 
     public static Builder builder() {
