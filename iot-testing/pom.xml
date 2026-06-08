@@ -12,7 +12,7 @@
 
     <artifactId>casehub-iot-testing</artifactId>
     <name>CaseHub IoT — Testing</name>
-    <description>MockDeviceProvider, fixture devices, StateChangeEventPublisher — test scope only</description>
+    <description>MockDeviceProvider, fixture devices, StateChangeEventPublisher — test scope only, never compile/runtime</description>
 
     <dependencies>
         <dependency>
@@ -37,7 +37,7 @@
             <plugin>
                 <groupId>io.smallrye</groupId>
                 <artifactId>jandex-maven-plugin</artifactId>
-                <version>3.1.8</version>
+                <version>3.3.1</version>
                 <executions>
                     <execution>
                         <id>make-index</id>
