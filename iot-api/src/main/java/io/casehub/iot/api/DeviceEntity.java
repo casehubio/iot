@@ -1,6 +1,8 @@
 package io.casehub.iot.api;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public abstract class DeviceEntity {
@@ -19,6 +21,14 @@ public abstract class DeviceEntity {
         this.available = builder.available;
         this.lastUpdated = Objects.requireNonNull(builder.lastUpdated, "lastUpdated");
         this.tenancyId = Objects.requireNonNull(builder.tenancyId, "tenancyId");
+    }
+
+    public static final String CAP_AVAILABLE = "available";
+
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = new LinkedHashMap<>();
+        caps.put(CAP_AVAILABLE, available);
+        return caps;
     }
 
     public String deviceId() { return deviceId; }
