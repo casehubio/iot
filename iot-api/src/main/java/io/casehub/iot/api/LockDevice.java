@@ -1,5 +1,7 @@
 package io.casehub.iot.api;
 
+import java.util.Map;
+
 public class LockDevice extends DeviceEntity {
 
     public static final String CAP_LOCKED = "isLocked";
@@ -13,6 +15,20 @@ public class LockDevice extends DeviceEntity {
 
     public boolean isLocked() {
         return locked;
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_LOCKED, locked);
+        return caps;
+    }
+
+    public LockDevice.Builder toBuilder() {
+        return new Builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .locked(locked);
     }
 
     public static Builder builder() {

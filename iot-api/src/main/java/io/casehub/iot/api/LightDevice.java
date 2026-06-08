@@ -1,5 +1,6 @@
 package io.casehub.iot.api;
 
+import java.util.Map;
 import java.util.Optional;
 
 public class LightDevice extends DeviceEntity {
@@ -29,6 +30,22 @@ public class LightDevice extends DeviceEntity {
 
     public Optional<Integer> colorTemp() {
         return Optional.ofNullable(colorTemp);
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_ON, on);
+        caps.put(CAP_BRIGHTNESS, brightness);
+        caps.put(CAP_COLOR_TEMP, colorTemp);
+        return caps;
+    }
+
+    public LightDevice.Builder toBuilder() {
+        return new Builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .on(on).brightness(brightness).colorTemp(colorTemp);
     }
 
     public static Builder builder() {

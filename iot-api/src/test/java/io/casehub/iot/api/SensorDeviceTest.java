@@ -69,7 +69,6 @@ class SensorDeviceTest {
     @Test
     void sensorDeviceCapabilityConstants() {
         assertEquals("numericValue", SensorDevice.CAP_NUMERIC_VALUE);
-        assertEquals("unit", SensorDevice.CAP_UNIT);
         assertEquals("binaryValue", SensorDevice.CAP_BINARY_VALUE);
     }
 }

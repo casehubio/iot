@@ -1,6 +1,7 @@
 package io.casehub.iot.api;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Objects;
 
 public class PowerSensor extends DeviceEntity {
@@ -23,6 +24,21 @@ public class PowerSensor extends DeviceEntity {
 
     public BigDecimal energy() {
         return energy;
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_POWER, power);
+        caps.put(CAP_ENERGY, energy);
+        return caps;
+    }
+
+    public PowerSensor.Builder toBuilder() {
+        return PowerSensor.builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .power(power).energy(energy);
     }
 
     public static Builder builder() {

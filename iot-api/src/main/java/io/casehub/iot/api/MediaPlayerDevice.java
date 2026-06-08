@@ -1,5 +1,6 @@
 package io.casehub.iot.api;
 
+import java.util.Map;
 import java.util.Optional;
 
 public class MediaPlayerDevice extends DeviceEntity {
@@ -22,6 +23,21 @@ public class MediaPlayerDevice extends DeviceEntity {
 
     public Optional<Integer> volume() {
         return Optional.ofNullable(volume);
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_PLAYING, playing);
+        caps.put(CAP_VOLUME, volume);
+        return caps;
+    }
+
+    public MediaPlayerDevice.Builder toBuilder() {
+        return MediaPlayerDevice.builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .playing(playing).volume(volume);
     }
 
     public static Builder builder() {

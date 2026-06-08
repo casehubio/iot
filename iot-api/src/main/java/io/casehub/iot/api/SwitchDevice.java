@@ -1,5 +1,7 @@
 package io.casehub.iot.api;
 
+import java.util.Map;
+
 public class SwitchDevice extends DeviceEntity {
 
     public static final String CAP_ON = "isOn";
@@ -13,6 +15,20 @@ public class SwitchDevice extends DeviceEntity {
 
     public boolean isOn() {
         return on;
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_ON, on);
+        return caps;
+    }
+
+    public SwitchDevice.Builder toBuilder() {
+        return SwitchDevice.builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .on(on);
     }
 
     public static Builder builder() {

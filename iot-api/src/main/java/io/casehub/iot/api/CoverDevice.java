@@ -1,5 +1,7 @@
 package io.casehub.iot.api;
 
+import java.util.Map;
+
 public class CoverDevice extends DeviceEntity {
 
     public static final String CAP_POSITION = "position";
@@ -20,6 +22,21 @@ public class CoverDevice extends DeviceEntity {
 
     public boolean isMoving() {
         return moving;
+    }
+
+    @Override
+    public Map<String, Object> capabilities() {
+        Map<String, Object> caps = super.capabilities();
+        caps.put(CAP_POSITION, position);
+        caps.put(CAP_MOVING, moving);
+        return caps;
+    }
+
+    public CoverDevice.Builder toBuilder() {
+        return new Builder()
+            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
+            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
+            .position(position).moving(moving);
     }
 
     public static Builder builder() {
