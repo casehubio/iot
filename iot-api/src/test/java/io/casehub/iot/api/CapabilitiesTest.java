@@ -37,4 +37,23 @@ class CapabilitiesTest {
             .available(false).lastUpdated(NOW).tenancyId("t1").on(false).build();
         assertThat(device.capabilities().get(DeviceEntity.CAP_AVAILABLE)).isEqualTo(false);
     }
+
+    @Test
+    void switchDeviceCapabilitiesContainsOnAndAvailable() {
+        var device = SwitchDevice.builder()
+            .deviceId("sw1").deviceClass(DeviceClass.SWITCH).label("Switch")
+            .available(true).lastUpdated(NOW).tenancyId("t1").on(true).build();
+        var caps = device.capabilities();
+        assertThat(caps).containsEntry(DeviceEntity.CAP_AVAILABLE, true);
+        assertThat(caps).containsEntry(SwitchDevice.CAP_ON, true);
+        assertThat(caps).hasSize(2);
+    }
+
+    @Test
+    void switchDeviceCapabilitiesReflectsOffState() {
+        var device = SwitchDevice.builder()
+            .deviceId("sw1").deviceClass(DeviceClass.SWITCH).label("Switch")
+            .available(true).lastUpdated(NOW).tenancyId("t1").on(false).build();
+        assertThat(device.capabilities()).containsEntry(SwitchDevice.CAP_ON, false);
+    }
 }
