@@ -30,7 +30,7 @@ class MockDeviceRegistryTest {
     @Test
     void findByIdReturnsKnownDevice() {
         assertThat(registry.findById("sw1")).isPresent();
-        assertThat(registry.findById("sw1").get().deviceId()).isEqualTo("sw1");
+        assertThat(registry.findById("sw1").orElseThrow().deviceId()).isEqualTo("sw1");
     }
 
     @Test

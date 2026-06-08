@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/** Not thread-safe — designed for sequential test use only. */
 public class MockDeviceProvider implements DeviceProvider {
 
     private final String providerId;

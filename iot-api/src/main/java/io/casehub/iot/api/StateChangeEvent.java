@@ -30,6 +30,9 @@ public record StateChangeEvent(
         }
         Map<String, Object> capsBefore = before.capabilities();
         Map<String, Object> capsAfter = after.capabilities();
+        // Iterating capsAfter only is exhaustive: the same-type precondition guarantees
+        // both maps have identical key sets (capabilities() is deterministic per type).
+        // If a subclass ever produces variable key sets, extend this to a symmetric diff.
         Set<String> changed = new LinkedHashSet<>();
         for (var entry : capsAfter.entrySet()) {
             Object prev = capsBefore.get(entry.getKey());

@@ -71,7 +71,7 @@ class FixturesTest {
     }
 
     @Test
-    void toBuilderWorksWithFixtures() {
+    void toBuilderPreservesDeviceIdAndModifiesField() {
         var original = Fixtures.frontDoorLock();
         LockDevice unlocked = original.toBuilder().locked(false).build();
         assertThat(unlocked.isLocked()).isFalse();

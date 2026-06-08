@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/** Not thread-safe — designed for sequential test use only. */
 public class MockDeviceRegistry implements DeviceRegistry {
 
     private final Map<String, DeviceEntity> devices = new LinkedHashMap<>();
