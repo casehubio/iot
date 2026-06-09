@@ -41,19 +41,6 @@ public class ThermostatDevice extends DeviceEntity {
         return caps;
     }
 
-    public ThermostatDevice.Builder toBuilder() {
-        return new Builder()
-            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
-            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
-            .currentTemperature(currentTemperature)
-            .targetTemperature(targetTemperature)
-            .mode(mode);
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public static final class Builder extends AbstractBuilder<ThermostatDevice, Builder> {
         @Override
         protected Builder self() {

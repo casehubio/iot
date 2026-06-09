@@ -44,10 +44,10 @@ class DeriveChangedCapabilitiesTest {
 
     @Test
     void nullToNonNullTransitionDetected() {
-        var before = LightDevice.builder()
+        var before = new LightDevice.Builder()
             .deviceId("l1").deviceClass(DeviceClass.LIGHT).label("L")
             .available(true).lastUpdated(NOW).tenancyId("t1").on(true).build();
-        var after = LightDevice.builder()
+        var after = new LightDevice.Builder()
             .deviceId("l1").deviceClass(DeviceClass.LIGHT).label("L")
             .available(true).lastUpdated(NOW).tenancyId("t1").on(true).brightness(200).build();
         assertThat(StateChangeEvent.deriveChangedCapabilities(before, after))
@@ -56,10 +56,10 @@ class DeriveChangedCapabilitiesTest {
 
     @Test
     void nonNullToNullTransitionDetected() {
-        var before = LightDevice.builder()
+        var before = new LightDevice.Builder()
             .deviceId("l1").deviceClass(DeviceClass.LIGHT).label("L")
             .available(true).lastUpdated(NOW).tenancyId("t1").on(true).brightness(200).build();
-        var after = LightDevice.builder()
+        var after = new LightDevice.Builder()
             .deviceId("l1").deviceClass(DeviceClass.LIGHT).label("L")
             .available(true).lastUpdated(NOW).tenancyId("t1").on(true).build();
         assertThat(StateChangeEvent.deriveChangedCapabilities(before, after))
@@ -71,11 +71,14 @@ class DeriveChangedCapabilitiesTest {
         var current = new Temperature(new BigDecimal("21"), Temperature.TemperatureUnit.CELSIUS);
         var newCurrent = new Temperature(new BigDecimal("22"), Temperature.TemperatureUnit.CELSIUS);
         var target = new Temperature(new BigDecimal("23"), Temperature.TemperatureUnit.CELSIUS);
-        var before = ThermostatDevice.builder()
+        var before = new ThermostatDevice.Builder()
             .deviceId("th1").deviceClass(DeviceClass.THERMOSTAT).label("T")
             .available(true).lastUpdated(NOW).tenancyId("t1")
             .currentTemperature(current).targetTemperature(target).mode(ThermostatMode.HEAT).build();
-        var after = before.toBuilder().currentTemperature(newCurrent).mode(ThermostatMode.COOL).build();
+        var after = new ThermostatDevice.Builder()
+            .deviceId("th1").deviceClass(DeviceClass.THERMOSTAT).label("T")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .currentTemperature(newCurrent).targetTemperature(target).mode(ThermostatMode.COOL).build();
         var changed = StateChangeEvent.deriveChangedCapabilities(before, after);
         assertThat(changed).containsExactlyInAnyOrder(
             ThermostatDevice.CAP_CURRENT_TEMPERATURE, ThermostatDevice.CAP_MODE);
@@ -86,11 +89,14 @@ class DeriveChangedCapabilitiesTest {
         var t21 = new Temperature(new BigDecimal("21"), Temperature.TemperatureUnit.CELSIUS);
         var t21same = new Temperature(new BigDecimal("21.0"), Temperature.TemperatureUnit.CELSIUS);
         var target = new Temperature(new BigDecimal("22"), Temperature.TemperatureUnit.CELSIUS);
-        var before = ThermostatDevice.builder()
+        var before = new ThermostatDevice.Builder()
             .deviceId("th1").deviceClass(DeviceClass.THERMOSTAT).label("T")
             .available(true).lastUpdated(NOW).tenancyId("t1")
             .currentTemperature(t21).targetTemperature(target).mode(ThermostatMode.HEAT).build();
-        var after = before.toBuilder().currentTemperature(t21same).build();
+        var after = new ThermostatDevice.Builder()
+            .deviceId("th1").deviceClass(DeviceClass.THERMOSTAT).label("T")
+            .available(true).lastUpdated(NOW).tenancyId("t1")
+            .currentTemperature(t21same).targetTemperature(target).mode(ThermostatMode.HEAT).build();
         assertThat(StateChangeEvent.deriveChangedCapabilities(before, after)).isEmpty();
     }
 
@@ -99,7 +105,7 @@ class DeriveChangedCapabilitiesTest {
         var sw = SwitchDevice.builder()
             .deviceId("sw1").deviceClass(DeviceClass.SWITCH).label("S")
             .available(true).lastUpdated(NOW).tenancyId("t1").on(false).build();
-        var light = LightDevice.builder()
+        var light = new LightDevice.Builder()
             .deviceId("l1").deviceClass(DeviceClass.LIGHT).label("L")
             .available(true).lastUpdated(NOW).tenancyId("t1").on(false).build();
         assertThatThrownBy(() -> StateChangeEvent.deriveChangedCapabilities(sw, light))

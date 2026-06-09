@@ -34,14 +34,14 @@ public final class Fixtures {
     }
 
     public static LightDevice livingRoomLight() {
-        return LightDevice.builder()
+        return new LightDevice.Builder()
             .deviceId("light-living-1").deviceClass(DeviceClass.LIGHT)
             .label("Living Room Light").available(true).lastUpdated(EPOCH)
             .tenancyId(DEFAULT_TENANT).on(false).build();
     }
 
     public static ThermostatDevice livingRoomThermostat() {
-        return ThermostatDevice.builder()
+        return new ThermostatDevice.Builder()
             .deviceId("thermostat-living-1").deviceClass(DeviceClass.THERMOSTAT)
             .label("Living Room Thermostat").available(true).lastUpdated(EPOCH)
             .tenancyId(DEFAULT_TENANT)
@@ -71,21 +71,21 @@ public final class Fixtures {
             .deviceId("power-solar-1").deviceClass(DeviceClass.POWER_SENSOR)
             .label("Solar Panel").available(true).lastUpdated(EPOCH)
             .tenancyId(DEFAULT_TENANT)
-            .power(BigDecimal.ZERO).energy(BigDecimal.ZERO).build();
+            .power(new BigDecimal("3200")).build();
     }
 
     public static LockDevice frontDoorLock() {
-        return LockDevice.builder()
+        return new LockDevice.Builder()
             .deviceId("lock-front-1").deviceClass(DeviceClass.LOCK)
             .label("Front Door Lock").available(true).lastUpdated(EPOCH)
             .tenancyId(DEFAULT_TENANT).locked(true).build();
     }
 
     public static CoverDevice bedroomBlinds() {
-        return CoverDevice.builder()
+        return new CoverDevice.Builder()
             .deviceId("cover-bedroom-1").deviceClass(DeviceClass.COVER)
             .label("Bedroom Blinds").available(true).lastUpdated(EPOCH)
-            .tenancyId(DEFAULT_TENANT).position(0).moving(false).build();
+            .tenancyId(DEFAULT_TENANT).moving(false).build();
     }
 
     public static MediaPlayerDevice livingRoomSpeaker() {

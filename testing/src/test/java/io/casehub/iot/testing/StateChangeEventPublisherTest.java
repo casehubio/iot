@@ -53,7 +53,8 @@ class StateChangeEventPublisherTest {
 
     @Test
     void publishWithNoChangeProducesEmptyChangedCapabilities() throws Exception {
-        var device = Fixtures.frontDoorLock();
+        // Use SwitchDevice (non-extensible, has toBuilder) to test no-change case
+        var device = Fixtures.hallwaySwitch();
 
         publisher.publish(device, device.toBuilder().build(), "test")
             .toCompletableFuture().join();

@@ -5,6 +5,7 @@ import io.casehub.iot.api.DeviceCommand;
 import io.casehub.iot.api.DeviceEntity;
 import io.casehub.iot.api.ProviderStatus;
 import io.casehub.iot.api.spi.DeviceProvider;
+import io.smallrye.mutiny.Uni;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -28,14 +29,16 @@ public class MockDeviceProvider implements DeviceProvider {
     public String providerId() { return providerId; }
 
     @Override
-    public List<DeviceEntity> discover() {
-        return List.copyOf(devices.values());
+    public Uni<List<DeviceEntity>> discover() {
+        return Uni.createFrom().item(() -> List.copyOf(devices.values()));
     }
 
     @Override
-    public CommandResult dispatch(DeviceCommand command) {
-        dispatchedCommands.add(command);
-        return dispatchResult;
+    public Uni<CommandResult> dispatch(DeviceCommand command) {
+        return Uni.createFrom().item(() -> {
+            dispatchedCommands.add(command);
+            return dispatchResult;
+        });
     }
 
     @Override

@@ -22,7 +22,7 @@ class MockDeviceRegistryTest {
         registry.addDevice(SwitchDevice.builder()
             .deviceId("sw1").deviceClass(DeviceClass.SWITCH).label("Switch")
             .available(true).lastUpdated(NOW).tenancyId("t1").on(false).build());
-        registry.addDevice(LightDevice.builder()
+        registry.addDevice(new LightDevice.Builder()
             .deviceId("l1").deviceClass(DeviceClass.LIGHT).label("Light")
             .available(true).lastUpdated(NOW).tenancyId("t1").on(false).build());
     }
@@ -59,7 +59,7 @@ class MockDeviceRegistryTest {
 
     @Test
     void refreshIsNoOp() {
-        registry.refresh();
+        registry.refresh().await().indefinitely();
         assertThat(registry.findAll()).hasSize(2);
     }
 
@@ -75,7 +75,7 @@ class MockDeviceRegistryTest {
         registry.addDevices(
             SwitchDevice.builder().deviceId("sw1").deviceClass(DeviceClass.SWITCH)
                 .label("S").available(true).lastUpdated(NOW).tenancyId("t1").on(false).build(),
-            LightDevice.builder().deviceId("l1").deviceClass(DeviceClass.LIGHT)
+            new LightDevice.Builder().deviceId("l1").deviceClass(DeviceClass.LIGHT)
                 .label("L").available(true).lastUpdated(NOW).tenancyId("t1").on(false).build());
         assertThat(registry.findAll()).hasSize(2);
     }

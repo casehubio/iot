@@ -6,6 +6,7 @@ import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.quarkus.arc.DefaultBean;
 import io.quarkus.runtime.StartupEvent;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.enterprise.event.Observes;
@@ -16,10 +17,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 @DefaultBean
 public class CdiDeviceRegistry implements DeviceRegistry {
+
+    private static final Logger LOG = Logger.getLogger(CdiDeviceRegistry.class);
 
     @Inject @Any
     Instance<DeviceProvider> providers;
@@ -27,16 +32,26 @@ public class CdiDeviceRegistry implements DeviceRegistry {
     private volatile Map<String, DeviceEntity> devices = Map.of();
 
     void onStartup(@Observes StartupEvent event) {
-        refresh();
+        refresh().await().indefinitely();
     }
 
     @Override
-    public synchronized void refresh() {
-        Map<String, DeviceEntity> next = new HashMap<>();
-        for (DeviceProvider p : providers) {
-            p.discover().forEach(d -> next.put(d.deviceId(), d));
-        }
-        devices = Map.copyOf(next);
+    public Uni<Void> refresh() {
+        return Uni.join().all(
+                StreamSupport.stream(providers.spliterator(), false)
+                    .map(p -> p.discover()
+                        .onFailure().invoke(e -> LOG.warnf(e, "Provider %s failed during discover", p.providerId()))
+                        .onFailure().recoverWithItem(List.of()))
+                    .toList()
+            ).andCollectFailures()
+            .map(listOfLists -> {
+                synchronized (CdiDeviceRegistry.this) {
+                    Map<String, DeviceEntity> next = new HashMap<>();
+                    listOfLists.forEach(list -> list.forEach(d -> next.put(d.deviceId(), d)));
+                    devices = Map.copyOf(next);
+                }
+                return (Void) null;
+            });
     }
 
     void onStateChange(@ObservesAsync StateChangeEvent event) {

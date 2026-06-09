@@ -63,17 +63,21 @@ class FixturesTest {
         assertThat(Fixtures.livingRoomThermostat().mode()).isEqualTo(ThermostatMode.HEAT);
         assertThat(Fixtures.frontDoorPresence().isPresent()).isFalse();
         assertThat(Fixtures.frontDoorPresence().lastSeen()).isEqualTo(Fixtures.EPOCH);
+        assertThat(Fixtures.solarPanel().power()).hasValue(new java.math.BigDecimal("3200"));
+        assertThat(Fixtures.solarPanel().energy()).isEmpty();
         assertThat(Fixtures.frontDoorLock().isLocked()).isTrue();
-        assertThat(Fixtures.bedroomBlinds().position()).isEqualTo(0);
+        assertThat(Fixtures.bedroomBlinds().position()).isEmpty();
         assertThat(Fixtures.bedroomBlinds().isMoving()).isFalse();
         assertThat(Fixtures.livingRoomSpeaker().isPlaying()).isFalse();
         assertThat(Fixtures.bedroomFan().isOn()).isFalse();
     }
 
     @Test
-    void toBuilderPreservesDeviceIdAndModifiesField() {
-        var original = Fixtures.frontDoorLock();
-        LockDevice unlocked = original.toBuilder().locked(false).build();
+    void newBuilderPreservesDeviceIdAndModifiesField() {
+        LockDevice unlocked = new LockDevice.Builder()
+            .deviceId("lock-front-1").deviceClass(DeviceClass.LOCK)
+            .label("Front Door Lock").available(true).lastUpdated(Fixtures.EPOCH)
+            .tenancyId(Fixtures.DEFAULT_TENANT).locked(false).build();
         assertThat(unlocked.isLocked()).isFalse();
         assertThat(unlocked.deviceId()).isEqualTo("lock-front-1");
     }

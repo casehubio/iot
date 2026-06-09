@@ -13,17 +13,18 @@ class EnumTest {
     }
 
     @Test
-    void thermostatModeHasFiveValues() {
-        assertThat(ThermostatMode.values()).hasSize(5);
+    void thermostatModeHasSixValues() {
+        assertThat(ThermostatMode.values()).hasSize(6);
         assertThat(ThermostatMode.values()).containsExactly(
             ThermostatMode.HEAT, ThermostatMode.COOL, ThermostatMode.AUTO,
-            ThermostatMode.OFF, ThermostatMode.FAN_ONLY);
+            ThermostatMode.OFF, ThermostatMode.FAN_ONLY, ThermostatMode.DRY);
     }
 
     @Test
-    void sensorTypeHasSevenValues() {
-        assertThat(SensorType.values()).hasSize(7);
+    void sensorTypeHasEightValues() {
+        assertThat(SensorType.values()).hasSize(8);
         assertThat(SensorType.valueOf("GENERIC")).isEqualTo(SensorType.GENERIC);
+        assertThat(SensorType.valueOf("CO")).isNotEqualTo(SensorType.CO2);
     }
 
     @Test

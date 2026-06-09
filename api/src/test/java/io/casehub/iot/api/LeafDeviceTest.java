@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LeafDeviceTest {
@@ -134,7 +135,7 @@ class LeafDeviceTest {
     }
 
     @Test
-    void powerSensorBuildsWithRequiredFields() {
+    void powerSensorBuildsWithBothFields() {
         PowerSensor sensor = PowerSensor.builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Main Circuit")
@@ -145,34 +146,39 @@ class LeafDeviceTest {
                 .energy(new BigDecimal("3456.78"))
                 .build();
 
-        assertEquals(new BigDecimal("1500.50"), sensor.power());
-        assertEquals(new BigDecimal("3456.78"), sensor.energy());
+        assertThat(sensor.power()).hasValue(new BigDecimal("1500.50"));
+        assertThat(sensor.energy()).hasValue(new BigDecimal("3456.78"));
         assertEquals("power", PowerSensor.CAP_POWER);
         assertEquals("energy", PowerSensor.CAP_ENERGY);
     }
 
     @Test
-    void powerSensorRequiresPowerAndEnergy() {
-        assertThrows(NullPointerException.class, () -> {
-            PowerSensor.builder()
-                    .deviceId(UUID.randomUUID().toString())
-                    .label("Main Circuit")
-                    .deviceClass(DeviceClass.POWER_SENSOR)
-                    .lastUpdated(TEST_INSTANT)
-                    .tenancyId("test-tenant")
-                    .power(new BigDecimal("1500.50"))
-                    .build();
-        });
+    void powerSensorBuildsWithPowerOnly() {
+        PowerSensor sensor = PowerSensor.builder()
+                .deviceId(UUID.randomUUID().toString())
+                .label("Solar Panel")
+                .deviceClass(DeviceClass.POWER_SENSOR)
+                .lastUpdated(TEST_INSTANT)
+                .tenancyId("test-tenant")
+                .power(new BigDecimal("3200"))
+                .build();
 
-        assertThrows(NullPointerException.class, () -> {
-            PowerSensor.builder()
-                    .deviceId(UUID.randomUUID().toString())
-                    .label("Main Circuit")
-                    .deviceClass(DeviceClass.POWER_SENSOR)
-                    .lastUpdated(TEST_INSTANT)
-                    .tenancyId("test-tenant")
-                    .energy(new BigDecimal("3456.78"))
-                    .build();
-        });
+        assertThat(sensor.power()).hasValue(new BigDecimal("3200"));
+        assertThat(sensor.energy()).isEmpty();
+    }
+
+    @Test
+    void powerSensorBuildsWithEnergyOnly() {
+        PowerSensor sensor = PowerSensor.builder()
+                .deviceId(UUID.randomUUID().toString())
+                .label("Grid Meter")
+                .deviceClass(DeviceClass.POWER_SENSOR)
+                .lastUpdated(TEST_INSTANT)
+                .tenancyId("test-tenant")
+                .energy(new BigDecimal("15.2"))
+                .build();
+
+        assertThat(sensor.power()).isEmpty();
+        assertThat(sensor.energy()).hasValue(new BigDecimal("15.2"));
     }
 }

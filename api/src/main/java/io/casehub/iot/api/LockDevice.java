@@ -24,17 +24,6 @@ public class LockDevice extends DeviceEntity {
         return caps;
     }
 
-    public LockDevice.Builder toBuilder() {
-        return new Builder()
-            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
-            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
-            .locked(locked);
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public static final class Builder extends AbstractBuilder<LockDevice, Builder> {
         @Override
         protected Builder self() {

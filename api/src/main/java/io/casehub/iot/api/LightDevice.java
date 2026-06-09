@@ -41,17 +41,6 @@ public class LightDevice extends DeviceEntity {
         return caps;
     }
 
-    public LightDevice.Builder toBuilder() {
-        return new Builder()
-            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
-            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
-            .on(on).brightness(brightness).colorTemp(colorTemp);
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public static final class Builder extends AbstractBuilder<LightDevice, Builder> {
         @Override
         protected Builder self() {

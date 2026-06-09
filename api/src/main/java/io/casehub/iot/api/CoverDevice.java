@@ -1,13 +1,14 @@
 package io.casehub.iot.api;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class CoverDevice extends DeviceEntity {
 
     public static final String CAP_POSITION = "position";
     public static final String CAP_MOVING = "isMoving";
 
-    private final int position;
+    private final Integer position;
     private final boolean moving;
 
     protected CoverDevice(AbstractBuilder<?, ?> builder) {
@@ -16,8 +17,8 @@ public class CoverDevice extends DeviceEntity {
         this.moving = builder.moving;
     }
 
-    public int position() {
-        return position;
+    public Optional<Integer> position() {
+        return Optional.ofNullable(position);
     }
 
     public boolean isMoving() {
@@ -30,17 +31,6 @@ public class CoverDevice extends DeviceEntity {
         caps.put(CAP_POSITION, position);
         caps.put(CAP_MOVING, moving);
         return caps;
-    }
-
-    public CoverDevice.Builder toBuilder() {
-        return new Builder()
-            .deviceId(deviceId()).deviceClass(deviceClass()).label(label())
-            .available(available()).lastUpdated(lastUpdated()).tenancyId(tenancyId())
-            .position(position).moving(moving);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static final class Builder extends AbstractBuilder<CoverDevice, Builder> {
@@ -57,10 +47,10 @@ public class CoverDevice extends DeviceEntity {
 
     public abstract static class AbstractBuilder<T extends CoverDevice, B extends AbstractBuilder<T, B>>
             extends DeviceEntity.Builder<T, B> {
-        int position;
+        Integer position;
         boolean moving;
 
-        public B position(int position) {
+        public B position(Integer position) {
             this.position = position;
             return self();
         }

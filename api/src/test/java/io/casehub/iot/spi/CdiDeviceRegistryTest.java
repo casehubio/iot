@@ -4,6 +4,7 @@ import io.casehub.iot.api.*;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.quarkus.test.junit.QuarkusTest;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Alternative;
@@ -24,15 +25,17 @@ class CdiDeviceRegistryTest {
     @Priority(1)
     static class TestProvider implements DeviceProvider {
         @Override public String providerId() { return "test"; }
-        @Override public List<DeviceEntity> discover() {
-            return List.of(
+        @Override public Uni<List<DeviceEntity>> discover() {
+            return Uni.createFrom().item(List.of(
                 SwitchDevice.builder().deviceId("sw1").deviceClass(DeviceClass.SWITCH)
                     .label("Switch").available(true).lastUpdated(NOW).tenancyId("t1").on(true).build(),
-                LightDevice.builder().deviceId("l1").deviceClass(DeviceClass.LIGHT)
+                new LightDevice.Builder().deviceId("l1").deviceClass(DeviceClass.LIGHT)
                     .label("Light").available(true).lastUpdated(NOW).tenancyId("t2").on(true).brightness(200).build()
-            );
+            ));
         }
-        @Override public CommandResult dispatch(DeviceCommand command) { return CommandResult.SENT; }
+        @Override public Uni<CommandResult> dispatch(DeviceCommand command) {
+            return Uni.createFrom().item(CommandResult.SENT);
+        }
         @Override public ProviderStatus status() { return ProviderStatus.CONNECTED; }
     }
 
@@ -80,7 +83,7 @@ class CdiDeviceRegistryTest {
 
     @Test
     void refreshRebuildsDeviceMap() {
-        registry.refresh();
+        registry.refresh().await().indefinitely();
         assertThat(registry.findAll()).hasSize(2);
     }
 }

@@ -2,7 +2,7 @@ package io.casehub.iot.api;
 
 import java.math.BigDecimal;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 
 public class PowerSensor extends DeviceEntity {
 
@@ -14,16 +14,16 @@ public class PowerSensor extends DeviceEntity {
 
     private PowerSensor(Builder builder) {
         super(builder);
-        this.power = Objects.requireNonNull(builder.power, "power");
-        this.energy = Objects.requireNonNull(builder.energy, "energy");
+        this.power = builder.power;
+        this.energy = builder.energy;
     }
 
-    public BigDecimal power() {
-        return power;
+    public Optional<BigDecimal> power() {
+        return Optional.ofNullable(power);
     }
 
-    public BigDecimal energy() {
-        return energy;
+    public Optional<BigDecimal> energy() {
+        return Optional.ofNullable(energy);
     }
 
     @Override

@@ -2,6 +2,7 @@ package io.casehub.iot.testing;
 
 import io.casehub.iot.api.DeviceEntity;
 import io.casehub.iot.api.spi.DeviceRegistry;
+import io.smallrye.mutiny.Uni;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -40,7 +41,9 @@ public class MockDeviceRegistry implements DeviceRegistry {
     }
 
     @Override
-    public void refresh() { /* no-op — populated programmatically */ }
+    public Uni<Void> refresh() {
+        return Uni.createFrom().voidItem(); /* no-op — populated programmatically */
+    }
 
     public void addDevice(DeviceEntity device) {
         devices.put(device.deviceId(), device);

@@ -15,7 +15,7 @@ class ExtensibleDeviceTest {
 
     @Test
     void lightDeviceBuildsWithAllFields() {
-        LightDevice device = LightDevice.builder()
+        LightDevice device = new LightDevice.Builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Kitchen Light")
                 .deviceClass(DeviceClass.LIGHT)
@@ -36,7 +36,7 @@ class ExtensibleDeviceTest {
 
     @Test
     void lightDeviceBuildsWithOptionalFieldsAbsent() {
-        LightDevice device = LightDevice.builder()
+        LightDevice device = new LightDevice.Builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Kitchen Light")
                 .deviceClass(DeviceClass.LIGHT)
@@ -52,7 +52,7 @@ class ExtensibleDeviceTest {
 
     @Test
     void lightDeviceIsInstanceOfDeviceEntity() {
-        LightDevice device = LightDevice.builder()
+        LightDevice device = new LightDevice.Builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Kitchen Light")
                 .deviceClass(DeviceClass.LIGHT)
@@ -69,7 +69,7 @@ class ExtensibleDeviceTest {
         Temperature current = new Temperature(new BigDecimal("21.5"), Temperature.TemperatureUnit.CELSIUS);
         Temperature target = new Temperature(new BigDecimal("22.0"), Temperature.TemperatureUnit.CELSIUS);
 
-        ThermostatDevice device = ThermostatDevice.builder()
+        ThermostatDevice device = new ThermostatDevice.Builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Main Thermostat")
                 .deviceClass(DeviceClass.THERMOSTAT)
@@ -93,7 +93,7 @@ class ExtensibleDeviceTest {
         Temperature temp = new Temperature(new BigDecimal("21.5"), Temperature.TemperatureUnit.CELSIUS);
 
         assertThatThrownBy(() ->
-            ThermostatDevice.builder()
+            new ThermostatDevice.Builder()
                     .deviceId(UUID.randomUUID().toString())
                     .label("Main Thermostat")
                     .deviceClass(DeviceClass.THERMOSTAT)
@@ -105,7 +105,7 @@ class ExtensibleDeviceTest {
         ).isInstanceOf(NullPointerException.class);
 
         assertThatThrownBy(() ->
-            ThermostatDevice.builder()
+            new ThermostatDevice.Builder()
                     .deviceId(UUID.randomUUID().toString())
                     .label("Main Thermostat")
                     .deviceClass(DeviceClass.THERMOSTAT)
@@ -117,7 +117,7 @@ class ExtensibleDeviceTest {
         ).isInstanceOf(NullPointerException.class);
 
         assertThatThrownBy(() ->
-            ThermostatDevice.builder()
+            new ThermostatDevice.Builder()
                     .deviceId(UUID.randomUUID().toString())
                     .label("Main Thermostat")
                     .deviceClass(DeviceClass.THERMOSTAT)
@@ -131,7 +131,7 @@ class ExtensibleDeviceTest {
 
     @Test
     void lockDeviceBuildsWithRequiredFields() {
-        LockDevice device = LockDevice.builder()
+        LockDevice device = new LockDevice.Builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Front Door Lock")
                 .deviceClass(DeviceClass.LOCK)
@@ -146,7 +146,7 @@ class ExtensibleDeviceTest {
 
     @Test
     void lockDeviceIsInstanceOfDeviceEntity() {
-        LockDevice device = LockDevice.builder()
+        LockDevice device = new LockDevice.Builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Front Door Lock")
                 .deviceClass(DeviceClass.LOCK)
@@ -159,8 +159,8 @@ class ExtensibleDeviceTest {
     }
 
     @Test
-    void coverDeviceBuildsWithRequiredFields() {
-        CoverDevice device = CoverDevice.builder()
+    void coverDeviceBuildsWithPosition() {
+        CoverDevice device = new CoverDevice.Builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Living Room Blind")
                 .deviceClass(DeviceClass.COVER)
@@ -170,15 +170,30 @@ class ExtensibleDeviceTest {
                 .moving(false)
                 .build();
 
-        assertThat(device.position()).isEqualTo(75);
+        assertThat(device.position()).hasValue(75);
         assertThat(device.isMoving()).isFalse();
         assertThat(CoverDevice.CAP_POSITION).isEqualTo("position");
         assertThat(CoverDevice.CAP_MOVING).isEqualTo("isMoving");
     }
 
     @Test
+    void coverDevicePositionAbsent() {
+        CoverDevice device = new CoverDevice.Builder()
+                .deviceId(UUID.randomUUID().toString())
+                .label("Garage Door")
+                .deviceClass(DeviceClass.COVER)
+                .lastUpdated(TEST_INSTANT)
+                .tenancyId("test-tenant")
+                .moving(false)
+                .build();
+
+        assertThat(device.position()).isEmpty();
+        assertThat(device.isMoving()).isFalse();
+    }
+
+    @Test
     void coverDeviceIsInstanceOfDeviceEntity() {
-        CoverDevice device = CoverDevice.builder()
+        CoverDevice device = new CoverDevice.Builder()
                 .deviceId(UUID.randomUUID().toString())
                 .label("Living Room Blind")
                 .deviceClass(DeviceClass.COVER)
