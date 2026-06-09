@@ -62,7 +62,7 @@ PREFIX: `IOT` (issues only — foundation-tier modules use issue refs directly)
 | Java version | Java 21 | Language features; ecosystem-wide alignment |
 | Framework | Quarkus 3.x | CDI, REST client, WebSocket client, SSE |
 | Build tool | Maven (system `mvn`, no wrapper) | Ecosystem-wide convention |
-| Async model | Blocking SPIs; reactive variant deferred | Provider operations are I/O-bound but run in `@Blocking` context (startup or request handler); reactive `Uni<>` variant added when a reactive consumer exists |
+| Async model | Reactive SPIs (`Uni<>`) for discover/dispatch | Provider operations perform I/O (REST calls); `Uni<>` return types per `spi-reactive-blocking-io` protocol; corrected from blocking in C3 |
 | GroupId | `io.casehub` | Ecosystem-wide; publishes before casehub-life in build order |
 
 ### Architectural
@@ -1196,7 +1196,7 @@ Decisions that span multiple layers or are cross-cutting. Layer-specific decisio
 | State cache timing (OpenHAB) | 50ms coalescing window may be too short (split events) or too long (delayed reaction) | Open | Make window configurable; validate with real OpenHAB instance |
 | casehub-life Layer 9 timing | casehub-life needs iot-api before full provider work completes | Open | C1 (Core API) + C2 (Test Infrastructure) sufficient for casehub-life to begin Layer 9 |
 | Bridge security | WebSocket to cloud carries device state — interception risk | Open | TLS mandatory; bridge-auth-token per tenant; bridge does not store HA/OH credentials |
-| Device ID stability | HA entity_id can change; OpenHAB item names can change | Open | Provider maps platform ID to stable deviceId via a deterministic transformation; document ID stability contract |
+| Device ID stability | HA entity_id can change; OpenHAB item names can change | Accepted | HA: entity_id used verbatim; renames require refresh(); HA unique_id requires entity-registry API call and is not universally present. OH: Equipment Group name used. Documented in provider Javadoc. |
 
 ---
 

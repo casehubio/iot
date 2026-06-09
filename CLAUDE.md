@@ -25,11 +25,11 @@ mvn --batch-mode deploy -DskipTests
 
 | Module | Artifact | Purpose |
 |--------|----------|---------|
-| `iot-api` | `casehub-iot-api` | Core SPIs and typed device class hierarchy — **public API, semver discipline** |
-| `iot-homeassistant` | `casehub-iot-homeassistant` | Home Assistant provider (REST + WebSocket) and HA supplement types |
-| `iot-openhab` | `casehub-iot-openhab` | OpenHAB provider (REST + SSE, semantic model) and OpenHAB supplement types |
-| `iot-testing` | `casehub-iot-testing` | MockDeviceProvider, fixture devices, TestStateChangePublisher — test scope only |
-| `iot-bridge` | `casehub-iot-bridge` | Lightweight bridge runtime for cloud/hybrid deployment mode |
+| `api` | `casehub-iot-api` | Core SPIs (reactive `Uni<>`) and typed device class hierarchy — **public API, semver discipline** |
+| `homeassistant` | `casehub-iot-homeassistant` | Home Assistant provider (REST + WebSocket) and HA supplement types |
+| `openhab` | `casehub-iot-openhab` | OpenHAB provider (REST + SSE, semantic model) and OpenHAB supplement types |
+| `testing` | `casehub-iot-testing` | MockDeviceProvider, fixture devices, StateChangeEventPublisher — test scope only |
+| `bridge` | `casehub-iot-bridge` | Lightweight bridge runtime for cloud/hybrid deployment mode |
 
 ## Key Rules
 
