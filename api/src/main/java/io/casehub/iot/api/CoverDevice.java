@@ -17,6 +17,11 @@ public class CoverDevice extends DeviceEntity {
         this.moving = builder.moving;
     }
 
+    /**
+     * Position as a percentage: 0 = fully closed, 100 = fully open.
+     * Providers that use the opposite convention (e.g., OpenHAB Rollershutter:
+     * 0=open, 100=closed) must invert before populating this field.
+     */
     public Optional<Integer> position() {
         return Optional.ofNullable(position);
     }
