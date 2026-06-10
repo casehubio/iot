@@ -160,6 +160,7 @@ class HomeAssistantWebSocketClientTest {
         private final List<WebSocketConnection> connections = new CopyOnWriteArrayList<>();
 
         public void setMode(Mode mode) {
+            connections.clear();
             this.mode = mode;
         }
 

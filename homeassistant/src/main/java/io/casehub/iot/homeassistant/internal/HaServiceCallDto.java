@@ -8,11 +8,11 @@ import java.util.Map;
 
 public record HaServiceCallDto(
     @JsonProperty("entity_id") String entityId,
-    @JsonIgnore Map<String, Object> serviceData
+    @JsonIgnore Map<String, Object> parameters
 ) {
     @JsonAnyGetter
-    public Map<String, Object> serviceDataFlat() {
-        if (serviceData == null) return Map.of();
-        return serviceData;
+    public Map<String, Object> flatParameters() {
+        if (parameters == null) return Map.of();
+        return parameters;
     }
 }

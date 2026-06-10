@@ -8,6 +8,7 @@ import io.casehub.iot.api.ProviderStatus;
 import io.casehub.iot.api.ProviderStatusEvent;
 import io.casehub.iot.api.StateChangeEvent;
 import io.casehub.iot.homeassistant.internal.HaStateDto;
+import io.quarkus.websockets.next.CloseReason;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnError;
 import io.quarkus.websockets.next.OnOpen;
@@ -120,9 +121,11 @@ public class HomeAssistantWebSocketClient {
     }
 
     @OnClose
-    public void onClose(WebSocketClientConnection conn) {
+    public void onClose(WebSocketClientConnection conn, CloseReason reason) {
         if (!shuttingDown) {
-            LOG.info("HA WebSocket connection closed");
+            LOG.infof("HA WebSocket connection closed (code=%d, message=%s)",
+                reason != null ? reason.getCode() : -1,
+                reason != null ? reason.getMessage() : "unknown");
             cancelHeartbeat();
             cancelPongTimeout();
             fireStatus(ProviderStatus.DISCONNECTED);
