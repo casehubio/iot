@@ -5,13 +5,12 @@ import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.config.ConfigProvider;
-import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
+import org.eclipse.microprofile.rest.client.annotation.RegisterClientHeaders;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 import java.util.List;
 
 @RegisterRestClient(configKey = "openhab")
-@ClientHeaderParam(name = "Authorization", value = "{lookupToken}")
+@RegisterClientHeaders(OpenHabAuthHeadersFactory.class)
 public interface OpenHabRestClient {
 
     @GET @Path("/rest/items")
@@ -24,9 +23,4 @@ public interface OpenHabRestClient {
     Uni<Response> sendCommand(
         @PathParam("itemName") String itemName,
         String command);
-
-    default String lookupToken() {
-        return "Bearer " + ConfigProvider.getConfig()
-                .getValue("casehub.iot.openhab.token", String.class);
-    }
 }

@@ -71,6 +71,16 @@ class OpenHabProviderTest {
     }
 
     @Test
+    void discoverySendsBearerAuthHeader() {
+        OpenHabMockServerResource.setEquipmentBody("[]");
+
+        provider.discover().await().indefinitely();
+
+        assertThat(OpenHabMockServerResource.lastAuthHeader.get())
+                .isEqualTo("Bearer test-token");
+    }
+
+    @Test
     void statusDelegatesToSseClient() {
         ProviderStatus status = provider.status();
 

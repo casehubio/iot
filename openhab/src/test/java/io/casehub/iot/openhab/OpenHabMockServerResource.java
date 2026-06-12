@@ -38,6 +38,9 @@ public class OpenHabMockServerResource implements QuarkusTestResourceLifecycleMa
     /** Queue for item command (POST) responses. */
     static final LinkedBlockingDeque<MockResponse> commandResponses = new LinkedBlockingDeque<>();
 
+    /** Last Authorization header seen on a non-SSE request. */
+    static final AtomicReference<String> lastAuthHeader = new AtomicReference<>();
+
     /**
      * Set the JSON body for Equipment discovery responses.
      * Every {@code GET /rest/items?tags=Equipment} request returns this body
@@ -60,6 +63,7 @@ public class OpenHabMockServerResource implements QuarkusTestResourceLifecycleMa
     static void reset() {
         equipmentBody.set("[]");
         commandResponses.clear();
+        lastAuthHeader.set(null);
     }
 
     @Override
@@ -69,6 +73,7 @@ public class OpenHabMockServerResource implements QuarkusTestResourceLifecycleMa
             @Override
             public MockResponse dispatch(RecordedRequest request) {
                 String path = request.getPath();
+                lastAuthHeader.set(request.getHeader("Authorization"));
 
                 // SSE subscription — return empty stream (closes immediately → triggers reconnect)
                 if (path != null && path.contains("/rest/events")) {
