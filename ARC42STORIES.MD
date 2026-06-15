@@ -905,10 +905,10 @@ Not closed here: OpenHAB support (L4), bridge relay (L6).
 ### Layer — OpenHAB
 
 **Participates in chapters:** C4, C5
-**Architectural patterns:** REST Client, SSE Stream, State Cache with Coalescing, Semantic Model Mapping
-**Key protocols:** OpenHAB REST API, OpenHAB SSE API, OpenHAB Semantic Model
-**Design refs:** `docs/superpowers/specs/2026-06-05-iot-foundation-design.md` §OpenHAB provider
-**Issues:** casehubio/iot#4
+**Architectural patterns:** REST Client, SSE Stream, State Cache with Coalescing, Semantic Model Mapping, Layered Discovery (Equipment + Thing), ResolvedDeviceFields shared construction
+**Key protocols:** OpenHAB REST API, OpenHAB SSE API, OpenHAB Semantic Model, OpenHAB Thing API
+**Design refs:** `docs/superpowers/specs/2026-06-05-iot-foundation-design.md` §OpenHAB provider, `docs/superpowers/specs/2026-06-14-thing-scoped-discovery-design.md`
+**Issues:** casehubio/iot#4, casehubio/iot#11, casehubio/iot#13
 **Navigation:** `git log --grep="#4" --oneline`
 **Blog:** 🔲
 **Improvement refs:** 🔲
@@ -919,11 +919,13 @@ Not closed here: OpenHAB support (L4), bridge relay (L6).
 **Before:** HA provider works; OpenHAB users excluded.
 **After:** `OpenHABProvider` discovers devices via semantic model, subscribes via SSE, dispatches via item commands. State cache coalesces item-level events into device-level StateChangeEvent.
 
-- **Semantic model discovery** — `GET /rest/items?tags=Equipment&recursive=true` maps Equipment Groups with Point items to common device hierarchy
-- **SSE subscription** — `GET /rest/events?topics=openhab/items/*/statechanged` receives item-level events
-- **State cache** — `Map<String, DeviceEntity>` keyed by Equipment Group name; multiple item events within 50ms coalesced into one StateChangeEvent
-- **Command dispatch** — `POST /rest/items/{itemName}` with value mapped from DeviceCommand; target item resolved via semantic Point/Property tags
-- **Supplement types** — OpenHABThermostatItem (heatingDemand, coolingDemand), OpenHABRollershutter (upDown), OpenHABColorItem (hsb)
+- **Dual-layer discovery** — Equipment (semantic model) and Thing (channel metadata) discovery run in parallel and merge. Equipment-mapped devices get rich semantic-tag resolution; Thing-only devices get basic mapping from channel `itemType`. Controlled by `thingDiscoveryEnabled` config (default true)
+- **SSE subscription** — `openhab/items/*/statechanged,openhab/things/*/statuschanged` receives both item-level events and Thing status changes in a single connection
+- **State cache** — Equipment cache keyed by Equipment Group name + Thing cache keyed by Thing UID; multiple item events within 50ms coalesced into one StateChangeEvent
+- **Thing status** — `ThingStatusInfoChangedEvent` provides real-time availability for Equipment-backed devices (OFFLINE overrides item-derived availability) and Thing-only devices
+- **Command dispatch** — `POST /rest/items/{itemName}` with value mapped from DeviceCommand; target item resolved via semantic tags (Equipment path) or channel `itemType` (Thing path)
+- **Supplement types** — OpenHabThermostat (heatingDemand, coolingDemand), OpenHabRollershutter (upDown), OpenHabLight (hsb)
+- **Shared construction** — `ResolvedDeviceFields` + `OpenHabDeviceBuilder` eliminates mapper duplication between Equipment and Thing resolution strategies
 
 Not closed here: bridge relay (L6).
 
@@ -949,14 +951,14 @@ Not closed here: bridge relay (L6).
 
 #### Key wiring
 
-- **Semantic model is a hard prerequisite** — without Equipment Groups, the provider cannot map items to devices. Document prominently. Thing-scoped discovery fallback is deferred.
+- **Semantic model is the primary path; Thing fallback is the secondary** — Equipment Groups give rich field mapping via semantic tags. Thing-scoped discovery adds basic mapping from channel `itemType` when no semantic model is configured. Both always run; merge rules: any Equipment overlap → Equipment wins.
 - **Equipment Group → DeviceEntity mapping** — Equipment semantic tag determines DeviceClass. Member Point items provide state values. Each Equipment Group becomes one DeviceEntity.
 - **50ms coalescing window** — when an item event arrives, schedule a 50ms timer for the owning Equipment Group. If another item event for the same Equipment arrives within the window, reset the timer and accumulate the change. Fire StateChangeEvent when the timer expires.
 - **Command target resolution** — `DeviceCommand.action` + semantic Point/Property tags on member items determine which item receives the command value. E.g. `"set_temperature"` → find the member item with `Point_Setpoint` and `Property_Temperature`.
 
 #### Architectural decisions
 
-- **Why semantic model only (no Thing-scoped fallback):** Things map 1:1 to physical devices but lack the capability structure Equipment Groups provide. A Thing's channels are opaque strings; an Equipment Group's Point items carry semantic tags that map to the DeviceEntity capability model. Thing fallback adds significant complexity for a weaker mapping. Deferred.
+- **Why dual-layer (Equipment + Thing), not Equipment-only:** Things map 1:1 to physical devices via channel `itemType` — universal across all bindings. Equipment Groups give richer mapping via semantic tags. Running both layers always and merging (Equipment wins on overlap) gives maximum coverage without sacrificing accuracy for installations that have the semantic model. Three DeviceClasses (FAN, LOCK, PRESENCE_SENSOR) require semantic tags and cannot be inferred from channels alone — documented as coverage gaps.
 - **Why 50ms coalescing, not immediate fire:** OpenHAB fires one SSE event per item state change. A thermostat setpoint adjustment changes both `currentTemperature` and `targetTemperature` — two events milliseconds apart. Without coalescing, consumers receive two StateChangeEvents for what is semantically one device state transition. 50ms is long enough to catch multi-item updates, short enough for responsive automation.
 
 #### Pattern introduced
@@ -1170,6 +1172,14 @@ Decisions that span multiple layers or are cross-cutting. Layer-specific decisio
 **Decision:** CDI Event.fireAsync. Standard Quarkus pattern. No subscription management.
 **Consequences:** No backpressure. IoT state changes are low-frequency (seconds, not milliseconds). CDI queues events internally. High-frequency sensors batch at provider level.
 **Alternatives rejected:** Multi<> adds subscription lifecycle complexity unnecessary at IoT event frequency. Callbacks require manual registration and deregistration.
+
+### ADR-0004 — ResolvedDeviceFields shared construction (not duplicated mappers)
+
+**Date:** 2026-06-15
+**Context:** Thing-scoped discovery needs the same device construction as Equipment-based discovery. The variation point is resolution (how you find the field value — semantic tags vs channel itemType), not construction (how you build the DeviceEntity). Duplicating 7+ `mapXxx` methods creates a synchronisation hazard.
+**Decision:** Extract a `ResolvedDeviceFields` record that both resolution strategies produce. A single `OpenHabDeviceBuilder.build()` constructs the correct entity type. DeviceClass refinement (SENSOR → POWER_SENSOR, SENSOR → PRESENCE_SENSOR) happens in the resolution strategy, not in the tag dispatch method.
+**Consequences:** Adding a new device type requires updating one construction path. Parsing utilities (temperature, HSB, cover position) are shared unchanged. The `ResolvedDeviceFields` record carries all possible fields — some are always null for a given device class. This is acceptable: the record is short-lived (constructed, used for building, discarded).
+**Alternatives rejected:** Duplicated `mapXxx` methods in a separate `OpenHabThingMapper` — identical construction code in two files, bug fixes must be synchronized.
 
 ---
 
