@@ -14,14 +14,9 @@ import java.util.Map;
 
 /**
  * Resolves an OpenHAB Thing and its linked items' states to {@link ResolvedDeviceFields}
- * using channel metadata (itemType, channelTypeUID, id) instead of semantic tags.
- *
- * <p>The resolver scans all STATE channels on a Thing, determines the candidate
- * {@link DeviceClass} for each, and returns the <em>highest-priority</em> candidate
- * (lowest priority number wins). Channel iteration order does not affect the result.</p>
- *
- * <p>This is a plain class (not a CDI bean) — constructed with {@code tenancyId}.
- * Same pattern as {@link OpenHabEntityMapper}'s test constructor.</p>
+ * using a two-signal model: thing-type category (binding-maintained metadata) merged with
+ * channel itemType inference. Revealing categories (Lock, MotionDetector, Lightbulb)
+ * override channels; coarse categories (Sensor) defer to channel refinement.
  */
 public class OpenHabThingResolver {
 
@@ -39,44 +34,82 @@ public class OpenHabThingResolver {
     private static final int PRIORITY_NONE = Integer.MAX_VALUE;
 
     private final String tenancyId;
+    private final Map<String, String> thingTypeCategories;
 
-    public OpenHabThingResolver(String tenancyId) {
+    public OpenHabThingResolver(String tenancyId, Map<String, String> thingTypeCategories) {
         this.tenancyId = tenancyId;
+        this.thingTypeCategories = Map.copyOf(thingTypeCategories);
     }
 
-    /**
-     * Resolves a Thing and its linked items' states to {@link ResolvedDeviceFields}.
-     *
-     * @param thing      the Thing DTO with channels
-     * @param itemStates map of item name → item DTO (with current state)
-     * @param now        timestamp for lastUpdated
-     * @return resolved fields, or {@code null} if no mappable STATE channels exist
-     */
     public ResolvedDeviceFields resolve(OpenHabThingDto thing,
                                         Map<String, OpenHabItemDto> itemStates,
                                         Instant now) {
         List<OpenHabChannelDto> stateChannels = thing.stateChannels();
 
-        // Phase 1: determine DeviceClass by scanning all channels for priority
-        DeviceClass deviceClass = inferDeviceClass(stateChannels);
+        DeviceClass channelClass = inferDeviceClass(stateChannels);
+        DeviceClass categoryClass = mapCategory(thing.thingTypeUID());
+        DeviceClass deviceClass = mergeInference(channelClass, categoryClass);
         if (deviceClass == null) {
             return null;
         }
 
-        boolean available = thing.isOnline();
+        String category = thing.thingTypeUID() != null
+                ? thingTypeCategories.get(thing.thingTypeUID()) : null;
 
         ResolvedDeviceFields.Builder b = ResolvedDeviceFields.builder()
                 .deviceId(thing.uid())
                 .label(thing.label() != null ? thing.label() : thing.uid())
-                .available(available)
+                .available(thing.isOnline())
                 .now(now)
                 .tenancyId(tenancyId)
                 .deviceClass(deviceClass);
 
-        // Phase 2: populate fields from channels
         populateFields(b, deviceClass, stateChannels, itemStates);
+        enrichSensorType(b, deviceClass, category);
 
         return b.build();
+    }
+
+    // ---- category → DeviceClass mapping (case-insensitive) ----
+
+    DeviceClass mapCategory(String thingTypeUID) {
+        if (thingTypeUID == null) return null;
+        String category = thingTypeCategories.get(thingTypeUID);
+        if (category == null) return null;
+        return switch (category.toLowerCase(Locale.ROOT)) {
+            case "lightbulb" -> DeviceClass.LIGHT;
+            case "radiatorcontrol" -> DeviceClass.THERMOSTAT;
+            case "lock" -> DeviceClass.LOCK;
+            case "blinds" -> DeviceClass.COVER;
+            case "poweroutlet", "wallswitch" -> DeviceClass.SWITCH;
+            case "inverter" -> DeviceClass.POWER_SENSOR;
+            case "sensor", "smokedetector", "door", "frontdoor", "window" -> DeviceClass.SENSOR;
+            case "motiondetector" -> DeviceClass.PRESENCE_SENSOR;
+            case "speaker", "receiver", "screen", "projector" -> DeviceClass.MEDIA_PLAYER;
+            default -> null;
+        };
+    }
+
+    DeviceClass mergeInference(DeviceClass channelClass, DeviceClass categoryClass) {
+        if (categoryClass != null && categoryClass != DeviceClass.SENSOR) {
+            return categoryClass;
+        }
+        if (categoryClass == DeviceClass.SENSOR) {
+            return channelClass != null ? channelClass : DeviceClass.SENSOR;
+        }
+        return channelClass;
+    }
+
+    // ---- SensorType enrichment from category ----
+
+    private void enrichSensorType(ResolvedDeviceFields.Builder b, DeviceClass deviceClass, String category) {
+        if (deviceClass != DeviceClass.SENSOR || category == null) return;
+        SensorType current = b.currentSensorType();
+        if (current != null && current != SensorType.GENERIC) return;
+        switch (category.toLowerCase(Locale.ROOT)) {
+            case "door", "frontdoor", "window" -> b.sensorType(SensorType.DOOR_WINDOW);
+            default -> { }
+        }
     }
 
     // ---- DeviceClass inference (priority-based, scan all channels) ----
@@ -105,8 +138,6 @@ public class OpenHabThingResolver {
             }
         }
 
-        // Thermostat disambiguation: 2+ temperature channels with at least one setpoint
-        // THERMOSTAT has priority 6 — wins over single-temperature SENSOR (7) and below
         if (temperatureCount >= 2 && hasSetpointTemp && PRIORITY_THERMOSTAT < bestPriority) {
             return DeviceClass.THERMOSTAT;
         }
@@ -176,13 +207,15 @@ public class OpenHabThingResolver {
                     b.numericValue(OpenHabEntityMapper.parseOrNull(state));
                     b.sensorType(SensorType.GENERIC);
                 }
-                case "Contact" -> b.sensorType(SensorType.GENERIC);
+                case "Contact" -> {
+                    b.sensorType(SensorType.GENERIC);
+                    populateContact(b, state, deviceClass);
+                }
                 case "String" -> { /* handled separately for thermostat mode */ }
                 default -> { /* ignore unmapped channel types */ }
             }
         }
 
-        // Sensor type for single temperature (not thermostat)
         if (deviceClass == DeviceClass.SENSOR) {
             for (OpenHabChannelDto ch : stateChannels) {
                 if ("Number:Temperature".equals(ch.itemType())) {
@@ -194,12 +227,10 @@ public class OpenHabThingResolver {
             }
         }
 
-        // Thermostat mode resolution
         if (deviceClass == DeviceClass.THERMOSTAT) {
             b.mode(resolveThingHvacMode(stateChannels, itemStates));
         }
 
-        // Rollershutter flag
         if (deviceClass == DeviceClass.COVER) {
             b.isRollershutter(true);
         }
@@ -224,8 +255,19 @@ public class OpenHabThingResolver {
     private void populateSwitch(ResolvedDeviceFields.Builder b, String state, DeviceClass deviceClass) {
         if (deviceClass == DeviceClass.SWITCH) {
             b.on("ON".equals(state));
+        } else if (deviceClass == DeviceClass.LOCK) {
+            b.locked("ON".equals(state));
+        } else if (deviceClass == DeviceClass.PRESENCE_SENSOR) {
+            b.present("ON".equals(state));
         }
-        // For thermostat, switch state is handled by resolveThingHvacMode
+    }
+
+    private void populateContact(ResolvedDeviceFields.Builder b, String state, DeviceClass deviceClass) {
+        if (deviceClass == DeviceClass.LOCK) {
+            b.locked("CLOSED".equals(state));
+        } else if (deviceClass == DeviceClass.PRESENCE_SENSOR) {
+            b.present("OPEN".equals(state));
+        }
     }
 
     private void populateRollershutter(ResolvedDeviceFields.Builder b, String state) {
@@ -253,7 +295,6 @@ public class OpenHabThingResolver {
 
     private ThermostatMode resolveThingHvacMode(List<OpenHabChannelDto> stateChannels,
                                                  Map<String, OpenHabItemDto> itemStates) {
-        // 1. Check for Switch-type STATE channel — if OFF, mode = OFF
         for (OpenHabChannelDto ch : stateChannels) {
             if ("Switch".equals(ch.itemType())) {
                 String state = resolveState(ch, itemStates);
@@ -263,7 +304,6 @@ public class OpenHabThingResolver {
             }
         }
 
-        // 2. Look for String-type STATE channel with "mode" in channelTypeUID or id
         for (OpenHabChannelDto ch : stateChannels) {
             if ("String".equals(ch.itemType())) {
                 String combined = ((ch.channelTypeUID() != null ? ch.channelTypeUID() : "")
@@ -275,7 +315,6 @@ public class OpenHabThingResolver {
             }
         }
 
-        // 3. No mode channel — default to OFF
         return ThermostatMode.OFF;
     }
 

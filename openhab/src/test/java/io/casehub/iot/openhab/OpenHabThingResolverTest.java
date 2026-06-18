@@ -20,12 +20,18 @@ class OpenHabThingResolverTest {
     private static final Instant NOW = Instant.parse("2026-06-15T12:00:00Z");
     private static final String TENANT = "test-tenant";
 
-    private final OpenHabThingResolver resolver = new OpenHabThingResolver(TENANT);
+    private final OpenHabThingResolver resolver = new OpenHabThingResolver(TENANT, Map.of());
 
     // ---- helper methods ----
 
     private OpenHabThingDto thing(String uid, String label, String status, OpenHabChannelDto... channels) {
         return new OpenHabThingDto(uid, label, "binding:type",
+                new OpenHabStatusInfoDto(status, "NONE"), List.of(channels), null);
+    }
+
+    private OpenHabThingDto thingWithType(String uid, String label, String thingTypeUID,
+                                          String status, OpenHabChannelDto... channels) {
+        return new OpenHabThingDto(uid, label, thingTypeUID,
                 new OpenHabStatusInfoDto(status, "NONE"), List.of(channels), null);
     }
 
@@ -52,7 +58,13 @@ class OpenHabThingResolverTest {
         return map;
     }
 
-    // ---- 1. Color channel → LIGHT, HSB populated, on=true when brightness > 0 ----
+    private OpenHabThingResolver resolverWithCategories(Map<String, String> categories) {
+        return new OpenHabThingResolver(TENANT, categories);
+    }
+
+    // =====================================================================
+    //  Channel-based inference (existing tests — unchanged behavior)
+    // =====================================================================
 
     @Test
     void colorChannelMapsToLightWithHsb() {
@@ -72,8 +84,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.on()).isTrue();
     }
 
-    // ---- 2. Dimmer channel (no Color) → LIGHT with brightness ----
-
     @Test
     void dimmerChannelMapsToLightWithBrightness() {
         var t = thing("thing:dimmer1", "Dimmer Light", "ONLINE",
@@ -88,8 +98,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.on()).isTrue();
     }
 
-    // ---- 3. Switch-only → SWITCH, on=true when "ON" ----
-
     @Test
     void switchOnlyMapsToSwitch() {
         var t = thing("thing:switch1", "Wall Switch", "ONLINE",
@@ -102,8 +110,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SWITCH);
         assertThat(fields.on()).isTrue();
     }
-
-    // ---- 4. Rollershutter → COVER, position inverted (OH 30 → CaseHub 70) ----
 
     @Test
     void rollershutterMapsToCoverWithInvertedPosition() {
@@ -119,8 +125,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.isRollershutter()).isTrue();
     }
 
-    // ---- 5. Player → MEDIA_PLAYER ----
-
     @Test
     void playerChannelMapsToMediaPlayer() {
         var t = thing("thing:player1", "Media Player", "ONLINE",
@@ -132,8 +136,6 @@ class OpenHabThingResolverTest {
         assertThat(fields).isNotNull();
         assertThat(fields.deviceClass()).isEqualTo(DeviceClass.MEDIA_PLAYER);
     }
-
-    // ---- 6. Number:Power → POWER_SENSOR ----
 
     @Test
     void numberPowerMapsToPowerSensor() {
@@ -148,8 +150,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.power()).isEqualByComparingTo("1500");
     }
 
-    // ---- 7. Number:Energy → POWER_SENSOR with energy ----
-
     @Test
     void numberEnergyMapsToPowerSensorWithEnergy() {
         var t = thing("thing:energy1", "Energy Meter", "ONLINE",
@@ -162,8 +162,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.deviceClass()).isEqualTo(DeviceClass.POWER_SENSOR);
         assertThat(fields.energy()).isEqualByComparingTo("42.7");
     }
-
-    // ---- 8. Dual Number:Temperature with setpoint channelTypeUID → THERMOSTAT ----
 
     @Test
     void dualTemperatureWithSetpointMapsThermostat() {
@@ -181,8 +179,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.targetTemperature().value()).isEqualByComparingTo("22.0");
     }
 
-    // ---- 9. Single Number:Temperature → SENSOR with SensorType.TEMPERATURE ----
-
     @Test
     void singleTemperatureMapsToSensor() {
         var t = thing("thing:sensor1", "Temp Sensor", "ONLINE",
@@ -196,8 +192,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.sensorType()).isEqualTo(SensorType.TEMPERATURE);
         assertThat(fields.numericValue()).isEqualByComparingTo("18.3");
     }
-
-    // ---- 10. Number:Humidity → SENSOR with SensorType.HUMIDITY ----
 
     @Test
     void numberHumidityMapsToSensorHumidity() {
@@ -213,8 +207,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.numericValue()).isEqualByComparingTo("68.5");
     }
 
-    // ---- 11. Contact → SENSOR with SensorType.GENERIC ----
-
     @Test
     void contactMapsToSensorGeneric() {
         var t = thing("thing:contact1", "Door Sensor", "ONLINE",
@@ -227,8 +219,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SENSOR);
         assertThat(fields.sensorType()).isEqualTo(SensorType.GENERIC);
     }
-
-    // ---- 12. Bare Number → SENSOR with SensorType.GENERIC ----
 
     @Test
     void bareNumberMapsToSensorGeneric() {
@@ -244,8 +234,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.numericValue()).isEqualByComparingTo("42");
     }
 
-    // ---- 13. OFFLINE Thing → available=false ----
-
     @Test
     void offlineThingMarksUnavailable() {
         var t = thing("thing:offline1", "Offline Switch", "OFFLINE",
@@ -258,8 +246,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.available()).isFalse();
     }
 
-    // ---- 14. No mappable STATE channels → null ----
-
     @Test
     void noMappableChannelsReturnsNull() {
         var t = thing("thing:empty1", "Empty Thing", "ONLINE");
@@ -269,8 +255,6 @@ class OpenHabThingResolverTest {
 
         assertThat(fields).isNull();
     }
-
-    // ---- 15. TRIGGER channels excluded from inference ----
 
     @Test
     void triggerChannelsExcludedFromInference() {
@@ -282,8 +266,6 @@ class OpenHabThingResolverTest {
 
         assertThat(fields).isNull();
     }
-
-    // ---- 16. Priority: Switch + bare Number → SWITCH (priority 9 beats 11) ----
 
     @Test
     void prioritySwitchBeatsNumber() {
@@ -299,8 +281,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.on()).isTrue();
     }
 
-    // ---- 17. Priority: Color + Switch → LIGHT (priority 1 beats 9) ----
-
     @Test
     void priorityColorBeatsSwitch() {
         var t = thing("thing:priority2", "Color + Switch", "ONLINE",
@@ -314,8 +294,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.deviceClass()).isEqualTo(DeviceClass.LIGHT);
         assertThat(fields.hsb()).isNotNull();
     }
-
-    // ---- 18. Thermostat mode from String channel with "mode" in id ----
 
     @Test
     void thermostatModeFromStringChannel() {
@@ -334,8 +312,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.mode()).isEqualTo(ThermostatMode.HEAT);
     }
 
-    // ---- 19. Thermostat mode defaults to OFF when no mode channel ----
-
     @Test
     void thermostatModeDefaultsToOff() {
         var t = thing("thing:therm3", "No Mode Thermostat", "ONLINE",
@@ -350,8 +326,6 @@ class OpenHabThingResolverTest {
         assertThat(fields.deviceClass()).isEqualTo(DeviceClass.THERMOSTAT);
         assertThat(fields.mode()).isEqualTo(ThermostatMode.OFF);
     }
-
-    // ---- 20. Switch OFF on thermostat → mode OFF ----
 
     @Test
     void thermostatSwitchOffOverridesMode() {
@@ -369,5 +343,250 @@ class OpenHabThingResolverTest {
         assertThat(fields).isNotNull();
         assertThat(fields.deviceClass()).isEqualTo(DeviceClass.THERMOSTAT);
         assertThat(fields.mode()).isEqualTo(ThermostatMode.OFF);
+    }
+
+    // =====================================================================
+    //  Category-based inference (new tests)
+    // =====================================================================
+
+    @Test
+    void revealingCategoryMapsToDeviceClass() {
+        var categories = Map.of("hue:0210", "Lightbulb");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:hue1", "Hue Bulb", "hue:0210", "ONLINE",
+                channel("power", "Switch", "switchItem"));
+        var itemStates = items("switchItem", "ON");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.LIGHT);
+    }
+
+    @Test
+    void lockCategoryWithSwitchOnPopulatesLocked() {
+        var categories = Map.of("yale:lock", "Lock");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:lock1", "Front Door", "yale:lock", "ONLINE",
+                channel("lock", "Switch", "lockItem"));
+        var itemStates = items("lockItem", "ON");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.LOCK);
+        assertThat(fields.locked()).isTrue();
+    }
+
+    @Test
+    void lockCategoryWithContactClosedPopulatesLocked() {
+        var categories = Map.of("yale:lock", "Lock");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:lock2", "Back Door", "yale:lock", "ONLINE",
+                channel("state", "Contact", "contactItem"));
+        var itemStates = items("contactItem", "CLOSED");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.LOCK);
+        assertThat(fields.locked()).isTrue();
+    }
+
+    @Test
+    void lockCategoryWithNoChannelsDefaultsToUnlocked() {
+        var categories = Map.of("yale:lock", "Lock");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:lock3", "Garage Lock", "yale:lock", "ONLINE");
+
+        var fields = r.resolve(t, Map.of(), NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.LOCK);
+        assertThat(fields.locked()).isNull();
+    }
+
+    @Test
+    void motionDetectorWithSwitchOnPopulatesPresent() {
+        var categories = Map.of("zwave:motion", "MotionDetector");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:motion1", "Hallway Motion", "zwave:motion", "ONLINE",
+                channel("alarm", "Switch", "motionItem"));
+        var itemStates = items("motionItem", "ON");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.PRESENCE_SENSOR);
+        assertThat(fields.present()).isTrue();
+    }
+
+    @Test
+    void motionDetectorWithContactOpenPopulatesPresent() {
+        var categories = Map.of("zwave:motion", "MotionDetector");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:motion2", "Doorway Motion", "zwave:motion", "ONLINE",
+                channel("state", "Contact", "contactItem"));
+        var itemStates = items("contactItem", "OPEN");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.PRESENCE_SENSOR);
+        assertThat(fields.present()).isTrue();
+    }
+
+    @Test
+    void sensorCategoryDefersToChannelRefinement() {
+        var categories = Map.of("shelly:pm", "Sensor");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:pm1", "Power Monitor", "shelly:pm", "ONLINE",
+                channel("power", "Number:Power", "powerItem"));
+        var itemStates = items("powerItem", "1500");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.POWER_SENSOR);
+    }
+
+    @Test
+    void sensorCategoryWithThermostatDisambiguation() {
+        var categories = Map.of("knx:device", "Sensor");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:knx1", "KNX HVAC", "knx:device", "ONLINE",
+                channel("temperature", "Number:Temperature", "tempItem"),
+                channelWithType("setpoint", "Number:Temperature",
+                        "hvac:setpoint-temperature", "setpointItem"));
+        var itemStates = items("tempItem", "21.5", "setpointItem", "22.0");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.THERMOSTAT);
+    }
+
+    @Test
+    void sensorCategoryWithNoRefinableChannels() {
+        var categories = Map.of("generic:sensor", "Sensor");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:generic1", "Generic Sensor", "generic:sensor", "ONLINE",
+                channel("state", "String", "stringItem"));
+        var itemStates = items("stringItem", "OK");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SENSOR);
+    }
+
+    @Test
+    void doorCategoryEnrichesSensorTypeToDoorWindow() {
+        var categories = Map.of("zwave:door", "Door");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:door1", "Front Door", "zwave:door", "ONLINE",
+                channel("state", "Contact", "contactItem"));
+        var itemStates = items("contactItem", "OPEN");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SENSOR);
+        assertThat(fields.sensorType()).isEqualTo(SensorType.DOOR_WINDOW);
+    }
+
+    @Test
+    void unknownCategoryFallsThroughToChannelInference() {
+        var categories = Map.of("ring:camera", "Camera");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:cam1", "Ring Camera", "ring:camera", "ONLINE",
+                channel("power", "Switch", "switchItem"));
+        var itemStates = items("switchItem", "ON");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SWITCH);
+    }
+
+    @Test
+    void nullCategoryFallsThroughToChannelInference() {
+        var t = thing("thing:nocat1", "No Category", "ONLINE",
+                channel("power", "Switch", "switchItem"));
+        var itemStates = items("switchItem", "ON");
+
+        var fields = resolver.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SWITCH);
+    }
+
+    @Test
+    void hvacFallsThroughToChannelInference() {
+        var categories = Map.of("daikin:ac", "HVAC");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:ac1", "Daikin AC", "daikin:ac", "ONLINE",
+                channel("power", "Switch", "switchItem"));
+        var itemStates = items("switchItem", "ON");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SWITCH);
+    }
+
+    @Test
+    void garageDoorFallsThroughToChannelInference() {
+        var categories = Map.of("gogogate:garage", "GarageDoor");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:garage1", "Garage", "gogogate:garage", "ONLINE",
+                channel("power", "Switch", "switchItem"));
+        var itemStates = items("switchItem", "ON");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SWITCH);
+    }
+
+    @Test
+    void categoryRescuesNullChannelThing() {
+        var categories = Map.of("yale:lock", "Lock");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:lock4", "Smart Lock", "yale:lock", "ONLINE",
+                channel("state", "String", "stringItem"));
+        var itemStates = items("stringItem", "LOCKED");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.LOCK);
+    }
+
+    @Test
+    void categoryMatchingIsCaseInsensitive() {
+        var categories = Map.of("hue:bulb", "lightbulb");
+        var r = resolverWithCategories(categories);
+        var t = thingWithType("thing:hue2", "Hue Light", "hue:bulb", "ONLINE",
+                channel("power", "Switch", "switchItem"));
+        var itemStates = items("switchItem", "ON");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.LIGHT);
+    }
+
+    @Test
+    void emptyCategoryMapDegracesGracefully() {
+        var r = resolverWithCategories(Map.of());
+        var t = thing("thing:switch2", "Switch", "ONLINE",
+                channel("power", "Switch", "switchItem"));
+        var itemStates = items("switchItem", "ON");
+
+        var fields = r.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SWITCH);
     }
 }

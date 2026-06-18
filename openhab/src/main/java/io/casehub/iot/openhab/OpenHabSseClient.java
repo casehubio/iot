@@ -12,6 +12,7 @@ import io.casehub.iot.openhab.internal.OpenHabSseEventDto;
 import io.casehub.iot.openhab.internal.OpenHabStatePayloadDto;
 import io.casehub.iot.openhab.internal.OpenHabStatusInfoDto;
 import io.casehub.iot.openhab.internal.OpenHabThingDto;
+import io.casehub.iot.openhab.internal.OpenHabThingTypeDto;
 import io.smallrye.mutiny.Uni;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -64,6 +65,8 @@ public class OpenHabSseClient {
     private static final Logger LOG = Logger.getLogger(OpenHabSseClient.class);
 
     @Inject @RestClient OpenHabRestClient restClient;
+
+    private volatile Map<String, String> categoryMapCached;
     @Inject @RestClient OpenHabSseRestClient sseRestClient;
     @Inject OpenHabEntityMapper mapper;
     @Inject OpenHabConfig config;
@@ -135,7 +138,7 @@ public class OpenHabSseClient {
      */
     @jakarta.annotation.PostConstruct
     void init() {
-        this.thingResolver = new OpenHabThingResolver(config.tenancyId());
+        this.thingResolver = new OpenHabThingResolver(config.tenancyId(), Map.of());
     }
 
     /** Test constructor — bypasses CDI for unit testing cache and resolution logic. */
@@ -173,11 +176,26 @@ public class OpenHabSseClient {
         return Uni.combine().all().unis(
             restClient.getItems("Equipment", true),
             restClient.getThings()
-                .onFailure().recoverWithItem(List.of())
+                .onFailure().recoverWithItem(List.of()),
+            categoryMapCached != null
+                ? Uni.createFrom().item(List.<OpenHabThingTypeDto>of())
+                : restClient.getThingTypes().onFailure().recoverWithItem(List.of())
         ).asTuple()
         .chain(tuple -> {
             List<OpenHabItemDto> equipments = tuple.getItem1();
             List<OpenHabThingDto> things = tuple.getItem2();
+            List<OpenHabThingTypeDto> thingTypes = tuple.getItem3();
+
+            if (categoryMapCached == null && !thingTypes.isEmpty()) {
+                Map<String, String> map = new HashMap<>();
+                for (OpenHabThingTypeDto tt : thingTypes) {
+                    if (tt.category() != null && !tt.category().isBlank()) {
+                        map.put(tt.uid(), tt.category());
+                    }
+                }
+                categoryMapCached = Map.copyOf(map);
+                thingResolver = new OpenHabThingResolver(config.tenancyId(), categoryMapCached);
+            }
 
             // Phase 1: Equipment mapping (existing)
             populateCaches(equipments);

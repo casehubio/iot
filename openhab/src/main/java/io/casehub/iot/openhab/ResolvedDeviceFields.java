@@ -130,6 +130,7 @@ public record ResolvedDeviceFields(
         public Builder volume(Integer v) { this.volume = v; return this; }
 
         public Builder sensorType(SensorType v) { this.sensorType = v; return this; }
+        public SensorType currentSensorType() { return this.sensorType; }
         public Builder numericValue(BigDecimal v) { this.numericValue = v; return this; }
         public Builder unit(String v) { this.unit = v; return this; }
 

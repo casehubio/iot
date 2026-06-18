@@ -2,6 +2,7 @@ package io.casehub.iot.openhab;
 
 import io.casehub.iot.openhab.internal.OpenHabItemDto;
 import io.casehub.iot.openhab.internal.OpenHabThingDto;
+import io.casehub.iot.openhab.internal.OpenHabThingTypeDto;
 import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -24,6 +25,9 @@ public interface OpenHabRestClient {
 
     @GET @Path("/rest/items")
     Uni<List<OpenHabItemDto>> getAllItems();
+
+    @GET @Path("/rest/thing-types")
+    Uni<List<OpenHabThingTypeDto>> getThingTypes();
 
     @POST @Path("/rest/items/{itemName}")
     @Consumes(MediaType.TEXT_PLAIN)

@@ -40,7 +40,7 @@ class OpenHabSseClientTest {
     void setUp() {
         mapper = new OpenHabEntityMapper("test-tenant");
         objectMapper = new ObjectMapper();
-        thingResolver = new OpenHabThingResolver("test-tenant");
+        thingResolver = new OpenHabThingResolver("test-tenant", java.util.Map.of());
         sseClient = new OpenHabSseClient(mapper, objectMapper, thingResolver);
     }
 
