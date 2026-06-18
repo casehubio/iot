@@ -50,6 +50,11 @@ class OpenHabThingResolverTest {
                 itemType, "STATE", List.of(linkedItems), List.of());
     }
 
+    private OpenHabChannelDto channelWithTags(String id, String itemType, List<String> tags, String... linkedItems) {
+        return new OpenHabChannelDto("thing:" + id, id, "system:" + id,
+                itemType, "STATE", List.of(linkedItems), tags);
+    }
+
     private Map<String, OpenHabItemDto> items(String... pairs) {
         Map<String, OpenHabItemDto> map = new HashMap<>();
         for (int i = 0; i < pairs.length; i += 2) {
@@ -588,5 +593,23 @@ class OpenHabThingResolverTest {
 
         assertThat(fields).isNotNull();
         assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SWITCH);
+    }
+
+    // =====================================================================
+    //  defaultTags-based setpoint detection (#18)
+    // =====================================================================
+
+    @Test
+    void setpointDefaultTagTriggersThermostatWithoutNameMatch() {
+        var t = thing("thing:therm-tag", "Tagged Thermostat", "ONLINE",
+                channel("temperature", "Number:Temperature", "tempItem"),
+                channelWithTags("adjustment", "Number:Temperature", List.of("Setpoint"), "adjItem"));
+        var itemStates = items("tempItem", "21.0", "adjItem", "22.0");
+
+        var fields = resolver.resolve(t, itemStates, NOW);
+
+        assertThat(fields).isNotNull();
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.THERMOSTAT);
+        assertThat(fields.targetTemperature().value()).isEqualByComparingTo("22.0");
     }
 }

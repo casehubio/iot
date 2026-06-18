@@ -19,6 +19,9 @@ public record OpenHabChannelDto(
     }
 
     public boolean isSetpointChannel() {
+        if (defaultTags != null && defaultTags.stream().anyMatch(t -> "Setpoint".equalsIgnoreCase(t))) {
+            return true;
+        }
         String lower = ((channelTypeUID != null ? channelTypeUID : "") + " " + id)
                 .toLowerCase(Locale.ROOT);
         return lower.contains("setpoint") || lower.contains("target") || lower.contains("desired");
