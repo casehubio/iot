@@ -563,7 +563,7 @@ L1 and L2 appear in C1–C4: foundational — real platform data in C3/C4 may su
 - No way to test device-dependent code → MockDeviceProvider + MockDeviceRegistry (L5)
 - No repeatable device sets → Fixtures Java factory class (L5)
 - No test event publishing → StateChangeEventPublisher with auto-derived changedCapabilities (L5)
-- No state transition ergonomics → toBuilder() on all 10 device types (L1)
+- No state transition ergonomics → toBuilder() on all leaf device types and supplement types (L1)
 - No capability diffing → StateChangeEvent.deriveChangedCapabilities() (L2)
 - Availability changes not tracked → CAP_AVAILABLE in DeviceEntity.capabilities() (L1)
 
@@ -1021,7 +1021,7 @@ Not closed here: real platform integration (L3/L4), bridge (L6). YAML fixture lo
 | Device-dependent tests require live platform | CI pipeline needs HA/OH; flaky, slow, infrastructure-heavy | MockDeviceProvider — tests run without network or platform |
 | No repeatable device sets | Each test constructs devices ad-hoc; inconsistent | Fixtures Java factory class (10 methods + standardHome()) |
 | Manual changedCapabilities assembly | Tests must compute by hand; error-prone | StateChangeEvent.deriveChangedCapabilities() — also used by production providers |
-| State transitions require full rebuild | Providers and tests rebuild entire device from scratch to change one field | toBuilder() on all 10 concrete types |
+| State transitions require full rebuild | Providers and tests rebuild entire device from scratch to change one field | toBuilder() on all leaf types (no supplement subclasses) and all supplement types — extensible types (Thermostat, Light, Lock, Cover) deliberately omit toBuilder() to prevent type-slicing |
 | Availability transitions not in changedCapabilities | Device going offline silently produces empty changedCapabilities set | CAP_AVAILABLE in DeviceEntity.capabilities() base |
 
 #### Key files (delivered)
