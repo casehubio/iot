@@ -37,7 +37,7 @@ class IoTCloudEventAdapterTest {
     void setUp() {
         firedEvents = new ArrayList<>();
         Event<CloudEvent> capturingEvent = new CapturingEvent(firedEvents);
-        adapter = new IoTCloudEventAdapter(capturingEvent);
+        adapter = new IoTCloudEventAdapter(capturingEvent, MAPPER);
     }
 
     @Test
