@@ -226,6 +226,23 @@ class DeviceTypeIdResolverTest {
         assertThat(result.speed()).hasValue(3);
     }
 
+    @Test
+    void roundTripCameraDevice() throws Exception {
+        CameraDevice device = CameraDevice.builder()
+                .deviceId("cam-1").deviceClass(DeviceClass.CAMERA).label("Front Door Camera")
+                .available(true).lastUpdated(NOW).tenancyId("t1").providerId("test")
+                .streaming(true)
+                .build();
+
+        String json = mapper.writeValueAsString(device);
+        assertThat(json).contains("\"@deviceType\":\"CAMERA:CameraDevice\"");
+
+        DeviceEntity deserialized = mapper.readValue(json, DeviceEntity.class);
+        assertThat(deserialized).isInstanceOf(CameraDevice.class);
+        CameraDevice result = (CameraDevice) deserialized;
+        assertThat(result.isStreaming()).isTrue();
+    }
+
     // --- Graceful degradation: unknown compound ID falls back to common type ---
 
     @Test

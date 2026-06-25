@@ -2,12 +2,14 @@ package io.casehub.iot.bridge.agent;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.casehub.iot.api.CommandResult;
 import io.casehub.iot.api.bridge.BridgeMessage;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
 import io.quarkus.websockets.next.WebSocketClient;
 import io.quarkus.websockets.next.WebSocketClientConnection;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
@@ -33,6 +35,14 @@ public class BridgeCloudClient {
 
     @Inject
     BridgeAgentConfig config;
+
+    BridgeCloudClient() {}
+
+    // visible for testing
+    BridgeCloudClient(ObjectMapper mapper, BridgeCommandDispatcher commandDispatcher) {
+        this.mapper = mapper;
+        this.commandDispatcher = commandDispatcher;
+    }
 
     @OnOpen
     void onOpen(WebSocketClientConnection connection) {
@@ -70,21 +80,35 @@ public class BridgeCloudClient {
         }
     }
 
-    private void handleCommand(BridgeMessage.Command cmd, WebSocketClientConnection connection) {
-        commandDispatcher.dispatch(cmd.command())
-                .subscribe().with(
-                        result -> {
-                            var response = new BridgeMessage.CommandResponse(
-                                    cmd.tenancyId(), Instant.now(),
-                                    cmd.correlationId(), result);
-                            try {
-                                connection.sendTextAndAwait(mapper.writeValueAsString(response));
-                            } catch (JsonProcessingException e) {
-                                LOG.errorf("Failed to serialize command response: %s", e.getMessage());
-                            }
-                        },
-                        failure -> LOG.errorf(failure, "Command dispatch failed for correlation %s",
-                                cmd.correlationId()));
+    // visible for testing
+    void handleCommand(BridgeMessage.Command cmd, WebSocketClientConnection connection) {
+        Uni<CommandResult> result;
+        try {
+            result = commandDispatcher.dispatch(cmd.command());
+        } catch (Exception e) {
+            LOG.errorf(e, "Command dispatch threw synchronously for correlation %s",
+                    cmd.correlationId());
+            sendResponse(cmd, CommandResult.FAILED, connection);
+            return;
+        }
+        result.subscribe().with(
+                r -> sendResponse(cmd, r, connection),
+                failure -> {
+                    LOG.errorf(failure, "Command dispatch failed for correlation %s",
+                            cmd.correlationId());
+                    sendResponse(cmd, CommandResult.FAILED, connection);
+                });
+    }
+
+    private void sendResponse(BridgeMessage.Command cmd, CommandResult result,
+                               WebSocketClientConnection connection) {
+        var response = new BridgeMessage.CommandResponse(
+                cmd.tenancyId(), Instant.now(), cmd.correlationId(), result);
+        try {
+            connection.sendTextAndAwait(mapper.writeValueAsString(response));
+        } catch (JsonProcessingException e) {
+            LOG.errorf("Failed to serialize command response: %s", e.getMessage());
+        }
     }
 
     private void handleHeartbeat(BridgeMessage.Heartbeat hb, WebSocketClientConnection connection) {

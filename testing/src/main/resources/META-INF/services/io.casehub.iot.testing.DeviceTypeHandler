@@ -8,3 +8,4 @@ io.casehub.iot.testing.handlers.LockHandler
 io.casehub.iot.testing.handlers.CoverHandler
 io.casehub.iot.testing.handlers.MediaPlayerHandler
 io.casehub.iot.testing.handlers.FanHandler
+io.casehub.iot.testing.handlers.CameraHandler

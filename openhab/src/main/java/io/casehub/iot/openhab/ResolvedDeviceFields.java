@@ -50,7 +50,9 @@ public record ResolvedDeviceFields(
         BigDecimal power,
         BigDecimal energy,
         // presence sensor
-        Boolean present
+        Boolean present,
+        // camera
+        Boolean streaming
 ) {
     public ResolvedDeviceFields {
         Objects.requireNonNull(deviceId, "deviceId");
@@ -64,7 +66,7 @@ public record ResolvedDeviceFields(
         return new ResolvedDeviceFields(deviceId, label, newAvailable, now, tenancyId, deviceClass,
                 currentTemperature, targetTemperature, mode, heatingDemand, coolingDemand,
                 on, hsb, brightness, locked, position, isRollershutter, volume,
-                sensorType, numericValue, unit, power, energy, present);
+                sensorType, numericValue, unit, power, energy, present, streaming);
     }
 
     public static Builder builder() {
@@ -104,6 +106,8 @@ public record ResolvedDeviceFields(
         private BigDecimal energy;
         // presence sensor
         private Boolean present;
+        // camera
+        private Boolean streaming;
 
         public Builder deviceId(String deviceId) { this.deviceId = deviceId; return this; }
         public Builder label(String label) { this.label = label; return this; }
@@ -138,6 +142,7 @@ public record ResolvedDeviceFields(
         public Builder energy(BigDecimal v) { this.energy = v; return this; }
 
         public Builder present(Boolean v) { this.present = v; return this; }
+        public Builder streaming(Boolean v) { this.streaming = v; return this; }
 
         public ResolvedDeviceFields build() {
             return new ResolvedDeviceFields(
@@ -149,7 +154,8 @@ public record ResolvedDeviceFields(
                     volume,
                     sensorType, numericValue, unit,
                     power, energy,
-                    present
+                    present,
+                    streaming
             );
         }
     }

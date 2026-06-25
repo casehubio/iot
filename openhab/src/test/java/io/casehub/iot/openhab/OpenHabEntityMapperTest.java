@@ -538,4 +538,20 @@ class OpenHabEntityMapperTest {
         assertThat(result.lastUpdated()).isEqualTo(NOW);
         assertThat(result.tenancyId()).isEqualTo("test-tenant");
     }
+
+    // ---- 25. Camera equipment maps to CameraDevice ----
+
+    @Test
+    void cameraEquipmentMapsToCameraDevice() {
+        var eq = equipment("FrontDoorCam", "Front Door Camera",
+                List.of("Equipment", "Camera"));
+
+        var result = mapper.mapEquipment(eq, NOW);
+
+        assertThat(result).isNotNull();
+        assertThat(result).isInstanceOf(CameraDevice.class);
+        assertThat(result.deviceClass()).isEqualTo(DeviceClass.CAMERA);
+        CameraDevice camera = (CameraDevice) result;
+        assertThat(camera.isStreaming()).isFalse();
+    }
 }

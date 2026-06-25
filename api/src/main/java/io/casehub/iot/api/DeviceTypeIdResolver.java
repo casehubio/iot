@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Uses compound IDs of the form {@code "DeviceClass:SimpleClassName"}
  * (e.g. {@code "SWITCH:SwitchDevice"}, {@code "THERMOSTAT:HomeAssistantThermostat"}).
  *
- * <p>All 10 common types are registered in the static initializer.
+ * <p>All 11 common types are registered in the static initializer.
  * Vendor modules register supplement types via {@link #registerType(String, Class)}.
  *
  * <p>Deserialization tries an exact match first. On miss, it splits on {@code :}
@@ -44,11 +44,12 @@ public class DeviceTypeIdResolver extends TypeIdResolverBase {
             Map.entry("LOCK", LockDevice.class),
             Map.entry("COVER", CoverDevice.class),
             Map.entry("MEDIA_PLAYER", MediaPlayerDevice.class),
-            Map.entry("FAN", FanDevice.class)
+            Map.entry("FAN", FanDevice.class),
+            Map.entry("CAMERA", CameraDevice.class)
     );
 
     static {
-        // Register all 10 common types with compound IDs
+        // Register all 11 common types with compound IDs
         REGISTRY.put("SWITCH:SwitchDevice", SwitchDevice.class);
         REGISTRY.put("LIGHT:LightDevice", LightDevice.class);
         REGISTRY.put("THERMOSTAT:ThermostatDevice", ThermostatDevice.class);
@@ -59,6 +60,7 @@ public class DeviceTypeIdResolver extends TypeIdResolverBase {
         REGISTRY.put("COVER:CoverDevice", CoverDevice.class);
         REGISTRY.put("MEDIA_PLAYER:MediaPlayerDevice", MediaPlayerDevice.class);
         REGISTRY.put("FAN:FanDevice", FanDevice.class);
+        REGISTRY.put("CAMERA:CameraDevice", CameraDevice.class);
     }
 
     /**

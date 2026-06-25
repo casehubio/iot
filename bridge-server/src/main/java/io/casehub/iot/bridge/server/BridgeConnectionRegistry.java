@@ -47,4 +47,8 @@ public class BridgeConnectionRegistry {
     public boolean isFullyConnected() {
         return sessions.keySet().containsAll(knownTenancies);
     }
+
+    public Set<String> knownTenancies() {
+        return Set.copyOf(knownTenancies);
+    }
 }

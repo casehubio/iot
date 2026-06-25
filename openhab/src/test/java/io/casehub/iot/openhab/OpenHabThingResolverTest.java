@@ -501,7 +501,7 @@ class OpenHabThingResolverTest {
     }
 
     @Test
-    void unknownCategoryFallsThroughToChannelInference() {
+    void cameraCategoryMapsToCameraDevice() {
         var categories = Map.of("ring:camera", "Camera");
         var r = resolverWithCategories(categories);
         var t = thingWithType("thing:cam1", "Ring Camera", "ring:camera", "ONLINE",
@@ -511,7 +511,7 @@ class OpenHabThingResolverTest {
         var fields = r.resolve(t, itemStates, NOW);
 
         assertThat(fields).isNotNull();
-        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.SWITCH);
+        assertThat(fields.deviceClass()).isEqualTo(DeviceClass.CAMERA);
     }
 
     @Test

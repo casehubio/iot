@@ -84,6 +84,6 @@ class MockDeviceRegistryTest {
     void addDevicesList() {
         registry.clear();
         registry.addDevices(Fixtures.standardHome());
-        assertThat(registry.findAll()).hasSize(10);
+        assertThat(registry.findAll()).hasSize(11);
     }
 }

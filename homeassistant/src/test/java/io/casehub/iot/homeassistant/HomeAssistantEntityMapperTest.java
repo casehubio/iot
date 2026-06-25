@@ -419,6 +419,36 @@ class HomeAssistantEntityMapperTest {
         assertThat(ps.deviceClass()).isEqualTo(DeviceClass.PRESENCE_SENSOR);
     }
 
+    // --- camera ---
+
+    @Test
+    void mapsCameraStreamingState() {
+        var result = mapper.mapOne(dto("camera.front_door", "streaming", Map.of()));
+
+        assertThat(result).isInstanceOf(CameraDevice.class);
+        var cam = (CameraDevice) result;
+        assertThat(cam.isStreaming()).isTrue();
+        assertThat(cam.deviceClass()).isEqualTo(DeviceClass.CAMERA);
+    }
+
+    @Test
+    void mapsCameraIdleState() {
+        var result = mapper.mapOne(dto("camera.backyard", "idle", Map.of()));
+
+        assertThat(result).isInstanceOf(CameraDevice.class);
+        var cam = (CameraDevice) result;
+        assertThat(cam.isStreaming()).isFalse();
+    }
+
+    @Test
+    void mapsCameraRecordingAsStreaming() {
+        var result = mapper.mapOne(dto("camera.garage", "recording", Map.of()));
+
+        assertThat(result).isInstanceOf(CameraDevice.class);
+        var cam = (CameraDevice) result;
+        assertThat(cam.isStreaming()).isTrue();
+    }
+
     // --- mapAll ---
 
     @Test

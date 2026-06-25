@@ -22,6 +22,6 @@ class DeviceFixtureEquivalenceTest {
     @Test
     void yamlAndJavaProduceSameDeviceCount() {
         List<DeviceEntity> fromYaml = DeviceFixtureLoader.load("fixtures/standard-home.yaml");
-        assertThat(fromYaml).hasSize(10);
+        assertThat(fromYaml).hasSize(11);
     }
 }

@@ -1,5 +1,6 @@
 package io.casehub.iot.testing;
 
+import io.casehub.iot.api.CameraDevice;
 import io.casehub.iot.api.DeviceClass;
 import io.casehub.iot.api.DeviceEntity;
 import io.casehub.iot.api.LockDevice;
@@ -22,6 +23,7 @@ class FixturesTest {
         assertThat(Fixtures.bedroomBlinds().deviceId()).isEqualTo("cover-bedroom-1");
         assertThat(Fixtures.livingRoomSpeaker().deviceId()).isEqualTo("media-living-1");
         assertThat(Fixtures.bedroomFan().deviceId()).isEqualTo("fan-bedroom-1");
+        assertThat(Fixtures.securityCamera().deviceId()).isEqualTo("camera-security-1");
     }
 
     @Test
@@ -40,11 +42,11 @@ class FixturesTest {
     }
 
     @Test
-    void standardHomeContainsTenDistinctDevices() {
+    void standardHomeContainsElevenDistinctDevices() {
         var home = Fixtures.standardHome();
-        assertThat(home).hasSize(10);
+        assertThat(home).hasSize(11);
         var ids = home.stream().map(DeviceEntity::deviceId).collect(Collectors.toSet());
-        assertThat(ids).hasSize(10);
+        assertThat(ids).hasSize(11);
     }
 
     @Test
@@ -70,6 +72,7 @@ class FixturesTest {
         assertThat(Fixtures.bedroomBlinds().isMoving()).isFalse();
         assertThat(Fixtures.livingRoomSpeaker().isPlaying()).isFalse();
         assertThat(Fixtures.bedroomFan().isOn()).isFalse();
+        assertThat(Fixtures.securityCamera().isStreaming()).isFalse();
     }
 
     @Test

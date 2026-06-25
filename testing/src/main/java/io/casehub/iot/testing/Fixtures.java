@@ -1,5 +1,6 @@
 package io.casehub.iot.testing;
 
+import io.casehub.iot.api.CameraDevice;
 import io.casehub.iot.api.CoverDevice;
 import io.casehub.iot.api.DeviceClass;
 import io.casehub.iot.api.DeviceEntity;
@@ -102,10 +103,18 @@ public final class Fixtures {
             .tenancyId(DEFAULT_TENANT).providerId("test").on(false).build();
     }
 
+    public static CameraDevice securityCamera() {
+        return CameraDevice.builder()
+            .deviceId("camera-security-1").deviceClass(DeviceClass.CAMERA)
+            .label("Security Camera").available(true).lastUpdated(EPOCH)
+            .tenancyId(DEFAULT_TENANT).providerId("test").streaming(false).build();
+    }
+
     public static List<DeviceEntity> standardHome() {
         return List.of(
             hallwaySwitch(), livingRoomLight(), livingRoomThermostat(),
             outdoorTemperature(), frontDoorPresence(), solarPanel(),
-            frontDoorLock(), bedroomBlinds(), livingRoomSpeaker(), bedroomFan());
+            frontDoorLock(), bedroomBlinds(), livingRoomSpeaker(), bedroomFan(),
+            securityCamera());
     }
 }

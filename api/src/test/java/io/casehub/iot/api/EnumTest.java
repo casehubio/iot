@@ -6,8 +6,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EnumTest {
 
     @Test
-    void deviceClassHasTenValues() {
-        assertThat(DeviceClass.values()).hasSize(10);
+    void deviceClassHasElevenValues() {
+        assertThat(DeviceClass.values()).hasSize(11);
         assertThat(DeviceClass.valueOf("SWITCH")).isEqualTo(DeviceClass.SWITCH);
         assertThat(DeviceClass.valueOf("PRESENCE_SENSOR")).isEqualTo(DeviceClass.PRESENCE_SENSOR);
     }

@@ -168,6 +168,52 @@ class LeafDeviceTest {
     }
 
     @Test
+    void cameraDeviceBuildsWithAllFields() {
+        CameraDevice device = CameraDevice.builder()
+                .deviceId(UUID.randomUUID().toString())
+                .label("Front Door Camera")
+                .deviceClass(DeviceClass.CAMERA)
+                .lastUpdated(TEST_INSTANT)
+                .tenancyId("test-tenant").providerId("test")
+                .streaming(true)
+                .build();
+
+        assertTrue(device.isStreaming());
+        assertEquals("Front Door Camera", device.label());
+        assertEquals(DeviceClass.CAMERA, device.deviceClass());
+        assertEquals("isStreaming", CameraDevice.CAP_STREAMING);
+    }
+
+    @Test
+    void cameraDeviceDefaultsStreamingToFalse() {
+        CameraDevice device = CameraDevice.builder()
+                .deviceId(UUID.randomUUID().toString())
+                .label("Backyard Camera")
+                .deviceClass(DeviceClass.CAMERA)
+                .lastUpdated(TEST_INSTANT)
+                .tenancyId("test-tenant").providerId("test")
+                .build();
+
+        assertFalse(device.isStreaming());
+    }
+
+    @Test
+    void cameraDeviceCapabilitiesContainStreamingAndAvailable() {
+        CameraDevice device = CameraDevice.builder()
+                .deviceId(UUID.randomUUID().toString())
+                .label("Camera")
+                .deviceClass(DeviceClass.CAMERA)
+                .lastUpdated(TEST_INSTANT)
+                .tenancyId("test-tenant").providerId("test")
+                .streaming(true)
+                .build();
+
+        assertThat(device.capabilities()).containsEntry("available", true);
+        assertThat(device.capabilities()).containsEntry("isStreaming", true);
+        assertThat(device.capabilities()).hasSize(2);
+    }
+
+    @Test
     void powerSensorBuildsWithEnergyOnly() {
         PowerSensor sensor = PowerSensor.builder()
                 .deviceId(UUID.randomUUID().toString())

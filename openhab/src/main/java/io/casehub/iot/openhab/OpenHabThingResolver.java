@@ -86,6 +86,7 @@ public class OpenHabThingResolver {
             case "sensor", "smokedetector", "door", "frontdoor", "window" -> DeviceClass.SENSOR;
             case "motiondetector" -> DeviceClass.PRESENCE_SENSOR;
             case "speaker", "receiver", "screen", "projector" -> DeviceClass.MEDIA_PLAYER;
+            case "camera" -> DeviceClass.CAMERA;
             default -> null;
         };
     }

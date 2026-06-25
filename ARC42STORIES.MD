@@ -170,7 +170,7 @@ C4Container
   Person(consumer, "Application Consumer", "casehub-life, property management, elder care")
 
   Container_Boundary(b1, "Layer: Device Type System (L1)") {
-    Container(entity, "DeviceEntity hierarchy", "Pure Java", "10 typed device classes: Switch, Light, Thermostat, Sensor, PresenceSensor, PowerSensor, Lock, Cover, MediaPlayer, Fan")
+    Container(entity, "DeviceEntity hierarchy", "Pure Java", "11 typed device classes: Switch, Light, Thermostat, Sensor, PresenceSensor, PowerSensor, Lock, Cover, MediaPlayer, Fan, Camera")
     Container(enums, "DeviceClass + ThermostatMode + Temperature", "Pure Java", "Device class enum, mode enum, value type")
   }
 
@@ -552,7 +552,7 @@ L1 and L2 appear in C1–C4: foundational — real platform data in C3/C4 may su
 
 **What this delivers**
 
-`iot-api` module — the full public API surface. 10 typed device classes with cross-vendor fields, DeviceProvider SPI for platform integration, DeviceRegistry for device lookup, StateChangeEvent for state propagation, DeviceCommand for control dispatch. After this chapter, consumers can write automation code against the type hierarchy and SPI contracts.
+`iot-api` module — the full public API surface. 11 typed device classes with cross-vendor fields, DeviceProvider SPI for platform integration, DeviceRegistry for device lookup, StateChangeEvent for state propagation, DeviceCommand for control dispatch. After this chapter, consumers can write automation code against the type hierarchy and SPI contracts.
 
 **Accountability gaps closed**
 - No common device vocabulary → DeviceEntity hierarchy + DeviceClass enum (L1)

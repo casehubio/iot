@@ -39,6 +39,7 @@ public final class OpenHabDeviceBuilder {
             case SENSOR -> buildSensor(f);
             case POWER_SENSOR -> buildPowerSensor(f);
             case PRESENCE_SENSOR -> buildPresenceSensor(f);
+            case CAMERA -> buildCamera(f);
         };
     }
 
@@ -168,6 +169,18 @@ public final class OpenHabDeviceBuilder {
                 .deviceId(f.deviceId()).deviceClass(DeviceClass.POWER_SENSOR).label(f.label())
                 .available(f.available()).lastUpdated(f.now()).tenancyId(f.tenancyId()).providerId("openhab")
                 .power(f.power()).energy(f.energy())
+                .build();
+    }
+
+    // ---- camera ----
+
+    private static CameraDevice buildCamera(ResolvedDeviceFields f) {
+        boolean streaming = f.streaming() != null ? f.streaming() : false;
+
+        return CameraDevice.builder()
+                .deviceId(f.deviceId()).deviceClass(DeviceClass.CAMERA).label(f.label())
+                .available(f.available()).lastUpdated(f.now()).tenancyId(f.tenancyId()).providerId("openhab")
+                .streaming(streaming)
                 .build();
     }
 

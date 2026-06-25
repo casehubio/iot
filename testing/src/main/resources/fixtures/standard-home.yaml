@@ -58,3 +58,8 @@ devices:
     deviceId: fan-bedroom-1
     label: Bedroom Fan
     on: false
+
+  - type: camera
+    deviceId: camera-security-1
+    label: Security Camera
+    streaming: false

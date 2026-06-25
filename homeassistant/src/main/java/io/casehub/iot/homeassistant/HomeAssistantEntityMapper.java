@@ -72,6 +72,7 @@ public class HomeAssistantEntityMapper {
             case "fan" -> mapFan(state, attrs, entityId, label, available, lastUpdated);
             case "sensor" -> mapSensor(state, attrs, entityId, label, available, lastUpdated, deviceClass);
             case "binary_sensor" -> mapBinarySensor(state, attrs, entityId, label, available, lastUpdated, deviceClass);
+            case "camera" -> mapCamera(state, entityId, label, available, lastUpdated);
             default -> {
                 LOG.warnf("Unknown HA domain '%s' for entity %s — skipping", domain, entityId);
                 yield null;
@@ -214,6 +215,18 @@ public class HomeAssistantEntityMapper {
                 .available(available).lastUpdated(lastUpdated).tenancyId(config.tenancyId()).providerId("homeassistant")
                 .on("on".equals(state.state()))
                 .speed(speed)
+                .build();
+    }
+
+    private CameraDevice mapCamera(HaStateDto state,
+                                    String entityId, String label,
+                                    boolean available, Instant lastUpdated) {
+        boolean streaming = "streaming".equals(state.state()) || "recording".equals(state.state());
+
+        return CameraDevice.builder()
+                .deviceId(entityId).deviceClass(DeviceClass.CAMERA).label(label)
+                .available(available).lastUpdated(lastUpdated).tenancyId(config.tenancyId()).providerId("homeassistant")
+                .streaming(streaming)
                 .build();
     }
 

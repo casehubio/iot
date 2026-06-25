@@ -110,6 +110,7 @@ public class OpenHabEntityMapper {
             case MEDIA_PLAYER -> resolveMediaPlayer(b, members);
             case FAN -> resolveFan(b, members);
             case SENSOR -> resolveSensor(b, members, tags);
+            case CAMERA -> {} // no standard OH channels map to streaming state
             default -> {
                 LOG.warnf("Unhandled device class %s for equipment %s", deviceClass, deviceId);
                 return null;
@@ -290,6 +291,7 @@ public class OpenHabEntityMapper {
             if (COVER_TAGS.contains(tag)) return DeviceClass.COVER;
             if (MEDIA_TAGS.contains(tag)) return DeviceClass.MEDIA_PLAYER;
             if ("Fan".equals(tag)) return DeviceClass.FAN;
+            if ("Camera".equals(tag)) return DeviceClass.CAMERA;
             if ("Sensor".equals(tag)) return DeviceClass.SENSOR;
             if ("MotionDetector".equals(tag)) return DeviceClass.SENSOR;
             if ("Battery".equals(tag)) return DeviceClass.SENSOR;
