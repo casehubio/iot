@@ -127,7 +127,7 @@ C4Context
 
 | Tier | Pattern | IoT expression |
 |---|---|---|
-| Domain | **Type Hierarchy** | Abstract `DeviceEntity` base with 10 typed subclasses; Matter-aligned vocabulary |
+| Domain | **Type Hierarchy** | Abstract `DeviceEntity` base with 11 typed subclasses; Matter-aligned vocabulary |
 | Integration | **Hexagonal (SPI)** | `DeviceProvider` and `DeviceRegistry` as ports; HA and OpenHAB as adapters |
 | Eventing | **CDI async events** | `StateChangeEvent` via `Event.fireAsync()`; consumers use `@ObservesAsync` |
 | Discovery | **CDI Instance<>** | Providers are `@ApplicationScoped` beans discovered via `@Any Instance<DeviceProvider>` |
@@ -563,7 +563,7 @@ L1 and L2 appear in C1–C4: foundational — real platform data in C3/C4 may su
 
 | Layer | Delta |
 |---|---|
-| L1 Device Type System | High — DeviceEntity base with builders, DeviceClass enum, 10 typed subclasses with CAP_ constants, SensorType enum, Temperature, ThermostatMode |
+| L1 Device Type System | High — DeviceEntity base with builders, DeviceClass enum, 11 typed subclasses with CAP_ constants, SensorType enum, Temperature, ThermostatMode |
 | L2 SPI & Registry | High — DeviceProvider (blocking), DeviceRegistry (with findByTenancyId), CdiDeviceRegistry (volatile swap + event observation), StateChangeEvent, DeviceCommand (with action constants + factories), CommandResult, ProviderStatus, ProviderStatusEvent |
 
 ---
@@ -575,7 +575,7 @@ L1 and L2 appear in C1–C4: foundational — real platform data in C3/C4 may su
 
 **What this delivers**
 
-`iot-testing` module — `MockDeviceProvider` for programmatic device registration, `MockDeviceRegistry` for unit tests without CDI, `StateChangeEventPublisher` CDI helper that auto-derives `changedCapabilities` via `StateChangeEvent.deriveChangedCapabilities()`, and `Fixtures` factory class with 10 device factory methods. Also delivers C1 API enhancements: `capabilities()` on the full device hierarchy, `toBuilder()` on all 10 concrete types, `StateChangeEvent.deriveChangedCapabilities()` static utility, and `Temperature.equals()` scale-insensitive fix. After this chapter, downstream consumers (casehub-life) can write device-dependent tests without a live platform.
+`iot-testing` module — `MockDeviceProvider` for programmatic device registration, `MockDeviceRegistry` for unit tests without CDI, `StateChangeEventPublisher` CDI helper that auto-derives `changedCapabilities` via `StateChangeEvent.deriveChangedCapabilities()`, and `Fixtures` factory class with 11 device factory methods. Also delivers C1 API enhancements: `capabilities()` on the full device hierarchy, `toBuilder()` on all 11 concrete types, `StateChangeEvent.deriveChangedCapabilities()` static utility, and `Temperature.equals()` scale-insensitive fix. After this chapter, downstream consumers (casehub-life) can write device-dependent tests without a live platform.
 
 **Design reversals from original spec (all intentional):**
 - `TestDeviceRegistry` → `MockDeviceRegistry`: populated programmatically, no YAML loading
@@ -692,7 +692,7 @@ L1 and L2 appear in C1–C4: foundational — real platform data in C3/C4 may su
 #### What it adds
 
 **Before:** No device vocabulary exists — each platform uses its own entity model.
-**After:** `DeviceEntity` abstract base with 10 typed subclasses. `DeviceClass` enum aligned with Matter Device Type Library.
+**After:** `DeviceEntity` abstract base with 11 typed subclasses. `DeviceClass` enum aligned with Matter Device Type Library.
 
 - **Typed device hierarchy** — `SwitchDevice.isOn()`, `LightDevice.brightness()`, `ThermostatDevice.currentTemperature()` — strongly typed access replaces string-keyed attribute maps
 - **Cross-vendor common fields** — only fields mappable from both HA and OpenHAB appear in common types
@@ -704,7 +704,7 @@ Not closed here: provider contract (L2), platform integration (L3/L4), test infr
 
 | Gap | What breaks without it | Closed by |
 |---|---|---|
-| No common device vocabulary | Each consumer writes platform-specific parsing | DeviceEntity hierarchy with 10 typed subclasses |
+| No common device vocabulary | Each consumer writes platform-specific parsing | DeviceEntity hierarchy with 11 typed subclasses |
 | No device categorization | Consumer code uses string matching on entity IDs | DeviceClass enum aligned with Matter |
 | Temperature unit ambiguity | Celsius/Fahrenheit confusion across platforms | Temperature value type with explicit unit |
 
@@ -1028,7 +1028,7 @@ Not closed here: bridge relay (L6).
 #### What it adds
 
 **Before:** No way to test device-dependent code without a live HA/OpenHAB instance. Device types had no way to expose their current capability state.
-**After:** `MockDeviceProvider` for programmatic device registration; `MockDeviceRegistry` for unit tests without CDI; `StateChangeEventPublisher` CDI helper that auto-derives changedCapabilities; `Fixtures` Java factory class with 10 device factory methods. Also delivers C1 API enhancements: `capabilities()` on the full device type hierarchy, `toBuilder()` on all 10 concrete device types, `StateChangeEvent.deriveChangedCapabilities()` static utility, and `Temperature.equals()` scale-insensitive fix.
+**After:** `MockDeviceProvider` for programmatic device registration; `MockDeviceRegistry` for unit tests without CDI; `StateChangeEventPublisher` CDI helper that auto-derives changedCapabilities; `Fixtures` Java factory class with 11 device factory methods. Also delivers C1 API enhancements: `capabilities()` on the full device type hierarchy, `toBuilder()` on all 11 concrete device types, `StateChangeEvent.deriveChangedCapabilities()` static utility, and `Temperature.equals()` scale-insensitive fix.
 
 - **MockDeviceProvider** — `addDevice()`, `removeDevice()`, `clear()`, `setStatus()`, `setDispatchResult()`, `dispatchedCommands()` — CDI-free POJO; event firing is `StateChangeEventPublisher`'s concern
 - **MockDeviceRegistry** — `addDevice()`, `addDevices()`, `clear()` — for unit tests that don't need a CDI container; `refresh()` is a no-op (populated programmatically)
