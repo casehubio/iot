@@ -55,6 +55,10 @@ public class BridgeConnectionManager {
     @Inject
     BridgeEventStore eventStore;
 
+    @Inject
+    @org.eclipse.microprofile.config.inject.ConfigProperty(name = "casehub.iot.tenancy-id")
+    String tenancyId;
+
     private final AtomicReference<WebSocketClientConnection> connection = new AtomicReference<>();
 
     void onStartup(@Observes StartupEvent event) {
@@ -93,7 +97,7 @@ public class BridgeConnectionManager {
             WebSocketClientConnection conn = connector
                     .baseUri(uri)
                     .addHeader("Authorization", "Bearer " + config.token())
-                    .addHeader("X-Tenancy-ID", config.tenancyId())
+                    .addHeader("X-Tenancy-ID", tenancyId)
                     .connectAndAwait();
             connection.set(conn);
             LOG.infof("Bridge agent connected to %s", uri);
@@ -135,7 +139,7 @@ public class BridgeConnectionManager {
             }
         }
         var snapshot = new BridgeMessage.StateSnapshot(
-                config.tenancyId(), Instant.now(), allDevices);
+                tenancyId, Instant.now(), allDevices);
         send(snapshot);
         LOG.infof("Sent state snapshot with %d devices", allDevices.size());
     }

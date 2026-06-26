@@ -4,6 +4,7 @@ import io.casehub.iot.api.*;
 import io.casehub.iot.openhab.internal.OpenHabItemDto;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import java.math.BigDecimal;
@@ -34,11 +35,12 @@ public class OpenHabEntityMapper {
     private static final Set<String> COVER_TAGS = Set.of("Blinds", "Rollershutter");
     private static final Set<String> MEDIA_TAGS = Set.of("Receiver", "Screen", "Speaker", "Television");
 
-    private final String tenancyId;
+    @Inject
+    @ConfigProperty(name = "casehub.iot.tenancy-id")
+    String tenancyId;
 
     @Inject
-    public OpenHabEntityMapper(OpenHabConfig config) {
-        this.tenancyId = config.tenancyId();
+    public OpenHabEntityMapper() {
     }
 
     /** Package-private constructor for unit tests (no CDI). */

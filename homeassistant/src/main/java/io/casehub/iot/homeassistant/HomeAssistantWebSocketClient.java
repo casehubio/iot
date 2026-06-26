@@ -66,8 +66,10 @@ public class HomeAssistantWebSocketClient {
     }
 
     public Uni<Void> connect() {
+        String url = config.url()
+            .orElseGet(() -> HomeAssistantDiscovery.resolve(config.discoveryTimeoutSeconds()));
         return connectorProvider.get()
-            .baseUri(URI.create(config.url()))
+            .baseUri(URI.create(url))
             .connect()
             .invoke(c -> this.connection = c)
             .replaceWithVoid();
@@ -159,7 +161,9 @@ public class HomeAssistantWebSocketClient {
     // ---- Private helpers ----
 
     private Uni<Void> sendAuth(WebSocketClientConnection conn) {
-        String authJson = "{\"type\":\"auth\",\"access_token\":\"" + config.token() + "\"}";
+        String token = config.token().orElseThrow(() ->
+            new IllegalStateException("casehub.iot.homeassistant.token is required when enabled=true"));
+        String authJson = "{\"type\":\"auth\",\"access_token\":\"" + token + "\"}";
         return conn.sendText(authJson).replaceWithVoid();
     }
 

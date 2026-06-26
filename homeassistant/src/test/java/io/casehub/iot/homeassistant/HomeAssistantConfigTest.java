@@ -14,16 +14,19 @@ class HomeAssistantConfigTest {
 
     @Test
     void requiredFieldsPopulated() {
-        assertThat(config.url()).isEqualTo("http://localhost:8081");
-        assertThat(config.token()).isEqualTo("test-token");
-        assertThat(config.tenancyId()).isEqualTo("test-tenant");
+        // URL is set dynamically by TestHttpServerResource
+        assertThat(config.url()).isPresent();
+        assertThat(config.url().orElseThrow()).startsWith("http://localhost:");
+        assertThat(config.token()).hasValue("test-token");
     }
 
     @Test
     void defaultsApplied() {
+        assertThat(config.enabled()).isTrue(); // explicitly set in application.properties
         assertThat(config.reconnectBaseSeconds()).isEqualTo(5);
         assertThat(config.reconnectMaxSeconds()).isEqualTo(300);
         assertThat(config.pingIntervalSeconds()).isEqualTo(30);
         assertThat(config.pongTimeoutSeconds()).isEqualTo(10);
+        assertThat(config.discoveryTimeoutSeconds()).isEqualTo(5);
     }
 }

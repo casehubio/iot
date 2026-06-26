@@ -12,7 +12,7 @@ class OpenHabConfigAuthTest {
     void bearerPresentWhenTokenConfigured() {
         OpenHabConfig config = buildConfig(
                 "casehub.iot.openhab.url", "http://localhost:8080",
-                "casehub.iot.openhab.tenancy-id", "test",
+                "casehub.iot.tenancy-id", "test",
                 "casehub.iot.openhab.auth.bearer.token", "my-token");
 
         assertThat(config.auth().bearer()).isPresent();
@@ -24,7 +24,7 @@ class OpenHabConfigAuthTest {
     void basicPresentWhenUsernameAndPasswordConfigured() {
         OpenHabConfig config = buildConfig(
                 "casehub.iot.openhab.url", "http://localhost:8080",
-                "casehub.iot.openhab.tenancy-id", "test",
+                "casehub.iot.tenancy-id", "test",
                 "casehub.iot.openhab.auth.basic.username", "admin",
                 "casehub.iot.openhab.auth.basic.password", "secret");
 
@@ -38,7 +38,7 @@ class OpenHabConfigAuthTest {
     void anonymousWhenNoAuthConfigured() {
         OpenHabConfig config = buildConfig(
                 "casehub.iot.openhab.url", "http://localhost:8080",
-                "casehub.iot.openhab.tenancy-id", "test");
+                "casehub.iot.tenancy-id", "test");
 
         assertThat(config.auth().bearer()).isEmpty();
         assertThat(config.auth().basic()).isEmpty();
@@ -48,7 +48,7 @@ class OpenHabConfigAuthTest {
     void bothPresentWhenBothConfigured() {
         OpenHabConfig config = buildConfig(
                 "casehub.iot.openhab.url", "http://localhost:8080",
-                "casehub.iot.openhab.tenancy-id", "test",
+                "casehub.iot.tenancy-id", "test",
                 "casehub.iot.openhab.auth.bearer.token", "my-token",
                 "casehub.iot.openhab.auth.basic.username", "admin",
                 "casehub.iot.openhab.auth.basic.password", "secret");

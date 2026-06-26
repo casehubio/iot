@@ -2,8 +2,7 @@ package io.casehub.iot.homeassistant;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -11,17 +10,17 @@ import io.casehub.iot.homeassistant.TestHttpServerResource.StubbedResponse;
 import io.casehub.iot.homeassistant.TestHttpServerResource.TestHttpServer;
 import io.casehub.iot.homeassistant.internal.HaServiceCallDto;
 
+import java.net.URI;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
-@QuarkusTestResource(TestHttpServerResource.class)
+@QuarkusTestResource(value = TestHttpServerResource.class, restrictToAnnotatedClass = true)
 class HomeAssistantRestClientTest {
 
-    @Inject
-    @RestClient
-    HomeAssistantRestClient restClient;
+    private HomeAssistantRestClient restClient;
 
     private TestHttpServer server() {
         return TestHttpServerResource.INSTANCE;
@@ -30,6 +29,14 @@ class HomeAssistantRestClientTest {
     @BeforeEach
     void drainStaleRequests() {
         server().drainRequests();
+        // Create client programmatically with test server URL
+        String serverUrl = "http://localhost:" + server().port();
+        this.restClient = RestClientBuilder.newBuilder()
+            .baseUri(URI.create(serverUrl))
+            .register(new BearerAuthFilter("test-token"))
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build(HomeAssistantRestClient.class);
     }
 
     @Test

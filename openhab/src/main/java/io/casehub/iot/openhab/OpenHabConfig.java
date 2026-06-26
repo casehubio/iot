@@ -7,13 +7,14 @@ import java.util.Optional;
 
 @ConfigMapping(prefix = "casehub.iot.openhab")
 public interface OpenHabConfig {
-    String url();
-    String tenancyId();
+    @WithDefault("false") boolean enabled();
+    Optional<String> url();
     Auth auth();
     @WithDefault("5")   int reconnectBaseSeconds();
     @WithDefault("300") int reconnectMaxSeconds();
     @WithDefault("50")  int coalesceWindowMs();
     @WithDefault("true") boolean thingDiscoveryEnabled();
+    @WithDefault("10")  int discoveryTimeoutSeconds();
 
     interface Auth {
         Optional<Bearer> bearer();

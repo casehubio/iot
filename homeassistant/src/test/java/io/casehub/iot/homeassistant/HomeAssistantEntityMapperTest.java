@@ -14,17 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class HomeAssistantEntityMapperTest {
 
-    private static final HomeAssistantConfig TEST_CONFIG = new HomeAssistantConfig() {
-        public String url()               { return "http://localhost"; }
-        public String token()             { return "test-token"; }
-        public String tenancyId()         { return "t1"; }
-        public int reconnectBaseSeconds() { return 5; }
-        public int reconnectMaxSeconds()  { return 300; }
-        public int pingIntervalSeconds()  { return 30; }
-        public int pongTimeoutSeconds()   { return 10; }
-    };
-
-    private final HomeAssistantEntityMapper mapper = new HomeAssistantEntityMapper(TEST_CONFIG);
+    private final HomeAssistantEntityMapper mapper = new HomeAssistantEntityMapper("t1");
 
     private HaStateDto dto(String entityId, String state, Map<String, Object> attrs) {
         return new HaStateDto(entityId, state, "2026-06-09T10:00:00Z", "2026-06-09T09:55:00Z", attrs);

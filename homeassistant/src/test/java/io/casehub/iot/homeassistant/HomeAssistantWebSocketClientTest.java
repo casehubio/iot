@@ -11,6 +11,10 @@ import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 
@@ -143,6 +147,21 @@ class HomeAssistantWebSocketClientTest {
     }
 
     // ---- Embedded server and event collector beans ----
+
+    /**
+     * Fake Home Assistant REST API endpoint for tests that only exercise WebSocket.
+     * Returns an empty device list to satisfy the CdiDeviceRegistry startup refresh.
+     */
+    @Path("/api")
+    @ApplicationScoped
+    public static class FakeHaRestApi {
+        @GET
+        @Path("/states")
+        @Produces(MediaType.APPLICATION_JSON)
+        public String getStates() {
+            return "[]";
+        }
+    }
 
     /**
      * Fake Home Assistant WebSocket server running inside the same Quarkus test instance.

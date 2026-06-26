@@ -10,8 +10,6 @@ public interface BridgeAgentConfig {
 
     String token();
 
-    String tenancyId();
-
     @WithDefault("5")
     int reconnectBaseSeconds();
 

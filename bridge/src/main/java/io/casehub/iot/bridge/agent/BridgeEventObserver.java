@@ -30,9 +30,13 @@ public class BridgeEventObserver {
     @Inject
     BridgeEventStore eventStore;
 
+    @Inject
+    @org.eclipse.microprofile.config.inject.ConfigProperty(name = "casehub.iot.tenancy-id")
+    String tenancyId;
+
     void onStateChange(@ObservesAsync StateChangeEvent event) {
         FilterContext ctx = new FilterContext(
-                config.tenancyId(),
+                tenancyId,
                 connectionManager.isConnected() ? ConnectionState.CONNECTED : ConnectionState.DISCONNECTED,
                 event.providerId());
         FilterAction action = filterChain.execute(event, ctx).await().indefinitely();
@@ -40,7 +44,7 @@ public class BridgeEventObserver {
         switch (action) {
             case FilterAction.Forward f -> {
                 var msg = new BridgeMessage.StateChange(
-                        config.tenancyId(), Instant.now(), event);
+                        tenancyId, Instant.now(), event);
                 if (connectionManager.isConnected()) {
                     connectionManager.send(msg);
                 } else {
@@ -57,7 +61,7 @@ public class BridgeEventObserver {
             return;
         }
         var msg = new BridgeMessage.ProviderStatusChange(
-                config.tenancyId(), Instant.now(), event);
+                tenancyId, Instant.now(), event);
         connectionManager.send(msg);
     }
 }

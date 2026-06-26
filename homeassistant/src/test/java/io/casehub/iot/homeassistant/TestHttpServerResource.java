@@ -24,7 +24,7 @@ public class TestHttpServerResource implements QuarkusTestResourceLifecycleManag
         server.start();
         INSTANCE = server;
         String url = "http://localhost:" + server.port();
-        return Map.of("quarkus.rest-client.\"homeassistant\".url", url);
+        return Map.of("casehub.iot.homeassistant.url", url);
     }
 
     @Override

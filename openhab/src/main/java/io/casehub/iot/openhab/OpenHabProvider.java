@@ -5,18 +5,21 @@ import io.casehub.iot.api.DeviceCommand;
 import io.casehub.iot.api.DeviceEntity;
 import io.casehub.iot.api.ProviderStatus;
 import io.casehub.iot.api.spi.DeviceProvider;
+import io.quarkus.arc.lookup.LookupIfProperty;
 import io.smallrye.mutiny.Uni;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.WebApplicationException;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -26,23 +29,63 @@ import java.util.concurrent.TimeoutException;
  * command dispatch (REST item commands) into the common provider interface.
  */
 @ApplicationScoped
+@LookupIfProperty(name = "casehub.iot.openhab.enabled", stringValue = "true")
 public class OpenHabProvider implements DeviceProvider {
 
     private static final Logger LOG = Logger.getLogger(OpenHabProvider.class);
 
-    @Inject @RestClient OpenHabRestClient restClient;
+    @Inject OpenHabConfig config;
     @Inject OpenHabSseClient sseClient;
     @Inject OpenHabEntityMapper mapper;
+
+    private volatile OpenHabRestClient restClient;
+    private volatile boolean sseConnectAttempted = false;
 
     /** Package-private constructor for unit tests (no CDI). */
     OpenHabProvider() {}
 
     @PostConstruct
     void start() {
-        sseClient.connect().subscribe().with(
-            v -> {},
-            e -> LOG.warnf(e, "OpenHAB initial connect failed")
-        );
+        // Defer SSE connection until first use to avoid startup race with test servers
+        // Production use will trigger via first status() or discover() call
+    }
+
+    private void ensureSseConnected() {
+        if (!sseConnectAttempted) {
+            synchronized (this) {
+                if (!sseConnectAttempted) {
+                    sseConnectAttempted = true;
+                    String resolvedUrl = config.url()
+                        .orElseGet(() -> OpenHabDiscovery.resolve(config.discoveryTimeoutSeconds()));
+                    var authFilter = new OpenHabAuthFilter(config.auth());
+                    sseClient.init(resolvedUrl, authFilter);
+                    sseClient.connect().subscribe().with(
+                        v -> {},
+                        e -> LOG.warnf(e, "OpenHAB initial connect failed")
+                    );
+                }
+            }
+        }
+    }
+
+    private OpenHabRestClient getRestClient() {
+        if (restClient == null) {
+            synchronized (this) {
+                if (restClient == null) {
+                    String resolvedUrl = config.url()
+                        .orElseGet(() -> OpenHabDiscovery.resolve(config.discoveryTimeoutSeconds()));
+                    var authFilter = new OpenHabAuthFilter(config.auth());
+
+                    this.restClient = RestClientBuilder.newBuilder()
+                        .baseUri(URI.create(resolvedUrl))
+                        .register(authFilter)
+                        .connectTimeout(5, TimeUnit.SECONDS)
+                        .readTimeout(10, TimeUnit.SECONDS)
+                        .build(OpenHabRestClient.class);
+                }
+            }
+        }
+        return restClient;
     }
 
     @Override
@@ -52,12 +95,14 @@ public class OpenHabProvider implements DeviceProvider {
 
     @Override
     public ProviderStatus status() {
+        ensureSseConnected();
         return sseClient.currentStatus();
     }
 
     @Override
     public Uni<List<DeviceEntity>> discover() {
-        return restClient.getItems("Equipment", true)
+        ensureSseConnected();
+        return getRestClient().getItems("Equipment", true)
             .map(items -> items.stream()
                 .map(i -> mapper.mapEquipment(i, Instant.now()))
                 .filter(Objects::nonNull)
@@ -76,7 +121,7 @@ public class OpenHabProvider implements DeviceProvider {
             return Uni.createFrom().item(CommandResult.FAILED);
         }
 
-        return restClient.sendCommand(targetItem, commandValue)
+        return getRestClient().sendCommand(targetItem, commandValue)
             .map(resp -> resp.getStatus() < 300 ? CommandResult.SENT : CommandResult.FAILED)
             .onFailure(WebApplicationException.class).recoverWithItem(CommandResult.FAILED)
             .onFailure(ProcessingException.class).recoverWithItem(CommandResult.FAILED)

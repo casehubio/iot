@@ -36,6 +36,10 @@ public class BridgeCloudClient {
     @Inject
     BridgeAgentConfig config;
 
+    @Inject
+    @org.eclipse.microprofile.config.inject.ConfigProperty(name = "casehub.iot.tenancy-id")
+    String tenancyId;
+
     BridgeCloudClient() {}
 
     // visible for testing
@@ -112,7 +116,7 @@ public class BridgeCloudClient {
     }
 
     private void handleHeartbeat(BridgeMessage.Heartbeat hb, WebSocketClientConnection connection) {
-        var reply = new BridgeMessage.Heartbeat(config.tenancyId(), Instant.now());
+        var reply = new BridgeMessage.Heartbeat(tenancyId, Instant.now());
         try {
             connection.sendTextAndAwait(mapper.writeValueAsString(reply));
         } catch (JsonProcessingException e) {

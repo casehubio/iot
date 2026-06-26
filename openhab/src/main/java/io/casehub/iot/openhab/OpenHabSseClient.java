@@ -18,9 +18,10 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,15 +65,17 @@ public class OpenHabSseClient {
 
     private static final Logger LOG = Logger.getLogger(OpenHabSseClient.class);
 
-    @Inject @RestClient OpenHabRestClient restClient;
-
+    private volatile OpenHabRestClient restClient;
+    private volatile OpenHabSseRestClient sseRestClient;
     private volatile Map<String, String> categoryMapCached;
-    @Inject @RestClient OpenHabSseRestClient sseRestClient;
+
     @Inject OpenHabEntityMapper mapper;
     @Inject OpenHabConfig config;
     @Inject Event<StateChangeEvent> stateEvents;
     @Inject Event<ProviderStatusEvent> statusEvents;
     @Inject ObjectMapper objectMapper;
+    @Inject @org.eclipse.microprofile.config.inject.ConfigProperty(name = "casehub.iot.tenancy-id")
+    String tenancyId;
     private OpenHabThingResolver thingResolver;
 
     // ---- state caches ----
@@ -137,8 +140,30 @@ public class OpenHabSseClient {
      * Called automatically by CDI after field injection completes.
      */
     @jakarta.annotation.PostConstruct
-    void init() {
-        this.thingResolver = new OpenHabThingResolver(config.tenancyId(), Map.of());
+    void postConstruct() {
+        this.thingResolver = new OpenHabThingResolver(tenancyId, Map.of());
+    }
+
+    /**
+     * Initializes both REST clients programmatically.
+     * Called by OpenHabProvider after URL is resolved from config.
+     *
+     * @param url the OpenHAB base URL
+     * @param authFilter the auth filter to register with both clients
+     */
+    void init(String url, OpenHabAuthFilter authFilter) {
+        this.restClient = RestClientBuilder.newBuilder()
+            .baseUri(URI.create(url))
+            .register(authFilter)
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build(OpenHabRestClient.class);
+
+        this.sseRestClient = RestClientBuilder.newBuilder()
+            .baseUri(URI.create(url))
+            .register(authFilter)
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .build(OpenHabSseRestClient.class);
     }
 
     /** Test constructor — bypasses CDI for unit testing cache and resolution logic. */
@@ -194,7 +219,7 @@ public class OpenHabSseClient {
                     }
                 }
                 categoryMapCached = Map.copyOf(map);
-                thingResolver = new OpenHabThingResolver(config.tenancyId(), categoryMapCached);
+                thingResolver = new OpenHabThingResolver(tenancyId, categoryMapCached);
             }
 
             // Phase 1: Equipment mapping (existing)

@@ -20,7 +20,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
-@QuarkusTestResource(TestHttpServerResource.class)
+@QuarkusTestResource(value = TestHttpServerResource.class, restrictToAnnotatedClass = true)
 class HomeAssistantProviderTest {
 
     @Inject HomeAssistantProvider provider;
