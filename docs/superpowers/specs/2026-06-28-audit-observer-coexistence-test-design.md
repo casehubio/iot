@@ -36,10 +36,16 @@ verify CDI discovers and delivers to both when they coexist in the same containe
 **Test method — `bothObserversReceiveAsyncEvent()`:**
 1. Construct `BridgeAuditEvent` with correlationId `"coexistence-test"` for isolation
 2. `auditEvents.fireAsync(event).toCompletableFuture().get(5, SECONDS)`
-3. Assert: `store.query(correlationId="coexistence-test")` returns exactly 1 result (`hasSize(1)`)
+3. Assert: `store.query(correlationId="coexistence-test")` returns exactly 1 result matching the
+   fired event (`hasSize(1).containsExactly(event)`) — `containsExactly` verifies structural
+   equality across all 6 fields, catching field corruption during save/query round-trip
 4. Assert: `logHandler.records` has exactly 1 entry (`hasSize(1)`)
 
 **Assumptions:**
+- `CompletionStage` from `Event.fireAsync()` completes only after all `@ObservesAsync`
+  handlers finish (CDI 4.0 §10.3.2). This is what makes `get()` a valid synchronization
+  point for asserting both observers' side effects — without it, the assertions would be racy.
+  The 5-second timeout is a CI safety net, not the interesting part.
 - JBoss Log Manager is the JUL `LogManager` in `@QuarkusTest`. `Logger.getLogger(category)`
   returns a `org.jboss.logmanager.Logger` (which extends `java.util.logging.Logger`), so
   `addHandler()` routes records from JBoss Logging → JBoss Log Manager → test handler.
