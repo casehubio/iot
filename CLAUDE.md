@@ -29,6 +29,8 @@ mvn --batch-mode deploy -DskipTests
 | `homeassistant` | `casehub-iot-homeassistant` | Home Assistant provider (REST + WebSocket) and HA supplement types |
 | `openhab` | `casehub-iot-openhab` | OpenHAB provider (REST + SSE, semantic model) and OpenHAB supplement types |
 | `testing` | `casehub-iot-testing` | MockDeviceProvider, fixture devices (Java `Fixtures` + YAML `DeviceFixtureLoader`), `DeviceTypeHandler` SPI, StateChangeEventPublisher — test scope only |
+| `bridge-persistence-jpa` | `casehub-iot-bridge-persistence-jpa` | JPA-backed `BridgeAuditStore` — PostgreSQL with JSONB message storage, Flyway migrations, optional `@Scheduled` retention purge |
+| `bridge-persistence-memory` | `casehub-iot-bridge-persistence-memory` | In-memory bounded ring buffer `BridgeAuditStore` — `@Alternative @Priority(100)`, for Pi and test isolation |
 | `bridge` | `casehub-iot-bridge` | Local bridge agent (standalone Quarkus app) — event relay with CDI-discovered filter chain, WebSocket cloud client, command dispatch |
 | `bridge-server` | `casehub-iot-bridge-server` | Cloud-side `BridgeDeviceProvider implements DeviceProvider` — remote devices look local. Library added as dependency by cloud consumers. |
 
