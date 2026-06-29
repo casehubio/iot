@@ -217,7 +217,8 @@ class InMemoryBridgeAuditStoreTest {
         assertThat(results).hasSize(3);
         // newest-first: d9, d8, d7, d6, d5, d4, d3, d2, d1, d0
         // offset 3 skips d9, d8, d7 → returns d6, d5, d4
-        assertThat(results.get(0).deviceId()).isEqualTo("d6");
+        assertThat(results).extracting(BridgeAuditEvent::deviceId)
+            .containsExactly("d6", "d5", "d4");
     }
 
     private static BridgeAuditEvent auditEvent(final String tenancyId, final BridgeAuditEventType type,

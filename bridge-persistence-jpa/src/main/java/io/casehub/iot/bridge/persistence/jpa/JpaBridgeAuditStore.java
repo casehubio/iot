@@ -41,26 +41,26 @@ public class JpaBridgeAuditStore implements BridgeAuditStore {
         final List<Predicate> predicates = new ArrayList<>();
 
         if (query.tenancyId() != null) {
-            predicates.add(cb.equal(root.get("tenancyId"), query.tenancyId()));
+            predicates.add(cb.equal(root.get(BridgeAuditJpaEntity_.tenancyId), query.tenancyId()));
         }
         if (query.eventType() != null) {
-            predicates.add(cb.equal(root.get("eventType"), query.eventType()));
+            predicates.add(cb.equal(root.get(BridgeAuditJpaEntity_.eventType), query.eventType()));
         }
         if (query.deviceId() != null) {
-            predicates.add(cb.equal(root.get("deviceId"), query.deviceId()));
+            predicates.add(cb.equal(root.get(BridgeAuditJpaEntity_.deviceId), query.deviceId()));
         }
         if (query.correlationId() != null) {
-            predicates.add(cb.equal(root.get("correlationId"), query.correlationId()));
+            predicates.add(cb.equal(root.get(BridgeAuditJpaEntity_.correlationId), query.correlationId()));
         }
         if (query.from() != null) {
-            predicates.add(cb.greaterThanOrEqualTo(root.get("receivedAt"), query.from()));
+            predicates.add(cb.greaterThanOrEqualTo(root.get(BridgeAuditJpaEntity_.receivedAt), query.from()));
         }
         if (query.to() != null) {
-            predicates.add(cb.lessThanOrEqualTo(root.get("receivedAt"), query.to()));
+            predicates.add(cb.lessThanOrEqualTo(root.get(BridgeAuditJpaEntity_.receivedAt), query.to()));
         }
 
         cq.where(predicates.toArray(Predicate[]::new));
-        cq.orderBy(cb.desc(root.get("receivedAt")));
+        cq.orderBy(cb.desc(root.get(BridgeAuditJpaEntity_.receivedAt)));
 
         return em.createQuery(cq)
             .setFirstResult(query.offset())
