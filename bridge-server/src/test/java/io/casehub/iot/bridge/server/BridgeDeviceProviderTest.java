@@ -37,11 +37,6 @@ class BridgeDeviceProviderTest {
     private static final BridgeServerConfig TEST_CONFIG = new BridgeServerConfig() {
         @Override
         public int commandTimeoutSeconds() { return 1; }
-
-        @Override
-        public AuditStore auditStore() {
-            return () -> 10000;
-        }
     };
 
     private BridgeConnectionRegistry registry;

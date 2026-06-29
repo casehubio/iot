@@ -7,6 +7,7 @@ import io.casehub.iot.api.bridge.BridgeAuditStore;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,7 +16,14 @@ class StoringBridgeAuditObserverTest {
 
     @Test
     void onAuditDelegatesToStoreSave() {
-        final var store = new InMemoryBridgeAuditStore(100);
+        final var saved = new ArrayList<BridgeAuditEvent>();
+        final BridgeAuditStore store = new BridgeAuditStore() {
+            @Override
+            public void save(final BridgeAuditEvent event) { saved.add(event); }
+
+            @Override
+            public List<BridgeAuditEvent> query(final BridgeAuditQuery query) { return List.of(); }
+        };
         final var observer = new StoringBridgeAuditObserver(store);
         final var event = new BridgeAuditEvent(
             "tenant-1", Instant.now(), BridgeAuditEventType.STATE_CHANGE,
@@ -23,7 +31,6 @@ class StoringBridgeAuditObserverTest {
 
         observer.onAudit(event);
 
-        final var results = store.query(BridgeAuditQuery.builder().build());
-        assertThat(results).containsExactly(event);
+        assertThat(saved).containsExactly(event);
     }
 }
