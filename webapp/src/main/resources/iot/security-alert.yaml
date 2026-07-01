@@ -1,0 +1,74 @@
+dsl: "0.1"
+version: "1.0"
+name: security-alert
+namespace: io.casehub.iot
+title: Security Alert — intrusion response
+
+spec:
+
+  ## ─── Capabilities ───────────────────────────────────────────────────────────
+  capabilities:
+    - name: device-command-dispatch
+      description: "Lock doors and secure premises"
+      inputSchema: "{ deviceId: .deviceId, action: .action, parameters: .parameters }"
+      outputSchema: "{ lockResult: . }"
+
+    - name: camera-activation
+      description: "Activate cameras for recording"
+      inputSchema: "{ deviceId: .deviceId, action: .action }"
+      outputSchema: "{ cameraResult: . }"
+      prerequisites:
+        - device-command-dispatch
+
+    - name: household-notification
+      description: "Notify household of security alert"
+      inputSchema: "{ tenancyId: .tenancyId, message: .message }"
+      outputSchema: "{ notificationSent: . }"
+      prerequisites:
+        - camera-activation
+
+    - name: human-decision
+      description: "Human decision on escalation"
+      inputSchema: "{ situationContext: .situationContext, options: .options }"
+      outputSchema: "{ decision: . }"
+      prerequisites:
+        - household-notification
+
+  ## ─── Goals ──────────────────────────────────────────────────────────────────
+  goals:
+    - name: alert-resolved
+      kind: success
+      condition: ".decision != null"
+
+  ## ─── Completion ─────────────────────────────────────────────────────────────
+  completion:
+    success:
+      allOf:
+        - alert-resolved
+
+  ## ─── Bindings ────────────────────────────────────────────────────────────────
+  bindings:
+
+    ## Fires first — immediate lock command (no human approval)
+    - name: device-command-dispatch
+      on: { contextChange: {} }
+      when: ".situationContext != null and .lockResult == null"
+      capability: device-command-dispatch
+
+    ## Fires after doors are locked
+    - name: camera-activation
+      on: { contextChange: {} }
+      when: ".lockResult != null and .cameraResult == null"
+      capability: camera-activation
+
+    ## Fires after cameras are activated
+    - name: household-notification
+      on: { contextChange: {} }
+      when: ".cameraResult != null and .notificationSent == null"
+      capability: household-notification
+
+    ## Fires after notification sent — human decides next action
+    - name: human-decision
+      on: { contextChange: {} }
+      when: ".notificationSent != null and .decision == null"
+      capability: human-decision

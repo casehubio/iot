@@ -1,0 +1,61 @@
+dsl: "0.1"
+version: "1.0"
+name: safety-alert
+namespace: io.casehub.iot
+title: Safety Alert — fire risk automated response
+
+spec:
+
+  ## ─── Capabilities ───────────────────────────────────────────────────────────
+  capabilities:
+    - name: device-command-dispatch
+      description: "Dispatch safety commands (kill HVAC, unlock doors)"
+      inputSchema: "{ deviceId: .deviceId, action: .action, parameters: .parameters }"
+      outputSchema: "{ commandResult: . }"
+
+    - name: household-notification
+      description: "Notify household of safety alert"
+      inputSchema: "{ tenancyId: .tenancyId, message: .message }"
+      outputSchema: "{ notificationSent: . }"
+      prerequisites:
+        - device-command-dispatch
+
+    - name: human-acknowledgement
+      description: "Human acknowledgement of safety alert"
+      inputSchema: "{ situationContext: .situationContext }"
+      outputSchema: "{ acknowledged: . }"
+      prerequisites:
+        - household-notification
+
+  ## ─── Goals ──────────────────────────────────────────────────────────────────
+  goals:
+    - name: alert-acknowledged
+      kind: success
+      condition: ".acknowledged != null"
+
+  ## ─── Completion ─────────────────────────────────────────────────────────────
+  completion:
+    success:
+      allOf:
+        - alert-acknowledged
+
+  ## ─── Bindings ────────────────────────────────────────────────────────────────
+  bindings:
+
+    ## Fires first — immediate safety command dispatch (no human approval)
+    - name: device-command-dispatch
+      on: { contextChange: {} }
+      when: ".situationContext != null and .commandResult == null"
+      capability: device-command-dispatch
+
+    ## Fires after device commands are dispatched
+    - name: household-notification
+      on: { contextChange: {} }
+      when: ".commandResult != null and .notificationSent == null"
+      capability: household-notification
+
+    ## Fires after notification sent
+    - name: human-acknowledgement
+      on: { contextChange: {} }
+      when: ".notificationSent != null and .acknowledged == null"
+      capability: human-acknowledgement

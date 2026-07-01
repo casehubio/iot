@@ -19,6 +19,10 @@
     <name>CaseHub IoT Parent</name>
     <description>Typed device abstraction layer for Home Assistant, OpenHAB, and future IoT platforms</description>
 
+    <properties>
+        <version.drools>10.1.0</version.drools>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -40,6 +44,120 @@
                 <groupId>io.casehub</groupId>
                 <artifactId>casehub-iot-bridge-persistence-jpa</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-iot-webapp-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-iot-webapp-drools</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-iot-homeassistant</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-iot-openhab</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-iot-bridge-server</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Cross-repo dependencies — casehub.version from parent -->
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-ras-api</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-ras</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-ras-drools</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-ras-persistence-jpa</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-engine-api</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-engine</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-engine-scheduler-quartz</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-engine-work-adapter</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-engine-blackboard</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-engine-persistence-memory</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-worker-api</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-work</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-ledger</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-connectors-core</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-platform</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-platform-expression</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+
+            <!-- Drools CEP -->
+            <dependency>
+                <groupId>org.drools</groupId>
+                <artifactId>drools-wiring-dynamic</artifactId>
+                <version>${version.drools}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -77,6 +195,9 @@
         <module>bridge-persistence-jpa</module>
         <module>bridge</module>
         <module>bridge-server</module>
+        <module>webapp-api</module>
+        <module>webapp-drools</module>
+        <module>webapp</module>
     </modules>
 
 </project>

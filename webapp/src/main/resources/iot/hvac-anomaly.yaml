@@ -1,0 +1,61 @@
+dsl: "0.1"
+version: "1.0"
+name: hvac-anomaly
+namespace: io.casehub.iot
+title: HVAC Anomaly — automated correction with escalation
+
+spec:
+
+  ## ─── Capabilities ───────────────────────────────────────────────────────────
+  capabilities:
+    - name: device-command-dispatch
+      description: "Attempt setpoint correction"
+      inputSchema: "{ deviceId: .deviceId, action: .action, parameters: .parameters }"
+      outputSchema: "{ correctionResult: . }"
+
+    - name: household-notification
+      description: "Notify household if correction fails"
+      inputSchema: "{ tenancyId: .tenancyId, message: .message }"
+      outputSchema: "{ notificationSent: . }"
+      prerequisites:
+        - device-command-dispatch
+
+    - name: human-review
+      description: "Manual triage if automated correction fails"
+      inputSchema: "{ situationContext: .situationContext, correctionResult: .correctionResult }"
+      outputSchema: "{ triageComplete: . }"
+      prerequisites:
+        - household-notification
+
+  ## ─── Goals ──────────────────────────────────────────────────────────────────
+  goals:
+    - name: anomaly-resolved
+      kind: success
+      condition: ".triageComplete != null or (.correctionResult.status == \"SUCCESS\" and .temperatureNormal == true)"
+
+  ## ─── Completion ─────────────────────────────────────────────────────────────
+  completion:
+    success:
+      allOf:
+        - anomaly-resolved
+
+  ## ─── Bindings ────────────────────────────────────────────────────────────────
+  bindings:
+
+    ## Fires first — attempt automated setpoint correction
+    - name: device-command-dispatch
+      on: { contextChange: {} }
+      when: ".situationContext != null and .correctionResult == null"
+      capability: device-command-dispatch
+
+    ## Fires if correction command sent (success or failure)
+    - name: household-notification
+      on: { contextChange: {} }
+      when: ".correctionResult != null and .notificationSent == null"
+      capability: household-notification
+
+    ## Fires after notification sent — escalate to human
+    - name: human-review
+      on: { contextChange: {} }
+      when: ".notificationSent != null and .triageComplete == null"
+      capability: human-review

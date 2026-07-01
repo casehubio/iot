@@ -1,0 +1,35 @@
+dsl: "0.1"
+version: "1.0"
+name: generic-response
+namespace: io.casehub.iot
+title: Generic Response — pure human triage
+
+spec:
+
+  ## ─── Capabilities ───────────────────────────────────────────────────────────
+  capabilities:
+    - name: human-triage
+      description: "Human triage of unrecognized situation"
+      inputSchema: "{ situationContext: .situationContext }"
+      outputSchema: "{ triageComplete: . }"
+
+  ## ─── Goals ──────────────────────────────────────────────────────────────────
+  goals:
+    - name: triage-complete
+      kind: success
+      condition: ".triageComplete != null"
+
+  ## ─── Completion ─────────────────────────────────────────────────────────────
+  completion:
+    success:
+      allOf:
+        - triage-complete
+
+  ## ─── Bindings ────────────────────────────────────────────────────────────────
+  bindings:
+
+    ## Fires immediately — create WorkItem with situation context
+    - name: human-triage
+      on: { contextChange: {} }
+      when: ".situationContext != null and .triageComplete == null"
+      capability: human-triage

@@ -33,6 +33,9 @@ mvn --batch-mode deploy -DskipTests
 | `bridge-persistence-memory` | `casehub-iot-bridge-persistence-memory` | In-memory bounded ring buffer `BridgeAuditStore` — `@Alternative @Priority(100)`, for Pi and test isolation |
 | `bridge` | `casehub-iot-bridge` | Local bridge agent (standalone Quarkus app) — event relay with CDI-discovered filter chain, WebSocket cloud client, command dispatch |
 | `bridge-server` | `casehub-iot-bridge-server` | Cloud-side `BridgeDeviceProvider implements DeviceProvider` — remote devices look local. Library added as dependency by cloud consumers. |
+| `webapp-api` | `casehub-iot-webapp-api` | Reusable IoT JavaSwitch ganglia, case descriptors, worker functions, ActionRiskClassifier, REST interfaces. Tier 1 — no JPA, no Quarkus runtime. |
+| `webapp-drools` | `casehub-iot-webapp-drools` | DroolsCEP temporal pattern ganglia (`SustainedTemperatureRiseRule`, `MultiRoomMotionRule`). Activates by classpath presence. |
+| `webapp` | `casehub-iot-webapp` | Standalone Quarkus app — operational console with RAS situational awareness, case orchestration, REST API, SSE, TypeScript pages via Quinoa. Three-datasource Flyway layout. |
 
 ## Key Rules
 

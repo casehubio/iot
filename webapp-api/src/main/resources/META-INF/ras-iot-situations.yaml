@@ -1,0 +1,40 @@
+situations:
+  - situationId: unexpected-unlock
+    eventTypes:
+      - io.casehub.iot.state_change.lock
+    chainMode:
+      type: or
+      ganglia:
+        - lock-state
+    triggerMode:
+      type: repeating
+      cooldown: PT30M
+    triggerConfig:
+      caseNamespace: io.casehub.iot
+      caseName: security-alert
+      caseVersion: "1.0"
+
+  - situationId: device-offline
+    eventTypes:
+      - io.casehub.iot.state_change.switch
+      - io.casehub.iot.state_change.light
+      - io.casehub.iot.state_change.thermostat
+      - io.casehub.iot.state_change.sensor
+      - io.casehub.iot.state_change.presence_sensor
+      - io.casehub.iot.state_change.power_sensor
+      - io.casehub.iot.state_change.lock
+      - io.casehub.iot.state_change.cover
+      - io.casehub.iot.state_change.media_player
+      - io.casehub.iot.state_change.fan
+      - io.casehub.iot.state_change.camera
+    eventBufferDelay: PT5S
+    chainMode:
+      type: or
+      ganglia:
+        - device-unavailable
+    triggerMode:
+      type: fireOnce
+    triggerConfig:
+      caseNamespace: io.casehub.iot
+      caseName: generic-response
+      caseVersion: "1.0"

@@ -1,0 +1,49 @@
+situations:
+  - situationId: fire-risk
+    eventTypes:
+      - io.casehub.iot.state_change.sensor
+      - io.casehub.iot.state_change.thermostat
+    chainMode:
+      type: and
+      requiredGanglia:
+        - temperature-threshold
+        - sustained-rise
+    triggerMode:
+      type: repeating
+      cooldown: PT5M
+    triggerConfig:
+      caseNamespace: io.casehub.iot
+      caseName: safety-alert
+      caseVersion: "1.0"
+
+  - situationId: intrusion
+    eventTypes:
+      - io.casehub.iot.state_change.presence_sensor
+    eventBufferDelay: PT2S
+    chainMode:
+      type: threshold
+      ganglia:
+        - motion-at-time
+        - multi-room-motion
+      minConfidence: 0.7
+    triggerMode:
+      type: repeating
+      cooldown: PT10M
+    triggerConfig:
+      caseNamespace: io.casehub.iot
+      caseName: security-alert
+      caseVersion: "1.0"
+
+  - situationId: hvac-failure
+    eventTypes:
+      - io.casehub.iot.state_change.thermostat
+    chainMode:
+      type: count
+      ganglionId: sustained-rise
+      requiredCount: 3
+    triggerMode:
+      type: fireOnce
+    triggerConfig:
+      caseNamespace: io.casehub.iot
+      caseName: hvac-anomaly
+      caseVersion: "1.0"

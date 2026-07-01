@@ -1,0 +1,19 @@
+{
+  "name": "@casehubio/iot-webapp",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build"
+  },
+  "dependencies": {
+    "@casehubio/pages-runtime": "file:../../../../../pages/packages/pages-runtime",
+    "@casehubio/pages-ui": "file:../../../../../pages/packages/pages-ui",
+    "@casehubio/pages-data": "file:../../../../../pages/packages/pages-data",
+    "@casehubio/pages-viz": "file:../../../../../pages/packages/pages-viz",
+    "@casehubio/pages-component": "file:../../../../../pages/packages/pages-component"
+  },
+  "devDependencies": {
+    "typescript": "^5.4",
+    "vite": "^5.0"
+  }
+}

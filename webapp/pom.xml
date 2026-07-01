@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-iot-parent</artifactId>
+        <version>0.2-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>casehub-iot-webapp</artifactId>
+    <name>CaseHub IoT Webapp</name>
+    <description>Standalone Quarkus application — operational console with situational awareness and case orchestration</description>
+
+    <dependencies>
+        <!-- Webapp modules -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-webapp-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-webapp-drools</artifactId>
+        </dependency>
+
+        <!-- IoT foundation -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-homeassistant</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-openhab</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-bridge-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-bridge-persistence-jpa</artifactId>
+        </dependency>
+
+        <!-- RAS -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-ras</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-ras-persistence-jpa</artifactId>
+        </dependency>
+
+        <!-- Engine -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-engine</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-engine-scheduler-quartz</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-engine-work-adapter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-engine-blackboard</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-engine-persistence-memory</artifactId>
+        </dependency>
+
+        <!-- Work -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-work</artifactId>
+        </dependency>
+
+        <!-- Ledger -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-ledger</artifactId>
+        </dependency>
+
+        <!-- Platform -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform-expression</artifactId>
+        </dependency>
+
+        <!-- Connectors -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-connectors-core</artifactId>
+        </dependency>
+
+        <!-- Quarkus runtime -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-orm</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-scheduler</artifactId>
+        </dependency>
+        <!-- Removed: quarkus-rest-sse not in Quarkus BOM, use quarkus-resteasy-reactive-jackson instead -->
+        <dependency>
+            <groupId>io.quarkiverse.quinoa</groupId>
+            <artifactId>quarkus-quinoa</artifactId>
+            <version>2.4.7</version>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.quarkus.platform</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals><goal>build</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
