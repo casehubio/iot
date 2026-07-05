@@ -4,10 +4,10 @@ import io.casehub.api.spi.ActionRiskClassifier;
 import io.casehub.api.spi.ClassificationContext;
 import io.casehub.api.spi.RiskClassifier;
 import io.casehub.api.spi.RiskDecision;
+import io.casehub.api.spi.routing.StaticSetStrategy;
 import io.casehub.worker.api.PlannedAction;
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.List;
 import java.util.Set;
 
 @RiskClassifier
@@ -35,7 +35,7 @@ public class IoTActionRiskClassifier implements ActionRiskClassifier {
             return new RiskDecision.GateRequired(
                     "Lock/unlock commands require human approval",
                     true,
-                    List.of("iot-operator"),
+                    StaticSetStrategy.of("iot-operator"),
                     null,
                     "casehubio/iot/oversight");
         }
@@ -43,7 +43,7 @@ public class IoTActionRiskClassifier implements ActionRiskClassifier {
         return new RiskDecision.GateRequired(
                 "Unknown IoT command — manual review required",
                 true,
-                List.of("iot-admin"),
+                StaticSetStrategy.of("iot-admin"),
                 null,
                 "casehubio/iot/oversight");
     }
