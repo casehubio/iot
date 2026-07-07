@@ -4,6 +4,7 @@ import io.casehub.iot.api.bridge.BridgeAuditEvent;
 import io.casehub.iot.api.bridge.BridgeAuditEventType;
 import io.casehub.iot.api.bridge.BridgeAuditQuery;
 import io.casehub.iot.api.bridge.BridgeAuditStore;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -17,6 +18,7 @@ import java.time.temporal.ChronoUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
+@QuarkusTestResource(value = PostgresTestResource.class, restrictToAnnotatedClass = true)
 class JpaBridgeAuditStoreTest {
 
     @Inject

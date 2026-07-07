@@ -4,6 +4,7 @@ import io.casehub.iot.api.bridge.BridgeAuditEvent;
 import io.casehub.iot.api.bridge.BridgeAuditEventType;
 import io.casehub.iot.api.bridge.BridgeAuditQuery;
 import io.casehub.iot.api.bridge.BridgeAuditStore;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
 @TestProfile(JpaAuditRetentionJobTest.RetentionEnabledProfile.class)
+@QuarkusTestResource(value = PostgresTestResource.class, restrictToAnnotatedClass = true)
 class JpaAuditRetentionJobTest {
 
     @Inject
