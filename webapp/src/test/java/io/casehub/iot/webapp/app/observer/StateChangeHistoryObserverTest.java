@@ -15,6 +15,7 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,7 +59,7 @@ class StateChangeHistoryObserverTest {
             before,
             after,
             Set.of("isOn"),
-            Instant.now(),
+            Instant.now().truncatedTo(ChronoUnit.MICROS),
             "test-provider"
         );
 
@@ -105,7 +106,7 @@ class StateChangeHistoryObserverTest {
             before,
             after,
             Set.of("isOn", "brightness"),
-            Instant.now(),
+            Instant.now().truncatedTo(ChronoUnit.MICROS),
             "test-provider"
         );
 
@@ -133,7 +134,7 @@ class StateChangeHistoryObserverTest {
             null,
             after,
             Set.of(),
-            Instant.now(),
+            Instant.now().truncatedTo(ChronoUnit.MICROS),
             "test-provider"
         );
 
