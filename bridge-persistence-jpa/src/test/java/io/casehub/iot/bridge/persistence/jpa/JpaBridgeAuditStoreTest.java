@@ -127,9 +127,9 @@ class JpaBridgeAuditStoreTest {
 
     @Test
     void queryReturnsNewestFirst() {
-        final Instant t1 = Instant.now().minus(2, ChronoUnit.HOURS);
-        final Instant t2 = Instant.now().minus(1, ChronoUnit.HOURS);
-        final Instant t3 = Instant.now();
+        final Instant t1 = Instant.now().minus(2, ChronoUnit.HOURS).truncatedTo(ChronoUnit.MICROS);
+        final Instant t2 = Instant.now().minus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.MICROS);
+        final Instant t3 = Instant.now().truncatedTo(ChronoUnit.MICROS);
 
         store.save(auditEventAt("t", BridgeAuditEventType.STATE_CHANGE, "d1", t1));
         store.save(auditEventAt("t", BridgeAuditEventType.STATE_CHANGE, "d2", t2));
