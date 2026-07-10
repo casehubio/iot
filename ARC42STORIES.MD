@@ -7,7 +7,7 @@
 **Consumed by:** casehub-life (Layer 9), future property management, elder care apps
 **Depends on:** casehub-platform-api (types only, no runtime behaviour)
 **Prefix:** IOT
-**Status:** C1–C6 complete.
+**Status:** C1–C7 complete.
 
 ---
 
@@ -144,6 +144,9 @@ C4Context
 | L4 | OpenHAB | iot-openhab | REST + SSE + semantic model + state cache + supplement types |
 | L5 | Test Harness | iot-testing | Mock provider, fixture devices (Java `Fixtures` + YAML `DeviceFixtureLoader`), `DeviceTypeHandler` SPI, event publisher |
 | L6 | Bridge | iot-bridge + iot-bridge-server | Two-sided tunnel: local agent (event relay, CDI-discovered filter chain) + cloud-side BridgeDeviceProvider. Docker deployment (multi-arch image, Compose). Conditional provider activation via @LookupIfProperty. BridgeAuditEvent CDI events for operational + compliance audit trails. |
+| L7 | Webapp API | webapp-api | Reusable IoT ganglia, case descriptors, worker functions, ActionRiskClassifier. Tier 1 — no JPA, no Quarkus runtime. |
+| L8 | Webapp Drools | webapp-drools | DroolsCEP temporal pattern ganglia (SustainedTemperatureRiseRule, MultiRoomMotionRule). Activates by classpath presence. |
+| L9 | Webapp Console | webapp | Standalone Quarkus app — operational console with RAS situational awareness, case orchestration, REST API, SSE, TypeScript pages via Quinoa. Three-datasource Flyway layout. |
 
 L1 and L2 both reside in `iot-api` but represent distinct architectural concerns: L1 is the vocabulary (types, enums, Jackson serialization annotations); L2 introduces CDI, Mutiny, and runtime behavior (the contracts). L1 now includes Jackson `@JsonTypeInfo` and `DeviceTypeIdResolver` — a deliberate boundary change from "zero framework dependency" to support polymorphic serialization across process boundaries. L2 includes `quarkus-jackson` as a compile dependency on iot-api — provides the CDI-managed `ObjectMapper` bean that `IoTCloudEventAdapter` injects for JSON serialisation. L6 spans two modules: `iot-bridge` (standalone Quarkus app for the local agent) and `iot-bridge-server` (library for the cloud-side provider).
 
@@ -234,6 +237,12 @@ casehub-iot/
 │   └── src/main/java/io/casehub/iot/bridge/
 ├── iot-bridge-server/    L6: Bridge cloud-side provider
 │   └── src/main/java/io/casehub/iot/bridge/server/
+├── webapp-api/           L7: Reusable webapp ganglia, case descriptors, worker functions
+│   └── src/main/java/io/casehub/iot/webapp/
+├── webapp-drools/        L8: DroolsCEP temporal pattern ganglia
+│   └── src/main/java/io/casehub/iot/webapp/drools/
+├── webapp/               L9: Operational console (Quarkus app)
+│   └── src/main/java/io/casehub/iot/webapp/app/
 └── pom.xml               Parent POM
 ```
 
@@ -594,6 +603,7 @@ Structured query and retrieval of audit history (beyond log aggregation) is defe
 | Journey | Description | Chapters | Status |
 |---|---|---|---|
 | IoT Device Abstraction | From bare scaffold to deployable, tested, multi-platform device integration layer | 6 | Complete |
+| IoT Operational Console | Situational awareness, case orchestration, and operational tooling | 1 | Complete |
 
 ```mermaid
 flowchart LR
@@ -602,6 +612,7 @@ flowchart LR
   C3 --> C4["C4: OpenHAB\n+ L4"]
   C4 --> C5["C5: Bridge\n+ L6"]
   C5 --> C6["C6: Bridge Operations\nL3, L4, L6"]
+  C6 --> C7["C7: Webapp Console\nL7, L8, L9"]
 
   style C1 fill:#90EE90,color:#000
   style C2 fill:#90EE90,color:#000
@@ -609,6 +620,7 @@ flowchart LR
   style C4 fill:#90EE90,color:#000
   style C5 fill:#90EE90,color:#000
   style C6 fill:#90EE90,color:#000
+  style C7 fill:#90EE90,color:#000
 ```
 
 ---
@@ -623,19 +635,23 @@ flowchart LR
 | 4 | OpenHAB | IoT Device Abstraction | + L4 | High | ✅ |
 | 5 | Bridge | IoT Device Abstraction | + L6 | High | ✅ |
 | 6 | Bridge Operations | IoT Device Abstraction | L3, L4, L6, crosscutting | Low, Low, High | ✅ |
+| 7 | Webapp Console | IoT Operational Console | + L7, L8, L9 | High, High, High | ✅ |
 
 ### Layer x Chapter Matrix
 
-| Layer | C1 | C2 | C3 | C4 | C5 | C6 |
-|---|---|---|---|---|---|---|
-| L1 Device Type System | High | Low | Low | Low | — | — |
-| L2 SPI & Registry | High | Low | Low | Low | Low | — |
-| L3 Home Assistant | — | — | High | — | Low | Low |
-| L4 OpenHAB | — | — | — | High | Low | Low |
-| L5 Test Harness | — | High | Low | Low | — | — |
-| L6 Bridge | — | — | — | — | High | High |
+| Layer | C1 | C2 | C3 | C4 | C5 | C6 | C7 |
+|---|---|---|---|---|---|---|---|
+| L1 Device Type System | High | Low | Low | Low | — | — | — |
+| L2 SPI & Registry | High | Low | Low | Low | Low | — | Low |
+| L3 Home Assistant | — | — | High | — | Low | Low | — |
+| L4 OpenHAB | — | — | — | High | Low | Low | — |
+| L5 Test Harness | — | High | Low | Low | — | — | — |
+| L6 Bridge | — | — | — | — | High | High | — |
+| L7 Webapp API | — | — | — | — | — | — | High |
+| L8 Webapp Drools | — | — | — | — | — | — | High |
+| L9 Webapp Console | — | — | — | — | — | — | High |
 
-L1 and L2 appear in C1–C4: foundational — real platform data in C3/C4 may surface type adjustments or SPI refinements. L5 appears in C2–C4: test harness grows as providers add fixtures. L3, L4, L6 are additive single-column entries — stable after introduction.
+L1 and L2 appear in C1–C4: foundational — real platform data in C3/C4 may surface type adjustments or SPI refinements. L5 appears in C2–C4: test harness grows as providers add fixtures. L3, L4, L6 are additive single-column entries — stable after introduction. L7–L9 are introduced in C7 as a new journey (IoT Operational Console).
 
 ### Sequencing Rationale
 
@@ -804,6 +820,33 @@ Production deployment artifact (Docker Compose + multi-arch image for ARM64 and 
 | L3 Home Assistant | Low — config properties Optional, @LookupIfProperty activation, mDNS discovery, programmatic RestClientBuilder, tenancyId removed from HomeAssistantConfig |
 | L4 OpenHAB | Low — same pattern as L3, plus SSDP fallback for discovery |
 | L6 Bridge | High — Docker deployment (Dockerfile.jvm, docker-compose.yml, DEPLOYMENT.md, multi-arch CI), BridgeAuditEvent + BridgeAuditEventType in api/bridge/, LoggingBridgeAuditObserver in bridge-server, @LookupIfProperty provider activation, tenancyId consolidation |
+
+---
+
+### Chapter 7 — Webapp Console
+
+**Journey:** IoT Operational Console | **Sequence:** 7 of 7 | **Status:** ✅
+**Delivered:** 2026-07-09 | **Issues:** #44, #45, #47
+
+**What this delivers**
+
+Three new modules — `webapp-api` (reusable ganglia, case descriptors, worker functions, ActionRiskClassifier), `webapp-drools` (DroolsCEP temporal pattern ganglia), and `webapp` (standalone Quarkus operational console). After this chapter, IoT operators have a situational awareness dashboard with real-time device state, situation detection, case orchestration, and work item management.
+
+**Accountability gaps closed**
+- No operational visibility → REST API + SSE for device state, situations, cases, work items (L9)
+- No IoT-specific situation detection → JavaSwitch and DroolsCEP ganglia detect sustained temperature rise, multi-room motion, unexpected unlock, water leak, power anomaly (L7, L8)
+- No case creation from situations → Case descriptors wire situation triggers to engine case definitions (L7)
+- No risk-aware action gating → ActionRiskClassifier with StaticSetStrategy classifies IoT actions by risk level (L7)
+- No per-provider refresh → DeviceRegistry.refresh(String) added to SPI (#43) (L2)
+
+**Layer Impact**
+
+| Layer | Delta |
+|---|---|
+| L7 Webapp API | High — IoT ganglia (JavaSwitch: UnexpectedUnlockGanglion, WaterLeakGanglion; PowerAnomalyGanglion), case descriptors (SafetyAlertCaseDescriptor, SecurityAlertCaseDescriptor, HvacAnomalyCaseDescriptor), worker functions (DeviceCommandWorkerFunction, NotificationWorkerFunction), ActionRiskClassifier with StaticSetStrategy, REST response records, situation definition YAML |
+| L8 Webapp Drools | High — DroolsCEP temporal ganglia (SustainedTemperatureRiseRule, MultiRoomMotionRule, HvacFailureRule), situation definition YAML for Drools-based detections |
+| L9 Webapp Console | High — REST resources (DeviceResource, DeviceSseResource, ProviderResource, SituationResource, CaseResource, WorkItemResource, HealthResource), JPA entities (IoTDeviceStateHistoryEntity, IoTSituationDefinitionEntity), StateChangeHistoryObserver, JpaRuntimeSituationDefinitionProvider, three-datasource Flyway layout, TypeScript pages via Quinoa |
+| L2 SPI & Registry | Low — DeviceRegistry.refresh(String) per-provider refresh added |
 
 ---
 
@@ -1338,6 +1381,106 @@ Not closed here: Drools integration for hybrid local automations (deployment top
 
 ---
 
+### Layer — Webapp API
+
+**Participates in chapters:** C7
+**Architectural patterns:** JavaSwitch Ganglion, Case Descriptor, Worker Function, Risk Classification
+**Key protocols:** casehub-ras SituationDefinitionProvider SPI, casehub-engine CaseDefinition SPI
+**Design refs:** `docs/superpowers/specs/2026-07-01-iot-webapp-design.md`
+**Issues:** casehubio/iot#44
+**Navigation:** `git log --grep="#44" --oneline`
+**Blog:** 🔲
+**Improvement refs:** casehubio/iot#46 (evaluate extraction to application tier)
+**Completed:** ✅ 2026-07-09
+
+#### What it adds
+
+**Before:** IoT foundation provides device abstraction and event propagation; no operational tooling exists.
+**After:** Reusable IoT ganglia detect situations from device state changes. Case descriptors create engine cases from triggered situations. Worker functions dispatch device commands and notifications. ActionRiskClassifier gates dangerous actions.
+
+- **JavaSwitch ganglia** — `UnexpectedUnlockGanglion`, `WaterLeakGanglion`, `PowerAnomalyGanglion` — detect situations from single or correlated state changes using the casehub-ras JavaSwitch pattern
+- **Case descriptors** — `SafetyAlertCaseDescriptor`, `SecurityAlertCaseDescriptor`, `HvacAnomalyCaseDescriptor` — map situation triggers to casehub-engine case definitions with appropriate worker functions
+- **Worker functions** — `DeviceCommandWorkerFunction` dispatches device commands via DeviceProvider SPI; `NotificationWorkerFunction` sends operator notifications
+- **ActionRiskClassifier** — `StaticSetStrategy` classifies IoT actions (lock commands, thermostat overrides) by risk level for oversight gating
+- **Situation definition YAML** — `META-INF/ras-iot-situations.yaml` declares situation definitions loadable by `JpaRuntimeSituationDefinitionProvider`
+
+#### Accountability gaps closed
+
+| Gap | What breaks without it | Closed by |
+|---|---|---|
+| No IoT-specific situation detection | Device state changes not correlated into actionable situations | JavaSwitch ganglia detect patterns (unexpected unlock, water leak, power anomaly) |
+| No case creation from situations | Situations fire but nothing orchestrates a response | Case descriptors wire triggers to engine case definitions |
+| No risk-aware action gating | Device commands execute without oversight | ActionRiskClassifier with StaticSetStrategy |
+
+---
+
+### Layer — Webapp Drools
+
+**Participates in chapters:** C7
+**Architectural patterns:** DroolsCEP temporal patterns, classpath activation
+**Key protocols:** casehub-ras-drools DroolsCEP ganglion SPI
+**Design refs:** `docs/superpowers/specs/2026-07-01-iot-webapp-design.md` §Drools ganglia
+**Issues:** casehubio/iot#44
+**Navigation:** `git log --grep="#44" --oneline`
+**Blog:** 🔲
+**Improvement refs:** 🔲
+**Completed:** ✅ 2026-07-09
+
+#### What it adds
+
+**Before:** JavaSwitch ganglia handle simple pattern matching; temporal correlations (sustained rise, multi-room motion) require CEP.
+**After:** DroolsCEP ganglia detect time-windowed patterns that JavaSwitch cannot express.
+
+- **SustainedTemperatureRiseRule** — fires when temperature rises continuously over a configurable time window
+- **MultiRoomMotionRule** — fires when motion detected in multiple rooms within a correlation window
+- **HvacFailureRule** — fires when HVAC setpoint/actual temperature diverges beyond threshold for extended duration
+- **Classpath activation** — module activates automatically when on the classpath; no configuration needed
+
+#### Accountability gaps closed
+
+| Gap | What breaks without it | Closed by |
+|---|---|---|
+| No temporal pattern detection | Sustained temperature rise, multi-room intrusion undetectable | DroolsCEP rules with time-windowed correlations |
+| Tight coupling to Drools | Non-Drools deployments forced to include Drools runtime | Separate module; classpath-activated; omit to exclude |
+
+---
+
+### Layer — Webapp Console
+
+**Participates in chapters:** C7
+**Architectural patterns:** Quarkus REST + SSE, JPA persistence, three-datasource Flyway, Quinoa frontend
+**Key protocols:** casehub-ras SituationDefinitionProvider, JPA JSONB storage
+**Design refs:** `docs/superpowers/specs/2026-07-01-iot-webapp-design.md`
+**Issues:** casehubio/iot#44, casehubio/iot#45
+**Navigation:** `git log --grep="#44" --oneline`
+**Blog:** 🔲
+**Improvement refs:** casehubio/iot#46 (evaluate extraction)
+**Completed:** ✅ 2026-07-09
+
+#### What it adds
+
+**Before:** Device abstraction, situation detection, and case descriptors exist as libraries; no operational interface.
+**After:** Standalone Quarkus application providing REST API, SSE streaming, and TypeScript dashboard pages.
+
+- **REST resources** — `DeviceResource` (list/detail), `DeviceSseResource` (SSE stream with per-client tenancy filtering), `ProviderResource` (status + per-provider refresh), `SituationResource`, `CaseResource`, `WorkItemResource`, `HealthResource`
+- **SSE streaming** — `BroadcastProcessor<DeviceResponse>` with per-client tenancy filtering captured at connection time (not at broadcast time — request scope is active in `stream()`, not in `@ObservesAsync`)
+- **JPA persistence** — `IoTDeviceStateHistoryEntity` (device state change history), `IoTSituationDefinitionEntity` (tenant-scoped situation definition overrides with JSONB `SituationDefinition`)
+- **StateChangeHistoryObserver** — `@ObservesAsync StateChangeEvent` persists state change history for audit and replay
+- **JpaRuntimeSituationDefinitionProvider** — loads situation definitions from classpath YAML + database overrides per tenant; database definitions override classpath definitions by `situationId`
+- **Three-datasource Flyway layout** — default (bridge + webapp), `iot-work` (work + ledger), `iot-ras` (RAS isolated)
+- **TypeScript pages** — Quinoa-built frontend for operational dashboard
+
+#### Accountability gaps closed
+
+| Gap | What breaks without it | Closed by |
+|---|---|---|
+| No operational interface | Operators have no visibility into device state or situations | REST API + SSE + TypeScript dashboard |
+| No state change history | Past device states lost; no audit trail | IoTDeviceStateHistoryEntity persists every state change |
+| No tenant-scoped situation customization | All tenants share the same detection rules | JpaRuntimeSituationDefinitionProvider with database overrides |
+| SSE tenancy leak | Multi-tenant SSE broadcast exposes cross-tenant device state | Per-client tenancy filtering captured at connection time |
+
+---
+
 ## §10 Architectural Decisions
 
 Decisions that span multiple layers or are cross-cutting. Layer-specific decisions are in §9.4 layer entries.
@@ -1432,6 +1575,11 @@ Decisions that span multiple layers or are cross-cutting. Layer-specific decisio
 | **BridgeAuditEventType** | Enum classifying audit events: STATE_CHANGE, REPLAYED_STATE_CHANGE, STATE_SNAPSHOT, PROVIDER_STATUS_CHANGE, COMMAND_SENT, COMMAND_RESPONSE, AGENT_CONNECTED, AGENT_DISCONNECTED. No HEARTBEAT. |
 | **@LookupIfProperty** | Quarkus CDI mechanism for conditional bean activation. Provider not discoverable via `Instance<>` when property is absent or not equal to `"true"`. |
 | **Dual-trail audit pattern** | Operational logging and compliance ledger as independent CDI event observers. Both fire for every BridgeAuditEvent. Neither blocks the other. |
+| **Ganglion** | A situation detection strategy — observes device state changes and produces `DetectionResult` when a pattern matches. JavaSwitch ganglia use imperative code; DroolsCEP ganglia use Drools temporal rules. |
+| **ActionRiskClassifier** | Classifies IoT actions (device commands) by risk level. `StaticSetStrategy` uses a configured set of high-risk actions. Used by casehub-engine oversight gating. |
+| **JpaRuntimeSituationDefinitionProvider** | Loads situation definitions from classpath YAML resources and tenant-scoped database overrides. Database definitions override classpath definitions by `situationId`. |
+| **IoTDeviceStateHistoryEntity** | JPA entity persisting device state change history — deviceId, providerId, deviceClass, changedCapabilities, stateSnapshot (JSONB), occurredAt, tenancyId. |
+| **Quinoa** | Quarkiverse extension that builds and serves a frontend (TypeScript/npm) project alongside a Quarkus backend. Used by the webapp for the operational dashboard. |
 
 ---
 

@@ -103,6 +103,7 @@ class BridgeCloudClientTest {
         @Override public List<io.casehub.iot.api.DeviceEntity> findByTenancyId(String t) { return List.of(); }
         @Override public List<io.casehub.iot.api.DeviceEntity> findAll() { return List.of(); }
         @Override public Uni<Void> refresh() { return Uni.createFrom().voidItem(); }
+        @Override public Uni<Void> refresh(String providerId) { return Uni.createFrom().voidItem(); }
     }
 
     private static class StubDispatcher extends BridgeCommandDispatcher {

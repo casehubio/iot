@@ -42,7 +42,12 @@ public class MockDeviceRegistry implements DeviceRegistry {
 
     @Override
     public Uni<Void> refresh() {
-        return Uni.createFrom().voidItem(); /* no-op — populated programmatically */
+        return Uni.createFrom().voidItem();
+    }
+
+    @Override
+    public Uni<Void> refresh(String providerId) {
+        return Uni.createFrom().voidItem();
     }
 
     public void addDevice(DeviceEntity device) {

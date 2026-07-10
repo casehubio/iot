@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @QuarkusTest
 class CdiDeviceRegistryTest {
@@ -85,5 +86,20 @@ class CdiDeviceRegistryTest {
     void refreshRebuildsDeviceMap() {
         registry.refresh().await().indefinitely();
         assertThat(registry.findAll()).hasSize(2);
+    }
+
+    @Test
+    void perProviderRefreshRediscoversTargetProvider() {
+        registry.refresh("test").await().indefinitely();
+        assertThat(registry.findAll()).hasSize(2);
+        assertThat(registry.findById("sw1")).isPresent();
+        assertThat(registry.findById("l1")).isPresent();
+    }
+
+    @Test
+    void perProviderRefreshThrowsForUnknownProvider() {
+        assertThatThrownBy(() -> registry.refresh("nonexistent").await().indefinitely())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("nonexistent");
     }
 }

@@ -11,4 +11,5 @@ public interface DeviceRegistry {
     List<DeviceEntity> findByTenancyId(String tenancyId);
     List<DeviceEntity> findAll();
     Uni<Void> refresh();
+    Uni<Void> refresh(String providerId);
 }

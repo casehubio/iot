@@ -11,7 +11,6 @@ import io.casehub.ras.api.SituationRegistration;
 import io.casehub.iot.webapp.app.WebappPostgresTestResource;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import org.junit.jupiter.api.Disabled;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -43,26 +42,19 @@ class JpaRuntimeSituationDefinitionProviderTest {
     @BeforeEach
     @Transactional
     void setUp() {
-        // Clear any existing definitions
         entityManager.createQuery("DELETE FROM IoTSituationDefinitionEntity").executeUpdate();
         entityManager.flush();
     }
 
     @Test
     void shouldReturnEmptyListWhenNoDefinitionsExist() {
-        // When - YAML resources don't exist yet, and no DB entries
         final List<SituationRegistration> registrations = provider.registrations();
-
-        // Then - returns empty list gracefully
         assertThat(registrations).isNotNull();
-        // Note: may contain classpath definitions if YAML files are added
     }
 
-    @Disabled("SituationDefinition JSONB deserialization needs Jackson type info for sealed TriggerAction/ChainMode — casehub-ras upstream fix")
     @Test
     @Transactional
     void shouldLoadDatabaseDefinitionsForCurrentTenant() {
-        // Given - database definition for current tenant
         final SituationDefinition dbDef = new SituationDefinition(
             "test-situation",
             Set.of("io.casehub.iot.state_change.lock"),
@@ -89,18 +81,15 @@ class JpaRuntimeSituationDefinitionProviderTest {
         entityManager.flush();
         entityManager.clear();
 
-        // Force re-initialization by creating new provider instance
         final JpaRuntimeSituationDefinitionProvider freshProvider =
             new JpaRuntimeSituationDefinitionProvider(
                 entityManager,
                 currentPrincipal,
-                null // ganglia not needed for this test
+                null
             );
 
-        // When
         final List<SituationRegistration> registrations = freshProvider.registrations();
 
-        // Then
         assertThat(registrations)
             .extracting(r -> r.definition().situationId())
             .contains("test-situation");
@@ -116,22 +105,20 @@ class JpaRuntimeSituationDefinitionProviderTest {
             .isEqualTo(Duration.ofMinutes(5));
     }
 
-    @Disabled("SituationDefinition JSONB deserialization needs Jackson type info for sealed TriggerAction/ChainMode — casehub-ras upstream fix")
     @Test
     @Transactional
     void shouldMergeDatabaseOverridesWithClasspathDefinitions() {
-        // Given - two database definitions
         final SituationDefinition override1 = new SituationDefinition(
             "unexpected-unlock",
             Set.of("io.casehub.iot.state_change.lock"),
-            Duration.ofMinutes(10), // Different from potential classpath default
+            Duration.ofMinutes(10),
             null,
             new ChainMode.Or(new LinkedHashSet<>(List.of("lock-state"))),
             new TriggerAction.CreateCase(new CaseTriggerConfig(
                 "io.casehub.iot",
                 "security-alert",
                 "1.0",
-                Map.of("severity", "high") // Override adds custom data
+                Map.of("severity", "high")
             )),
             new TriggerMode.Repeating(Duration.ofMinutes(15))
         );
@@ -169,7 +156,6 @@ class JpaRuntimeSituationDefinitionProviderTest {
         entityManager.flush();
         entityManager.clear();
 
-        // Create fresh provider instance
         final JpaRuntimeSituationDefinitionProvider freshProvider =
             new JpaRuntimeSituationDefinitionProvider(
                 entityManager,
@@ -177,16 +163,12 @@ class JpaRuntimeSituationDefinitionProviderTest {
                 null
             );
 
-        // When
         final List<SituationRegistration> registrations = freshProvider.registrations();
 
-        // Then
         assertThat(registrations)
             .extracting(r -> r.definition().situationId())
             .contains("custom-situation");
 
-        // If unexpected-unlock exists in classpath YAML, it should be overridden
-        // If not, it should be present from database only
         final boolean hasUnexpectedUnlock = registrations.stream()
             .anyMatch(r -> r.definition().situationId().equals("unexpected-unlock"));
 
@@ -196,7 +178,6 @@ class JpaRuntimeSituationDefinitionProviderTest {
                 .findFirst()
                 .orElseThrow();
 
-            // Verify database override took precedence
             assertThat(overrideReg.definition().correlationWindow())
                 .isEqualTo(Duration.ofMinutes(10));
             assertThat(overrideReg.definition().triggerMode())
@@ -204,11 +185,9 @@ class JpaRuntimeSituationDefinitionProviderTest {
         }
     }
 
-    @Disabled("SituationDefinition JSONB deserialization needs Jackson type info for sealed TriggerAction/ChainMode — casehub-ras upstream fix")
     @Test
     @Transactional
     void shouldIsolateTenantDefinitions() {
-        // Given - definitions for two different tenants
         final SituationDefinition def = new SituationDefinition(
             "tenant-specific",
             Set.of("io.casehub.iot.state_change.lock"),
@@ -221,7 +200,6 @@ class JpaRuntimeSituationDefinitionProviderTest {
 
         final Instant now = Instant.now();
 
-        // Current tenant's definition
         entityManager.persist(new IoTSituationDefinitionEntity(
             "tenant-specific",
             currentPrincipal.tenancyId(),
@@ -230,7 +208,6 @@ class JpaRuntimeSituationDefinitionProviderTest {
             now
         ));
 
-        // Other tenant's definition (should not be loaded)
         entityManager.persist(new IoTSituationDefinitionEntity(
             "tenant-specific",
             "OTHER_TENANT",
@@ -242,7 +219,6 @@ class JpaRuntimeSituationDefinitionProviderTest {
         entityManager.flush();
         entityManager.clear();
 
-        // Create fresh provider instance
         final JpaRuntimeSituationDefinitionProvider freshProvider =
             new JpaRuntimeSituationDefinitionProvider(
                 entityManager,
@@ -250,10 +226,8 @@ class JpaRuntimeSituationDefinitionProviderTest {
                 null
             );
 
-        // When
         final List<SituationRegistration> registrations = freshProvider.registrations();
 
-        // Then - should only see current tenant's definition once
         final long count = registrations.stream()
             .filter(r -> r.definition().situationId().equals("tenant-specific"))
             .count();
@@ -263,11 +237,8 @@ class JpaRuntimeSituationDefinitionProviderTest {
 
     @Test
     void shouldCacheRegistrationsAfterFirstLoad() {
-        // When - call registrations() twice
         final List<SituationRegistration> first = provider.registrations();
         final List<SituationRegistration> second = provider.registrations();
-
-        // Then - should return the same list instance (cached)
         assertThat(first).isSameAs(second);
     }
 }

@@ -64,6 +64,12 @@ class MockDeviceRegistryTest {
     }
 
     @Test
+    void perProviderRefreshIsNoOp() {
+        registry.refresh("test").await().indefinitely();
+        assertThat(registry.findAll()).hasSize(2);
+    }
+
+    @Test
     void clearRemovesAllDevices() {
         registry.clear();
         assertThat(registry.findAll()).isEmpty();

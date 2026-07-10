@@ -12,16 +12,6 @@ import jakarta.ws.rs.core.MediaType;
 
 import java.util.List;
 
-/**
- * REST resource for device provider operations.
- *
- * <p>Endpoints:
- * <ul>
- *   <li>{@code GET /api/providers} — all registered providers with status
- *   <li>{@code GET /api/providers/{providerId}} — single provider detail
- *   <li>{@code POST /api/providers/refresh} — trigger device re-discovery
- * </ul>
- */
 @Path("/api/providers")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
@@ -37,11 +27,6 @@ public class ProviderResource {
     @Inject
     CurrentPrincipal principal;
 
-    /**
-     * List all registered providers with status and device count.
-     *
-     * @return list of provider status records
-     */
     @GET
     @RolesAllowed("iot-viewer")
     public List<ProviderStatusResponse> list() {
@@ -50,7 +35,7 @@ public class ProviderResource {
                     var status = p.status();
                     var deviceCount = deviceRegistry.findAll().stream()
                             .filter(d -> d.providerId().equals(p.providerId()))
-                            .filter(d -> filterByTenancy(d.tenancyId()))
+                            .filter(d -> d.tenancyId().equals(principal.tenancyId()))
                             .count();
 
                     return new ProviderStatusResponse(
@@ -62,12 +47,6 @@ public class ProviderResource {
                 .toList();
     }
 
-    /**
-     * Get single provider detail.
-     *
-     * @param providerId provider ID
-     * @return provider status with device count
-     */
     @GET
     @Path("/{providerId}")
     @RolesAllowed("iot-viewer")
@@ -80,7 +59,7 @@ public class ProviderResource {
         var status = provider.status();
         var deviceCount = deviceRegistry.findAll().stream()
                 .filter(d -> d.providerId().equals(provider.providerId()))
-                .filter(d -> filterByTenancy(d.tenancyId()))
+                .filter(d -> d.tenancyId().equals(principal.tenancyId()))
                 .count();
 
         return new ProviderStatusResponse(
@@ -90,22 +69,24 @@ public class ProviderResource {
         );
     }
 
-    /**
-     * Trigger device re-discovery across all providers.
-     *
-     * <p>Calls {@link DeviceRegistry#refresh()} which rediscovers all providers.
-     * Per-provider refresh is not supported in the current SPI (see iot#43).
-     */
     @POST
     @Path("/refresh")
     @RolesAllowed("iot-operator")
-    public RefreshResponse refresh() {
+    public RefreshResponse refreshAll() {
         deviceRegistry.refresh().await().indefinitely();
         return new RefreshResponse("Device discovery triggered for all providers");
     }
 
-    private boolean filterByTenancy(String deviceTenancyId) {
-        return deviceTenancyId == null || deviceTenancyId.equals(principal.tenancyId());
+    @POST
+    @Path("/{providerId}/refresh")
+    @RolesAllowed("iot-operator")
+    public RefreshResponse refresh(@PathParam("providerId") String providerId) {
+        try {
+            deviceRegistry.refresh(providerId).await().indefinitely();
+        } catch (IllegalArgumentException e) {
+            throw new NotFoundException(e.getMessage());
+        }
+        return new RefreshResponse("Device discovery triggered for provider: " + providerId);
     }
 
     public record ProviderStatusResponse(

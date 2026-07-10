@@ -54,6 +54,27 @@ public class CdiDeviceRegistry implements DeviceRegistry {
             });
     }
 
+    @Override
+    public Uni<Void> refresh(String providerId) {
+        DeviceProvider target = StreamSupport.stream(providers.spliterator(), false)
+                .filter(p -> p.providerId().equals(providerId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown provider: " + providerId));
+
+        return target.discover()
+                .onFailure().invoke(e -> LOG.warnf(e, "Provider %s failed during discover", providerId))
+                .onFailure().recoverWithItem(List.of())
+                .map(discovered -> {
+                    synchronized (CdiDeviceRegistry.this) {
+                        Map<String, DeviceEntity> next = new HashMap<>(devices);
+                        next.entrySet().removeIf(e -> e.getValue().providerId().equals(providerId));
+                        discovered.forEach(d -> next.put(d.deviceId(), d));
+                        devices = Map.copyOf(next);
+                    }
+                    return (Void) null;
+                });
+    }
+
     void onStateChange(@ObservesAsync StateChangeEvent event) {
         updateDevice(event.after());
     }
