@@ -152,6 +152,21 @@
                 <artifactId>casehub-platform-expression</artifactId>
                 <version>${casehub.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-neocortex-memory-api</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-neocortex-memory</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-neocortex-memory-cbr-jpa</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
 
             <!-- Drools CEP -->
             <dependency>

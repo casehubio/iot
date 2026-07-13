@@ -38,6 +38,12 @@
             <artifactId>casehub-engine-api</artifactId>
         </dependency>
 
+        <!-- Neocortex Memory API (CbrFeatureSchema, FeatureField, SimilaritySpec) -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-neocortex-memory-api</artifactId>
+        </dependency>
+
         <!-- Worker primitives (Worker, Capability, WorkerFunction, PlannedAction) -->
         <dependency>
             <groupId>io.casehub</groupId>

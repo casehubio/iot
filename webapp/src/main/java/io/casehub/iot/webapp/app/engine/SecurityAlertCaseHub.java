@@ -2,23 +2,16 @@ package io.casehub.iot.webapp.app.engine;
 
 import io.casehub.api.engine.YamlCaseHub;
 import io.casehub.api.model.CaseDefinition;
+import io.casehub.api.model.cbr.CbrConfig;
+import io.casehub.api.model.cbr.CbrConfig.CbrRetrievalTiming;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
+import io.casehub.iot.webapp.cbr.IoTCbrFeatureExtractors;
 import io.casehub.iot.webapp.engine.SecurityAlertCaseDescriptor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
-/**
- * CaseHub for security-alert cases triggered by intrusion situations.
- *
- * <p>Loads YAML structure from classpath and augments with worker lambdas
- * from SecurityAlertCaseDescriptor. Flow: lock doors + activate cameras →
- * notify household → human decision (false alarm / escalate / call authorities).
- * Automated lock is immediate, but escalation requires human approval.
- *
- * <p>Referenced by RAS CaseTriggerConfig: {@code ("io.casehub.iot", "security-alert", "1.0")}
- */
 @ApplicationScoped
 public class SecurityAlertCaseHub extends YamlCaseHub {
 
@@ -36,5 +29,21 @@ public class SecurityAlertCaseHub extends YamlCaseHub {
     protected void augment(final CaseDefinition definition) {
         final var descriptor = new SecurityAlertCaseDescriptor(providers, registry);
         descriptor.workers().forEach(definition.getWorkers()::add);
+
+        definition.setCbrConfig(CbrConfig.builder()
+                .domain("iot")
+                .caseType(definition.getName())
+                .featureExtractor(IoTCbrFeatureExtractors::extractSecurityAlertFeatures)
+                .weight("deviceClass", 2.0)
+                .weight("entryPoint", 1.5)
+                .weight("roomType", 1.5)
+                .weight("hourOfDay", 1.0)
+                .weight("dayType", 0.5)
+                .weight("season", 0.5)
+                .topK(5)
+                .minSimilarity(0.3)
+                .vectorWeight(0.0)
+                .timing(CbrRetrievalTiming.PER_EVALUATION)
+                .build());
     }
 }

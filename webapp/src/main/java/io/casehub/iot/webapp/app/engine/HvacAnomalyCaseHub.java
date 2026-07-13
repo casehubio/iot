@@ -2,23 +2,16 @@ package io.casehub.iot.webapp.app.engine;
 
 import io.casehub.api.engine.YamlCaseHub;
 import io.casehub.api.model.CaseDefinition;
+import io.casehub.api.model.cbr.CbrConfig;
+import io.casehub.api.model.cbr.CbrConfig.CbrRetrievalTiming;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
+import io.casehub.iot.webapp.cbr.IoTCbrFeatureExtractors;
 import io.casehub.iot.webapp.engine.HvacAnomalyCaseDescriptor;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
-/**
- * CaseHub for hvac-anomaly cases triggered by HVAC failure situations.
- *
- * <p>Loads YAML structure from classpath and augments with worker lambdas
- * from HvacAnomalyCaseDescriptor. Flow: attempt setpoint correction → if
- * command fails or temperature doesn't respond → notify household → human
- * review for manual triage.
- *
- * <p>Referenced by RAS CaseTriggerConfig: {@code ("io.casehub.iot", "hvac-anomaly", "1.0")}
- */
 @ApplicationScoped
 public class HvacAnomalyCaseHub extends YamlCaseHub {
 
@@ -36,5 +29,22 @@ public class HvacAnomalyCaseHub extends YamlCaseHub {
     protected void augment(final CaseDefinition definition) {
         final var descriptor = new HvacAnomalyCaseDescriptor(providers, registry);
         descriptor.workers().forEach(definition.getWorkers()::add);
+
+        definition.setCbrConfig(CbrConfig.builder()
+                .domain("iot")
+                .caseType(definition.getName())
+                .featureExtractor(IoTCbrFeatureExtractors::extractHvacAnomalyFeatures)
+                .weight("deviceClass", 2.0)
+                .weight("roomType", 1.5)
+                .weight("temperatureDelta", 1.5)
+                .weight("hourOfDay", 1.0)
+                .weight("outdoorTemperatureRange", 0.8)
+                .weight("dayType", 0.5)
+                .weight("season", 0.5)
+                .topK(5)
+                .minSimilarity(0.3)
+                .vectorWeight(0.0)
+                .timing(CbrRetrievalTiming.PER_EVALUATION)
+                .build());
     }
 }

@@ -79,6 +79,16 @@
             <artifactId>casehub-engine-persistence-memory</artifactId>
         </dependency>
 
+        <!-- CBR JPA store -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-neocortex-memory-cbr-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-neocortex-memory</artifactId>
+        </dependency>
+
         <!-- Work -->
         <dependency>
             <groupId>io.casehub</groupId>
