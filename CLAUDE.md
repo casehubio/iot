@@ -47,6 +47,8 @@ mvn --batch-mode deploy -DskipTests
 - Provider activation uses `@LookupIfProperty(name = "casehub.iot.<provider>.enabled", stringValue = "true")` — disabled providers are invisible to `Instance<DeviceProvider>`. All provider config properties must be `Optional<String>` to prevent SmallRye startup validation failure.
 - REST clients are created programmatically via `RestClientBuilder` (not `@RegisterRestClient`) — base URLs are resolved at runtime to support auto-discovery.
 - Single tenancy property: `casehub.iot.tenancy-id` — never per-module `tenancyId()` in `@ConfigMapping`.
+- Device metadata (deviceClass, roomType, eventTimestamp) flows into the case working layer via `IoTCaseInputContributor` — a CDI implementation of the `CaseInputContributor` SPI (`casehub-ras-api`). It resolves the device from `DeviceRegistry` using the CloudEvent correlationKey (`device/<deviceId>`). No CaseHub overrides needed.
+- `DeviceEntity.location()` is nullable — populated by OpenHAB (from `thing.location()`), null for HA (area registry integration pending).
 - Docker image: `ghcr.io/casehubio/iot-bridge` (JVM, multi-arch ARM64+x86_64). Deployment guide: `bridge/DEPLOYMENT.md`.
 
 ## Cross-Repo Conventions

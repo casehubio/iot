@@ -62,6 +62,7 @@ public class OpenHabThingResolver {
                 .available(thing.isOnline())
                 .now(now)
                 .tenancyId(tenancyId)
+                .location(thing.location())
                 .deviceClass(deviceClass);
 
         populateFields(b, deviceClass, stateChannels, itemStates);

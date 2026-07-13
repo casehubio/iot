@@ -25,6 +25,7 @@ public abstract class DeviceEntity {
     private final Instant lastUpdated;
     private final String tenancyId;
     private final String providerId;
+    private final String location;
 
     protected DeviceEntity(Builder<?, ?> builder) {
         this.deviceId = Objects.requireNonNull(builder.deviceId, "deviceId");
@@ -34,6 +35,7 @@ public abstract class DeviceEntity {
         this.lastUpdated = Objects.requireNonNull(builder.lastUpdated, "lastUpdated");
         this.tenancyId = Objects.requireNonNull(builder.tenancyId, "tenancyId");
         this.providerId = Objects.requireNonNull(builder.providerId, "providerId");
+        this.location = builder.location;
     }
 
     public static final String CAP_AVAILABLE = "available";
@@ -51,6 +53,7 @@ public abstract class DeviceEntity {
     public Instant lastUpdated() { return lastUpdated; }
     public String tenancyId() { return tenancyId; }
     public String providerId() { return providerId; }
+    public String location() { return location; }
 
     @Override
     public boolean equals(Object o) {
@@ -80,6 +83,7 @@ public abstract class DeviceEntity {
         Instant lastUpdated;
         String tenancyId;
         String providerId;
+        String location;
 
         public B deviceId(String v) { this.deviceId = v; return self(); }
         public B deviceClass(DeviceClass v) { this.deviceClass = v; return self(); }
@@ -88,6 +92,7 @@ public abstract class DeviceEntity {
         public B lastUpdated(Instant v) { this.lastUpdated = v; return self(); }
         public B tenancyId(String v) { this.tenancyId = v; return self(); }
         public B providerId(String v) { this.providerId = v; return self(); }
+        public B location(String v) { this.location = v; return self(); }
 
         protected B self() { return (B) this; }
         public abstract T build();

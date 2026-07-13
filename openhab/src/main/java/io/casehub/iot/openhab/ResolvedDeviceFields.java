@@ -24,6 +24,7 @@ public record ResolvedDeviceFields(
         boolean available,
         Instant now,
         String tenancyId,
+        String location,
         DeviceClass deviceClass,
         // thermostat
         Temperature currentTemperature,
@@ -63,7 +64,7 @@ public record ResolvedDeviceFields(
     }
 
     public ResolvedDeviceFields withAvailable(boolean newAvailable) {
-        return new ResolvedDeviceFields(deviceId, label, newAvailable, now, tenancyId, deviceClass,
+        return new ResolvedDeviceFields(deviceId, label, newAvailable, now, tenancyId, location, deviceClass,
                 currentTemperature, targetTemperature, mode, heatingDemand, coolingDemand,
                 on, hsb, brightness, locked, position, isRollershutter, volume,
                 sensorType, numericValue, unit, power, energy, present, streaming);
@@ -79,6 +80,7 @@ public record ResolvedDeviceFields(
         private boolean available = true;
         private Instant now;
         private String tenancyId;
+        private String location;
         private DeviceClass deviceClass;
         // thermostat
         private Temperature currentTemperature;
@@ -114,6 +116,7 @@ public record ResolvedDeviceFields(
         public Builder available(boolean available) { this.available = available; return this; }
         public Builder now(Instant now) { this.now = now; return this; }
         public Builder tenancyId(String tenancyId) { this.tenancyId = tenancyId; return this; }
+        public Builder location(String location) { this.location = location; return this; }
         public Builder deviceClass(DeviceClass deviceClass) { this.deviceClass = deviceClass; return this; }
 
         public Builder currentTemperature(Temperature v) { this.currentTemperature = v; return this; }
@@ -146,7 +149,7 @@ public record ResolvedDeviceFields(
 
         public ResolvedDeviceFields build() {
             return new ResolvedDeviceFields(
-                    deviceId, label, available, now, tenancyId, deviceClass,
+                    deviceId, label, available, now, tenancyId, location, deviceClass,
                     currentTemperature, targetTemperature, mode, heatingDemand, coolingDemand,
                     on, hsb, brightness,
                     locked,

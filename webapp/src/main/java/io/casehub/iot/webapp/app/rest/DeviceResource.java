@@ -79,7 +79,7 @@ public class DeviceResource {
                         d.tenancyId(),
                         d.deviceClass().name(),
                         d.label(),
-                        null,
+                        d.location(),
                         d.available(),
                         d.capabilities(),
                         d.lastUpdated()
@@ -111,7 +111,7 @@ public class DeviceResource {
                 device.tenancyId(),
                 device.deviceClass().name(),
                 device.label(),
-                null,
+                device.location(),
                 device.available(),
                 device.capabilities(),
                 device.lastUpdated()
