@@ -3,7 +3,6 @@ package io.casehub.iot.webapp.app.engine;
 import io.casehub.iot.api.DeviceClass;
 import io.casehub.iot.api.DeviceEntity;
 import io.casehub.iot.api.SwitchDevice;
-import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.testing.MockDeviceRegistry;
 import io.casehub.ras.api.CaseTriggerConfig;
 import io.casehub.ras.api.SituationContext;
@@ -11,9 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
-
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,23 +30,24 @@ class IoTCaseInputContributorTest {
     @Test
     void contributesDeviceMetadataFromRegistry() {
         DeviceEntity device = SwitchDevice.builder()
-                .deviceId("switch.living_room")
-                .deviceClass(DeviceClass.SWITCH)
-                .label("Living Room Switch")
-                .available(true)
-                .lastUpdated(T1)
-                .tenancyId("t1")
-                .providerId("homeassistant")
-                .location("Living Room")
-                .on(true)
-                .build();
+                                          .deviceId("switch.living_room")
+                                          .deviceClass(DeviceClass.SWITCH)
+                                          .label("Living Room Switch")
+                                          .available(true)
+                                          .lastUpdated(T1)
+                                          .tenancyId("t1")
+                                          .providerId("homeassistant")
+                                          .location("Living Room")
+                                          .on(true)
+                                          .build();
         registry.addDevice(device);
 
         var config = new CaseTriggerConfig("io.casehub.iot", "generic-response", "1.0", Map.of());
-        var ctx = SituationContext.initial("device-offline", "device/switch.living_room", "t1", T1);
+        var ctx    = SituationContext.initial("device-offline", "device/switch.living_room", "t1", T1);
 
         Map<String, Object> result = contributor.contribute(config, ctx);
 
+        assertThat(result.get("situationId")).isEqualTo("device-offline");
         assertThat(result.get("deviceId")).isEqualTo("switch.living_room");
         assertThat(result.get("deviceClass")).isEqualTo("switch");
         assertThat(result.get("roomType")).isEqualTo("Living Room");
@@ -82,23 +80,25 @@ class IoTCaseInputContributorTest {
     }
 
     @Test
-    void returnsEmptyForNonDeviceCorrelationKey() {
+    void returnsSituationIdForNonDeviceCorrelationKey() {
         var config = new CaseTriggerConfig("io.casehub.iot", "generic-response", "1.0", Map.of());
-        var ctx = SituationContext.initial("sit-1", "user/admin", "t1", T1);
+        var ctx    = SituationContext.initial("sit-1", "user/admin", "t1", T1);
 
         Map<String, Object> result = contributor.contribute(config, ctx);
 
-        assertThat(result).isEmpty();
+        assertThat(result).containsEntry("situationId", "sit-1");
+        assertThat(result).doesNotContainKey("deviceId");
     }
 
     @Test
-    void returnsEmptyWhenDeviceNotInRegistry() {
+    void returnsSituationIdWhenDeviceNotInRegistry() {
         var config = new CaseTriggerConfig("io.casehub.iot", "generic-response", "1.0", Map.of());
-        var ctx = SituationContext.initial("sit-1", "device/unknown-device", "t1", T1);
+        var ctx    = SituationContext.initial("sit-1", "device/unknown-device", "t1", T1);
 
         Map<String, Object> result = contributor.contribute(config, ctx);
 
-        assertThat(result).isEmpty();
+        assertThat(result).containsEntry("situationId", "sit-1");
+        assertThat(result).doesNotContainKey("deviceId");
     }
 
     @Test

@@ -94,7 +94,7 @@ class IoTCbrRetrievalServiceTest {
                 Map.of("deviceClass", FeatureValue.string("thermostat")),
                 List.of(planTrace));
         var scored = new ScoredCbrCase<>(cbrCase, "past-case-1", 0.87, false,
-                Map.of("deviceClass", 1.0, "roomType", 0.8));
+                Map.of("deviceClass", 1.0, "roomType", 0.8), null, null);
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
                 .thenReturn(List.of(scored));
@@ -121,7 +121,7 @@ class IoTCbrRetrievalServiceTest {
                 Map.of("deviceClass", FeatureValue.string("thermostat"),
                         "hourOfDay", FeatureValue.number(14.0)),
                 List.of());
-        var scored = new ScoredCbrCase<>(cbrCase, "c1", 0.5, false, Map.of());
+        var scored = new ScoredCbrCase<>(cbrCase, "c1", 0.5);
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
                 .thenReturn(List.of(scored));
@@ -188,8 +188,8 @@ class IoTCbrRetrievalServiceTest {
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
                 .thenReturn(List.of(
-                        new ScoredCbrCase<>(case1, "c1", 0.9, false, Map.of()),
-                        new ScoredCbrCase<>(case2, "c2", 0.7, false, Map.of())));
+                        new ScoredCbrCase<>(case1, "c1", 0.9),
+                        new ScoredCbrCase<>(case2, "c2", 0.7)));
 
         var results = service.retrieve(hvacConfig(), Map.of("d", "x"), "t1");
         assertThat(results).hasSize(2);

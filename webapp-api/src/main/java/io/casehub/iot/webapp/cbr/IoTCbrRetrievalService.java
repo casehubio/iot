@@ -32,16 +32,17 @@ public class IoTCbrRetrievalService {
         Map<String, FeatureValue> featureMap = FeatureValue.toFeatureMap(rawFeatures);
 
         CbrQuery query = CbrQuery.of(
-                        tenantId,
-                        new MemoryDomain(config.domain()),
-                        config.caseType(),
-                        featureMap,
-                        config.topK())
-                .withMinSimilarity(config.minSimilarity())
-                .withWeights(config.weights())
-                .withVectorWeight(config.vectorWeight())
-                .withRetrievalMode(config.vectorWeight() > 0.0
-                        ? RetrievalMode.HYBRID : RetrievalMode.FEATURE_ONLY);
+                                         tenantId,
+                                         new MemoryDomain(config.domain()),
+                                         io.casehub.platform.api.path.Path.root(),
+                                         config.caseType(),
+                                         featureMap,
+                                         config.topK())
+                                 .withMinSimilarity(config.minSimilarity())
+                                 .withWeights(config.weights())
+                                 .withVectorWeight(config.vectorWeight())
+                                 .withRetrievalMode(config.vectorWeight() > 0.0
+                                                    ? RetrievalMode.HYBRID : RetrievalMode.FEATURE_ONLY);
 
         List<ScoredCbrCase<PlanCbrCase>> scored = store.retrieveSimilar(query, PlanCbrCase.class);
         return scored.stream().map(this::toSuggestion).toList();

@@ -24,22 +24,22 @@ public class IoTCaseInputContributor implements CaseInputContributor {
 
     @Override
     public Map<String, Object> contribute(CaseTriggerConfig config, SituationContext context) {
+        var data = new LinkedHashMap<String, Object>();
+        data.put("situationId", context.situationId());
+
         String ck = context.correlationKey();
         if (ck == null || !ck.startsWith(DEVICE_PREFIX)) {
-            return Map.of();
+            return Map.copyOf(data);
         }
         String deviceId = ck.substring(DEVICE_PREFIX.length());
-        return deviceRegistry.findById(deviceId)
-                .map(device -> {
-                    var data = new LinkedHashMap<String, Object>();
-                    data.put("deviceId", deviceId);
-                    data.put("deviceClass", device.deviceClass().name().toLowerCase());
-                    if (device.location() != null) {
-                        data.put("roomType", device.location());
-                    }
-                    data.put("eventTimestamp", context.lastSignal());
-                    return Map.copyOf(data);
-                })
-                .orElse(Map.of());
+        deviceRegistry.findById(deviceId).ifPresent(device -> {
+            data.put("deviceId", deviceId);
+            data.put("deviceClass", device.deviceClass().name().toLowerCase());
+            if (device.location() != null) {
+                data.put("roomType", device.location());
+            }
+            data.put("eventTimestamp", context.lastSignal());
+        });
+        return Map.copyOf(data);
     }
 }
