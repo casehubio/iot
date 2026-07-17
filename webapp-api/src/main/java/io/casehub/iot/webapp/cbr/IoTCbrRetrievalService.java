@@ -44,6 +44,12 @@ public class IoTCbrRetrievalService {
                                  .withRetrievalMode(config.vectorWeight() > 0.0
                                                     ? RetrievalMode.HYBRID : RetrievalMode.FEATURE_ONLY);
 
+        if (config.temporalDecayHalfLifeDays() != null) {
+            query = query.withTemporalDecay(
+                    new io.casehub.neocortex.memory.cbr.TemporalDecay.HalfLife(
+                            java.time.Duration.ofDays(config.temporalDecayHalfLifeDays())));
+        }
+
         List<ScoredCbrCase<PlanCbrCase>> scored = store.retrieveSimilar(query, PlanCbrCase.class);
         return scored.stream().map(this::toSuggestion).toList();
     }

@@ -47,6 +47,50 @@ class IoTCbrRetrievalServiceTest {
                 .build();
     }
 
+    private CbrConfig hvacConfigWithDecay(int halfLifeDays) {
+        return CbrConfig.builder()
+                        .domain("iot")
+                        .caseType("hvac-anomaly")
+                        .featureExtractor(ctx -> Map.of())
+                        .weight("deviceClass", 2.0)
+                        .topK(5)
+                        .minSimilarity(0.3)
+                        .vectorWeight(0.0)
+                        .temporalDecayHalfLifeDays(halfLifeDays)
+                        .build();
+    }
+
+    @Test
+    void retrieve_appliesTemporalDecayWhenConfigured() {
+        when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
+                .thenReturn(List.of());
+
+        service.retrieve(hvacConfigWithDecay(30), Map.of("deviceClass", "thermostat"), "t1");
+
+        var captor = org.mockito.ArgumentCaptor.forClass(CbrQuery.class);
+        verify(store).retrieveSimilar(captor.capture(), eq(PlanCbrCase.class));
+
+        CbrQuery query = captor.getValue();
+        assertThat(query.temporalDecay()).isNotNull();
+        assertThat(query.temporalDecay()).isInstanceOf(io.casehub.neocortex.memory.cbr.TemporalDecay.HalfLife.class);
+        var halfLife = (io.casehub.neocortex.memory.cbr.TemporalDecay.HalfLife) query.temporalDecay();
+        assertThat(halfLife.halfLife()).isEqualTo(java.time.Duration.ofDays(30));
+    }
+
+    @Test
+    void retrieve_noTemporalDecayWhenNotConfigured() {
+        when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
+                .thenReturn(List.of());
+
+        service.retrieve(hvacConfig(), Map.of("deviceClass", "thermostat"), "t1");
+
+        var captor = org.mockito.ArgumentCaptor.forClass(CbrQuery.class);
+        verify(store).retrieveSimilar(captor.capture(), eq(PlanCbrCase.class));
+
+        assertThat(captor.getValue().temporalDecay()).isNull();
+    }
+
+
     @Test
     void retrieve_buildsCbrQueryFromConfig() {
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
