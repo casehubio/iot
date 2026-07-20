@@ -14,7 +14,7 @@ import java.util.Set;
 @ApplicationScoped
 public class IoTActionRiskClassifier implements ActionRiskClassifier {
 
-    private static final Set<String> SAFETY_CASE_TYPES = Set.of("safety-alert");
+    private static final Set<String> SAFETY_CASE_TYPES = IoTSafetyCaseTypes.SAFETY_CASE_TYPES;
     private static final Set<String> AUTONOMOUS_ACTIONS = Set.of(
             "TURN_ON", "TURN_OFF", "SET_TEMPERATURE", "SET_POSITION", "SET_VOLUME");
     private static final Set<String> GATED_ACTIONS = Set.of("LOCK", "UNLOCK");

@@ -169,6 +169,8 @@ class WorkItemOutcomeRecorderTest {
             @Override public Integer purge(CbrRetentionPolicy p) { return 0; }
             @Override public void supersede(String cid, String tid, String scid, String r) {}
             @Override public void reinstate(String cid, String tid) {}
+            @Override public java.util.List<io.casehub.neocortex.memory.cbr.SupersessionStatus> findSupersededCases(String cid, io.casehub.neocortex.memory.MemoryDomain d) { return java.util.List.of(); }
+            @Override public io.casehub.neocortex.memory.cbr.SupersessionStatus getSupersessionStatus(String cid, String tid) { return null; }
         };
     }
 

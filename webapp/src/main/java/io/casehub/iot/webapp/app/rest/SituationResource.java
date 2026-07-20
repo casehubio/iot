@@ -61,6 +61,15 @@ public class SituationResource {
     io.casehub.engine.common.spi.CaseDefinitionRegistry  caseDefinitionRegistry;
     @Inject
     io.casehub.iot.webapp.cbr.IoTCbrRetrievalService     retrievalService;
+    @Inject
+    io.casehub.iot.webapp.cbr.DismissalRecorder          dismissalRecorder;
+
+    @Inject
+    io.casehub.ras.api.SituationStore situationStore;
+
+    @Inject
+    jakarta.enterprise.event.Event<io.casehub.ras.api.SituationChangeEvent> changeEvent;
+
 
     /**
      * Map REST request to domain SituationDefinition.
@@ -333,6 +342,128 @@ public class SituationResource {
         // Query: SELECT * FROM ras_situation_context WHERE tenancy_id = :tenancyId AND terminated_at IS NULL
         return List.of();
     }
+
+    @jakarta.ws.rs.POST
+    @jakarta.ws.rs.Path("/active/{correlationKey}/dismiss")
+    @jakarta.transaction.Transactional
+    public jakarta.ws.rs.core.Response dismissSituation(
+            @jakarta.ws.rs.PathParam("correlationKey") String correlationKey,
+            io.casehub.iot.webapp.rest.DismissRequest request) {
+        if (request.situationId() == null || request.situationId().isBlank()) {
+            return jakarta.ws.rs.core.Response.status(400).entity("situationId is required").build();
+        }
+        String tenancyId = principal.tenancyId();
+
+        var context = situationStore.find(request.situationId(), correlationKey, tenancyId)
+                                    .await().indefinitely().orElse(null);
+
+        dismissalRecorder.recordDismissal(
+                request.situationId(), correlationKey, tenancyId, context, request.reason());
+
+        if (context != null) {
+            situationStore.remove(request.situationId(), correlationKey, tenancyId)
+                          .await().indefinitely();
+            changeEvent.fireAsync(new io.casehub.ras.api.SituationChangeEvent(
+                    tenancyId, request.situationId(), correlationKey,
+                    io.casehub.ras.api.SituationChangeEvent.ChangeType.DISMISSED, context));
+        }
+
+        return jakarta.ws.rs.core.Response.noContent().build();
+    }
+
+    @jakarta.ws.rs.GET
+    @jakarta.ws.rs.Path("/suppressions")
+    public java.util.List<io.casehub.iot.webapp.rest.SuppressionHistoryResponse> listSuppressions(
+            @jakarta.ws.rs.QueryParam("situationId") String situationId,
+            @jakarta.ws.rs.QueryParam("since") java.time.Instant since,
+            @jakarta.ws.rs.QueryParam("includeOverridden") @jakarta.ws.rs.DefaultValue("false") boolean includeOverridden) {
+        String tenancyId = principal.tenancyId();
+        if (since == null) {
+            since = java.time.Instant.now().minus(java.time.Duration.ofHours(24));
+        }
+
+        String jpql = "SELECT s FROM SuppressionLogEntry s WHERE s.tenancyId = :tenancyId AND s.suppressedAt >= :since";
+        if (situationId != null) {
+            jpql += " AND s.situationId = :situationId";
+        }
+        if (!includeOverridden) {
+            jpql += " AND s.overridden = false";
+        }
+        jpql += " ORDER BY s.suppressedAt DESC";
+
+        var query = em.createQuery(jpql, io.casehub.iot.webapp.app.persistence.SuppressionLogEntry.class)
+                      .setParameter("tenancyId", tenancyId)
+                      .setParameter("since", since);
+        if (situationId != null) {
+            query.setParameter("situationId", situationId);
+        }
+
+        return query.getResultList().stream()
+                    .map(e -> new io.casehub.iot.webapp.rest.SuppressionHistoryResponse(
+                            e.id(), e.situationId(), e.correlationKey(),
+                            e.tier().name(), e.dismissalRate(), e.matchedCaseCount(),
+                            e.suppressedAt(), e.overridden()))
+                    .toList();
+    }
+
+    @jakarta.ws.rs.POST
+    @jakarta.ws.rs.Path("/suppressions/{id}/override")
+    @jakarta.transaction.Transactional
+    public jakarta.ws.rs.core.Response overrideSuppression(
+            @jakarta.ws.rs.PathParam("id") java.util.UUID id) {
+        var entry = em.find(io.casehub.iot.webapp.app.persistence.SuppressionLogEntry.class, id);
+        if (entry == null) {
+            return jakarta.ws.rs.core.Response.status(404).build();
+        }
+        if (entry.overridden()) {
+            return jakarta.ws.rs.core.Response.status(409).entity("Already overridden").build();
+        }
+
+        entry.markOverridden(principal.actorId());
+
+        dismissalRecorder.recordCaseOutcome(
+                entry.situationId(), entry.correlationKey(), entry.tenancyId(),
+                null, "override-actioned");
+
+        return jakarta.ws.rs.core.Response.ok(java.util.Map.of("overridden", true)).build();
+    }
+
+    @jakarta.ws.rs.GET
+    @jakarta.ws.rs.Path("/{situationId}/suppression-stats")
+    public io.casehub.iot.webapp.rest.SuppressionStatsResponse getSuppressionStats(
+            @jakarta.ws.rs.PathParam("situationId") String situationId) {
+        String tenancyId = principal.tenancyId();
+
+        var suppressedCount = em.createQuery(
+                                        "SELECT COUNT(s) FROM SuppressionLogEntry s WHERE s.tenancyId = :tid AND s.situationId = :sid AND s.tier = :tier",
+                                        Long.class)
+                                .setParameter("tid", tenancyId)
+                                .setParameter("sid", situationId)
+                                .setParameter("tier", io.casehub.iot.webapp.cbr.SuppressionTier.SUPPRESS)
+                                .getSingleResult().intValue();
+
+        var demotedCount = em.createQuery(
+                                     "SELECT COUNT(s) FROM SuppressionLogEntry s WHERE s.tenancyId = :tid AND s.situationId = :sid AND s.tier = :tier",
+                                     Long.class)
+                             .setParameter("tid", tenancyId)
+                             .setParameter("sid", situationId)
+                             .setParameter("tier", io.casehub.iot.webapp.cbr.SuppressionTier.DEMOTE)
+                             .getSingleResult().intValue();
+
+        var overrideCount = em.createQuery(
+                                      "SELECT COUNT(s) FROM SuppressionLogEntry s WHERE s.tenancyId = :tid AND s.situationId = :sid AND s.overridden = true",
+                                      Long.class)
+                              .setParameter("tid", tenancyId)
+                              .setParameter("sid", situationId)
+                              .getSingleResult().intValue();
+
+        boolean safetyCritical = io.casehub.iot.webapp.risk.IoTSafetyCaseTypes.SAFETY_SITUATION_IDS.contains(situationId);
+
+        return new io.casehub.iot.webapp.rest.SuppressionStatsResponse(
+                situationId, suppressedCount, demotedCount, overrideCount,
+                0.0, safetyCritical);
+    }
+
 
     public record SituationDefinitionResponse(
             String situationId,

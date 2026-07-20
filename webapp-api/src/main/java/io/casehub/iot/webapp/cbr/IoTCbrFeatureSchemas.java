@@ -44,6 +44,13 @@ public final class IoTCbrFeatureSchemas {
         return new CbrFeatureSchema("iot-work-item", fields);
     }
 
+    public static CbrFeatureSchema situationDismissal() {
+        var fields = new ArrayList<>(commonFields());
+        fields.add(FeatureField.numeric("detectionConfidence", 0.0, 1.0,
+                                        new SimilaritySpec.GaussianDecay(0.2)));
+        return new CbrFeatureSchema("iot-dismissal", fields);
+    }
+
 
     static List<FeatureField> commonFields() {
         return List.of(

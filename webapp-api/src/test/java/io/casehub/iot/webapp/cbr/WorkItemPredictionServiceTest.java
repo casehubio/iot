@@ -2,11 +2,22 @@ package io.casehub.iot.webapp.cbr;
 
 import io.casehub.neocortex.memory.EraseRequest;
 import io.casehub.neocortex.memory.MemoryDomain;
-import io.casehub.neocortex.memory.cbr.*;
+import io.casehub.neocortex.memory.cbr.CbrCase;
+import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrFeatureSchema;
+import io.casehub.neocortex.memory.cbr.CbrOutcome;
+import io.casehub.neocortex.memory.cbr.CbrQuery;
+import io.casehub.neocortex.memory.cbr.CbrRetentionPolicy;
+import io.casehub.neocortex.memory.cbr.FeatureValue;
+import io.casehub.neocortex.memory.cbr.FeatureVectorCbrCase;
+import io.casehub.neocortex.memory.cbr.ScoredCbrCase;
 import io.casehub.platform.api.path.Path;
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import static io.casehub.neocortex.memory.cbr.FeatureValue.number;
 import static io.casehub.neocortex.memory.cbr.FeatureValue.string;
@@ -165,5 +176,11 @@ class WorkItemPredictionServiceTest {
         @Override public Integer purge(CbrRetentionPolicy p) { return 0; }
         @Override public void supersede(String cid, String tid, String scid, String r) {}
         @Override public void reinstate(String cid, String tid) {}
+
+        @Override
+        public java.util.List<io.casehub.neocortex.memory.cbr.SupersessionStatus> findSupersededCases(String cid, MemoryDomain d) {return java.util.List.of();}
+
+        @Override
+        public io.casehub.neocortex.memory.cbr.SupersessionStatus getSupersessionStatus(String cid, String tid) {return null;}
     }
 }

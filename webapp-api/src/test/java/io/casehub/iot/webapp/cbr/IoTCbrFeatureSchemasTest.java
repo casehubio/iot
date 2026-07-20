@@ -122,4 +122,15 @@ class IoTCbrFeatureSchemasTest {
         assertThat(numeric.min()).isEqualTo(-20);
         assertThat(numeric.max()).isEqualTo(20);
     }
+
+    @Test
+    void situationDismissal_schemaHasCommonFieldsPlusConfidence() {
+        var schema = IoTCbrFeatureSchemas.situationDismissal();
+        assertThat(schema.caseType()).isEqualTo("iot-dismissal");
+        var fieldNames = schema.fields().stream()
+                               .map(io.casehub.neocortex.memory.cbr.FeatureField::name).toList();
+        assertThat(fieldNames).contains("deviceClass", "roomType", "hourOfDay",
+                                        "dayType", "season", "detectionConfidence");
+        assertThat(fieldNames).hasSize(6);
+    }
 }
