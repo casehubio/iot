@@ -78,6 +78,14 @@
             <groupId>io.casehub</groupId>
             <artifactId>casehub-engine-persistence-memory</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-engine-queue</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform-view</artifactId>
+        </dependency>
 
         <!-- CBR JPA store -->
         <dependency>

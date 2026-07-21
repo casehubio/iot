@@ -4,6 +4,7 @@ import io.casehub.api.engine.YamlCaseHub;
 import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.cbr.CbrConfig;
 import io.casehub.api.model.cbr.CbrConfig.CbrRetrievalTiming;
+import io.casehub.iot.webapp.app.triage.IoTTriageConfig;
 import io.casehub.iot.webapp.cbr.IoTCbrFeatureExtractors;
 import io.casehub.iot.webapp.engine.GenericResponseCaseDescriptor;
 import io.casehub.work.api.spi.WorkItemCreator;
@@ -14,6 +15,8 @@ import jakarta.inject.Inject;
 public class GenericResponseCaseHub extends YamlCaseHub {
     @Inject
     WorkItemCreator workItemCreator;
+    @Inject
+    IoTTriageConfig triageConfig;
 
 
     public GenericResponseCaseHub() {
@@ -39,5 +42,9 @@ public class GenericResponseCaseHub extends YamlCaseHub {
                                          .vectorWeight(0.0)
                                          .timing(CbrRetrievalTiming.PER_EVALUATION)
                                          .build());
+
+        definition.setLabelRules(
+                io.casehub.iot.webapp.cbr.IoTTriageLabelRules.cbrTriageRules(
+                        triageConfig.aiMinSimilarity(), triageConfig.aiMinConsistency()));
     }
 }

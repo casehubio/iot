@@ -6,6 +6,7 @@ import io.casehub.api.model.cbr.CbrConfig;
 import io.casehub.api.model.cbr.CbrConfig.CbrRetrievalTiming;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
+import io.casehub.iot.webapp.app.triage.IoTTriageConfig;
 import io.casehub.iot.webapp.cbr.IoTCbrFeatureExtractors;
 import io.casehub.iot.webapp.engine.HvacAnomalyCaseDescriptor;
 import io.casehub.work.api.spi.WorkItemCreator;
@@ -23,6 +24,8 @@ public class HvacAnomalyCaseHub extends YamlCaseHub {
     DeviceRegistry  registry;
     @Inject
     WorkItemCreator workItemCreator;
+    @Inject
+    IoTTriageConfig triageConfig;
 
 
     public HvacAnomalyCaseHub() {
@@ -50,5 +53,9 @@ public class HvacAnomalyCaseHub extends YamlCaseHub {
                                          .vectorWeight(0.0)
                                          .timing(CbrRetrievalTiming.PER_EVALUATION)
                                          .build());
+
+        definition.setLabelRules(
+                io.casehub.iot.webapp.cbr.IoTTriageLabelRules.cbrTriageRules(
+                        triageConfig.aiMinSimilarity(), triageConfig.aiMinConsistency()));
     }
 }

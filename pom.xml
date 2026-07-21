@@ -124,6 +124,16 @@
             </dependency>
             <dependency>
                 <groupId>io.casehub</groupId>
+                <artifactId>casehub-engine-queue</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-platform-view</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
                 <artifactId>casehub-worker-api</artifactId>
                 <version>${casehub.version}</version>
             </dependency>

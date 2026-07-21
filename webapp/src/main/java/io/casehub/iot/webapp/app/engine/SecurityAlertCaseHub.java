@@ -7,8 +7,12 @@ import io.casehub.api.model.cbr.CbrConfig.CbrRetrievalTiming;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.webapp.cbr.IoTCbrFeatureExtractors;
+import io.casehub.platform.api.expression.LambdaExpression;
+import io.casehub.platform.api.label.LabelAction;
+import io.casehub.platform.api.label.LabelRule;
 import io.casehub.iot.webapp.engine.SecurityAlertCaseDescriptor;
 import io.casehub.work.api.spi.WorkItemCreator;
+import java.util.List;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
@@ -49,5 +53,10 @@ public class SecurityAlertCaseHub extends YamlCaseHub {
                                          .vectorWeight(0.0)
                                          .timing(CbrRetrievalTiming.PER_EVALUATION)
                                          .build());
+
+        definition.setLabelRules(List.of(
+                new LabelRule("safety-immediate",
+                              new LambdaExpression<>(ctx -> true),
+                              List.of(new LabelAction.Add("iot-triage:immediate")))));
     }
 }

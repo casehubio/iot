@@ -21,7 +21,7 @@ public class IoTActionRiskClassifier implements ActionRiskClassifier {
 
     @Override
     public RiskDecision classify(PlannedAction action, ClassificationContext context) {
-        var actionType = action.actionType();
+        String actionType = action.actionType();
 
         if (SAFETY_CASE_TYPES.contains(context.caseDefinitionName())) {
             return new RiskDecision.Autonomous();
@@ -37,7 +37,8 @@ public class IoTActionRiskClassifier implements ActionRiskClassifier {
                     true,
                     StaticSetStrategy.of("iot-operator"),
                     null,
-                    "casehubio/iot/oversight");
+                    "casehubio/iot/oversight",
+                    null);
         }
 
         return new RiskDecision.GateRequired(
@@ -45,6 +46,7 @@ public class IoTActionRiskClassifier implements ActionRiskClassifier {
                 true,
                 StaticSetStrategy.of("iot-admin"),
                 null,
-                "casehubio/iot/oversight");
+                "casehubio/iot/oversight",
+                null);
     }
 }
