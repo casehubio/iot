@@ -69,7 +69,7 @@ class IoTSuppressionTriggerPolicyTest {
         var context = ctx("sit-1");
         var definition = def("sit-1", new TriggerAction.CreateCase(NORMAL_CONFIG));
 
-        var result = policy.evaluate(context, definition).await().indefinitely();
+        var result = policy.evaluate(context, definition);
 
         assertThat(result.decision()).isEqualTo(TriggerDecision.CONTINUE_ACCUMULATING);
         verifyNoInteractions(suppressionEvaluator);
@@ -80,7 +80,7 @@ class IoTSuppressionTriggerPolicyTest {
         var context = ctxWithDetection("sit-1");
         var definition = def("sit-1", new TriggerAction.CreateCase(SAFETY_CONFIG));
 
-        var result = policy.evaluate(context, definition).await().indefinitely();
+        var result = policy.evaluate(context, definition);
 
         assertThat(result.decision()).isEqualTo(TriggerDecision.TRIGGER);
         verifyNoInteractions(suppressionEvaluator);
@@ -91,7 +91,7 @@ class IoTSuppressionTriggerPolicyTest {
         var context = ctxWithDetection("smoke-detected");
         var definition = def("smoke-detected", new TriggerAction.NotifyOnly());
 
-        var result = policy.evaluate(context, definition).await().indefinitely();
+        var result = policy.evaluate(context, definition);
 
         assertThat(result.decision()).isEqualTo(TriggerDecision.TRIGGER);
         verifyNoInteractions(suppressionEvaluator);
@@ -107,7 +107,7 @@ class IoTSuppressionTriggerPolicyTest {
                 .thenReturn(new SuppressionAssessment(
                         SuppressionTier.SUPPRESS, 0.92, 15, 14, 0.85));
 
-        var result = policy.evaluate(context, definition).await().indefinitely();
+        var result = policy.evaluate(context, definition);
 
         assertThat(result.decision()).isEqualTo(TriggerDecision.SUPPRESS);
         assertThat(result.metadata())
@@ -125,7 +125,7 @@ class IoTSuppressionTriggerPolicyTest {
                 .thenReturn(new SuppressionAssessment(
                         SuppressionTier.DEMOTE, 0.78, 12, 9, 0.72));
 
-        var result = policy.evaluate(context, definition).await().indefinitely();
+        var result = policy.evaluate(context, definition);
 
         assertThat(result.decision()).isEqualTo(TriggerDecision.SUPPRESS);
         assertThat(result.metadata())
@@ -142,7 +142,7 @@ class IoTSuppressionTriggerPolicyTest {
                 .thenReturn(new SuppressionAssessment(
                         SuppressionTier.ANNOTATE, 0.45, 10, 5, 0.65));
 
-        var result = policy.evaluate(context, definition).await().indefinitely();
+        var result = policy.evaluate(context, definition);
 
         assertThat(result.decision()).isEqualTo(TriggerDecision.TRIGGER);
         assertThat(result.metadata())
@@ -160,7 +160,7 @@ class IoTSuppressionTriggerPolicyTest {
                 .thenReturn(new SuppressionAssessment(
                         SuppressionTier.NONE, 0.0, 0, 0, 0.0));
 
-        var result = policy.evaluate(context, definition).await().indefinitely();
+        var result = policy.evaluate(context, definition);
 
         assertThat(result.decision()).isEqualTo(TriggerDecision.TRIGGER);
         assertThat(result.metadata()).isEmpty();
@@ -184,7 +184,7 @@ class IoTSuppressionTriggerPolicyTest {
         when(suppressionEvaluator.assess(eq("sit-1"), any(), eq("t1")))
                 .thenReturn(new SuppressionAssessment(SuppressionTier.NONE, 0, 0, 0, 0));
 
-        policy.evaluate(context, definition).await().indefinitely();
+        policy.evaluate(context, definition);
 
         var captor = org.mockito.ArgumentCaptor.forClass(Map.class);
         org.mockito.Mockito.verify(suppressionEvaluator).assess(eq("sit-1"), captor.capture(), eq("t1"));
@@ -208,7 +208,7 @@ class IoTSuppressionTriggerPolicyTest {
         when(suppressionEvaluator.assess(eq("sit-1"), any(), eq("t1")))
                 .thenReturn(new SuppressionAssessment(SuppressionTier.NONE, 0, 0, 0, 0));
 
-        policy.evaluate(context, definition).await().indefinitely();
+        policy.evaluate(context, definition);
 
         var captor = org.mockito.ArgumentCaptor.forClass(Map.class);
         org.mockito.Mockito.verify(suppressionEvaluator).assess(eq("sit-1"), captor.capture(), eq("t1"));
@@ -233,7 +233,7 @@ class IoTSuppressionTriggerPolicyTest {
         when(suppressionEvaluator.assess(eq("sit-1"), any(), eq("t1")))
                 .thenReturn(new SuppressionAssessment(SuppressionTier.NONE, 0, 0, 0, 0));
 
-        policy.evaluate(context, definition).await().indefinitely();
+        policy.evaluate(context, definition);
 
         var captor = org.mockito.ArgumentCaptor.forClass(Map.class);
         org.mockito.Mockito.verify(suppressionEvaluator).assess(eq("sit-1"), captor.capture(), eq("t1"));

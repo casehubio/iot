@@ -50,7 +50,7 @@ class HumanDecisionWorkerFunctionTest {
     void returnsWorkItemIdInResult() {
         var fn = new HumanDecisionWorkerFunction(captureCreator(new ArrayList<>()));
 
-        WorkerResult result = fn.apply(fullInput());
+        WorkerResult<Map<String, Object>> result = fn.apply(fullInput());
 
         assertThat(result.output()).containsKey("workItemId");
     }

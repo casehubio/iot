@@ -45,7 +45,8 @@ class SuppressionEvaluatorTest {
             String outcome = i < dismissed ? "dismissed" : "actioned";
             var cbrCase = new FeatureVectorCbrCase(
                     "situation-dismissal", "n/a", outcome, null,
-                    Map.of("deviceClass", FeatureValue.string("thermostat")));
+                    Map.of("deviceClass", FeatureValue.string("thermostat")),
+                    null, null);
             results.add(new ScoredCbrCase<>(cbrCase, "case-" + i, avgScore));
         }
         return results;
@@ -158,7 +159,8 @@ class SuppressionEvaluatorTest {
         for (int i = 0; i < 5; i++) {
             var cbrCase = new FeatureVectorCbrCase(
                     "situation-dismissal", "n/a", "dismissed", null,
-                    Map.of("deviceClass", FeatureValue.string("thermostat")));
+                    Map.of("deviceClass", FeatureValue.string("thermostat")),
+                    null, null);
             cases.add(new ScoredCbrCase<>(cbrCase, "case-" + i, 0.6 + i * 0.05));
         }
         when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
@@ -175,13 +177,15 @@ class SuppressionEvaluatorTest {
         for (int i = 0; i < 5; i++) {
             var cbrCase = new FeatureVectorCbrCase(
                     "situation-dismissal", "n/a", "dismissed", null,
-                    Map.of("deviceClass", FeatureValue.string("thermostat")));
+                    Map.of("deviceClass", FeatureValue.string("thermostat")),
+                    null, null);
             cases.add(new ScoredCbrCase<>(cbrCase, "case-" + i, 0.8));
         }
         for (int i = 5; i < 10; i++) {
             var cbrCase = new FeatureVectorCbrCase(
                     "situation-dismissal", "n/a", "override-actioned", null,
-                    Map.of("deviceClass", FeatureValue.string("thermostat")));
+                    Map.of("deviceClass", FeatureValue.string("thermostat")),
+                    null, null);
             cases.add(new ScoredCbrCase<>(cbrCase, "case-" + i, 0.8));
         }
         when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))

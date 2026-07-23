@@ -151,7 +151,8 @@ class WorkItemPredictionServiceTest {
         featureMap.put("resolutionDurationMinutes", number(durationMinutes));
         if (assignee != null) featureMap.put("resolvedBy", string(assignee));
         var cbrCase = new FeatureVectorCbrCase(
-                "work item title", "resolution", status, 1.0, featureMap);
+                "work item title", "resolution", status, 1.0, featureMap,
+                null, null);
         return new ScoredCbrCase<>(cbrCase, score);
     }
 

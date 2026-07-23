@@ -134,6 +134,11 @@
             </dependency>
             <dependency>
                 <groupId>io.casehub</groupId>
+                <artifactId>casehub-platform-view-inmem</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
                 <artifactId>casehub-worker-api</artifactId>
                 <version>${casehub.version}</version>
             </dependency>
@@ -183,6 +188,13 @@
                 <groupId>org.drools</groupId>
                 <artifactId>drools-wiring-dynamic</artifactId>
                 <version>${version.drools}</version>
+            </dependency>
+
+            <!-- Convergence: engine-api brings 1.6.0, platform-expression brings 1.0.0 -->
+            <dependency>
+                <groupId>net.thisptr</groupId>
+                <artifactId>jackson-jq</artifactId>
+                <version>1.6.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

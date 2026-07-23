@@ -18,7 +18,7 @@ class HouseholdNotificationWorkerFunctionTest {
                 "message", "Safety alert detected"
         );
 
-        WorkerResult result = function.apply(input);
+        WorkerResult<Map<String, Object>> result = function.apply(input);
 
         assertThat(result.output()).containsEntry("sent", true);
         assertThat(result.output()).containsEntry("tenancyId", "default-tenant");
@@ -28,7 +28,7 @@ class HouseholdNotificationWorkerFunctionTest {
     void handlesNullInputs() {
         var input = Map.<String, Object>of();
 
-        WorkerResult result = function.apply(input);
+        WorkerResult<Map<String, Object>> result = function.apply(input);
 
         assertThat(result.output()).containsEntry("sent", true);
         assertThat(result.output()).containsKey("tenancyId");

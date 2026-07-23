@@ -136,9 +136,9 @@ class IoTCbrRetrievalServiceTest {
         var cbrCase = new PlanCbrCase(
                 "Temperature spike", "Replaced filter", "RESOLVED", 0.95,
                 Map.of("deviceClass", FeatureValue.string("thermostat")),
-                List.of(planTrace));
+                List.of(planTrace), null, null);
         var scored = new ScoredCbrCase<>(cbrCase, "past-case-1", 0.87, false,
-                Map.of("deviceClass", 1.0, "roomType", 0.8), null, null);
+                Map.of("deviceClass", 1.0, "roomType", 0.8), null, null, null);
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
                 .thenReturn(List.of(scored));
@@ -164,7 +164,7 @@ class IoTCbrRetrievalServiceTest {
                 "problem", "solution", "RESOLVED", null,
                 Map.of("deviceClass", FeatureValue.string("thermostat"),
                         "hourOfDay", FeatureValue.number(14.0)),
-                List.of());
+                List.of(), null, null);
         var scored = new ScoredCbrCase<>(cbrCase, "c1", 0.5);
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
@@ -226,9 +226,9 @@ class IoTCbrRetrievalServiceTest {
     @Test
     void retrieve_multipleResults_preservesStoreOrder() {
         var case1 = new PlanCbrCase("p1", "s1", "R", null,
-                Map.of("d", FeatureValue.string("a")), List.of());
+                Map.of("d", FeatureValue.string("a")), List.of(), null, null);
         var case2 = new PlanCbrCase("p2", "s2", "R", null,
-                Map.of("d", FeatureValue.string("b")), List.of());
+                Map.of("d", FeatureValue.string("b")), List.of(), null, null);
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
                 .thenReturn(List.of(

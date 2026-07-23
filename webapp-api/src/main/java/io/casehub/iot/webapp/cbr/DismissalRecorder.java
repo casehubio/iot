@@ -71,7 +71,7 @@ public class DismissalRecorder {
     private void storeCase(String situationId, String correlationKey, String tenancyId,
                             Map<String, Object> rawFeatures, String problem, String outcome) {
         Map<String, FeatureValue> featureMap = FeatureValue.toFeatureMap(rawFeatures);
-        var cbrCase = new FeatureVectorCbrCase(problem, "operator-feedback", outcome, null, featureMap);
+        var cbrCase = new FeatureVectorCbrCase(problem, "operator-feedback", outcome, null, featureMap, null, null);
         String caseType = "iot-dismissal:" + situationId;
         store.store(cbrCase, caseType, correlationKey, IOT_DOMAIN, tenancyId,
                 UUID.randomUUID().toString(), Path.root());

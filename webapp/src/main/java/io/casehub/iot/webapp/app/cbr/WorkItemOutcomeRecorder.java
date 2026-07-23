@@ -83,7 +83,8 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
                     solution,
                     event.status().name(),
                     1.0,
-                    FeatureValue.toFeatureMap(rawFeatures));
+                    FeatureValue.toFeatureMap(rawFeatures),
+                    null, null);
 
             String caseId = parseCaseId(workItem.payload);
             store.store(cbrCase, "iot-work-item", event.workItemId().toString(),

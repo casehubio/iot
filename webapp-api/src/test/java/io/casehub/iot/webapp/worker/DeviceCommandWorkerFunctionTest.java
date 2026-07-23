@@ -65,7 +65,7 @@ class DeviceCommandWorkerFunctionTest {
                 "parameters", Map.of()
         );
 
-        WorkerResult result = function.apply(input);
+        WorkerResult<Map<String, Object>> result = function.apply(input);
 
         assertThat(result.output()).containsEntry("result", "SENT");
     }
@@ -80,7 +80,7 @@ class DeviceCommandWorkerFunctionTest {
                 "parameters", Map.of()
         );
 
-        WorkerResult result = function.apply(input);
+        WorkerResult<Map<String, Object>> result = function.apply(input);
 
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
         assertThat(result.output()).containsEntry("targetDeviceId", "unknown-device");
@@ -108,7 +108,7 @@ class DeviceCommandWorkerFunctionTest {
                 "parameters", Map.of()
         );
 
-        WorkerResult result = function.apply(input);
+        WorkerResult<Map<String, Object>> result = function.apply(input);
 
         assertThat(result.outcome()).isInstanceOf(WorkerOutcome.Failed.class);
         assertThat(result.output()).containsEntry("providerId", "unknown-provider");
