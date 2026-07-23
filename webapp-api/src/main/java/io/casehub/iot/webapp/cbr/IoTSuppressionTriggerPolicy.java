@@ -11,7 +11,6 @@ import io.casehub.ras.api.SuppressionMetadataKeys;
 import io.casehub.ras.api.TriggerAction;
 import io.casehub.ras.api.TriggerDecision;
 import io.casehub.ras.runtime.DefaultRasTriggerPolicy;
-import io.smallrye.mutiny.Uni;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -30,27 +29,26 @@ public class IoTSuppressionTriggerPolicy implements RasTriggerPolicy {
     }
 
     @Override
-    public Uni<PolicyDecision> evaluate(SituationContext context, SituationDefinition definition) {
-        return delegate.evaluate(context, definition).map(base -> {
-            if (base.decision() != TriggerDecision.TRIGGER
-                    && base.decision() != TriggerDecision.TRIGGER_AND_CONTINUE) {
-                return base;
-            }
-            if (isSafetyCritical(definition)) {
-                return base;
-            }
+    public PolicyDecision evaluate(SituationContext context, SituationDefinition definition) {
+        PolicyDecision base = delegate.evaluate(context, definition);
+        if (base.decision() != TriggerDecision.TRIGGER
+            && base.decision() != TriggerDecision.TRIGGER_AND_CONTINUE) {
+            return base;
+        }
+        if (isSafetyCritical(definition)) {
+            return base;
+        }
 
-            Map<String, Object> features = extractFeatures(context);
-            SuppressionAssessment assessment = suppressionEvaluator.assess(
-                    definition.situationId(), features, context.tenancyId());
+        Map<String, Object> features = extractFeatures(context);
+        SuppressionAssessment assessment = suppressionEvaluator.assess(
+                definition.situationId(), features, context.tenancyId());
 
-            return switch (assessment.tier()) {
-                case NONE -> base;
-                case ANNOTATE -> new PolicyDecision(base.decision(), buildMetadata(assessment, "annotate"));
-                case DEMOTE -> new PolicyDecision(TriggerDecision.SUPPRESS, buildMetadata(assessment, "demote"));
-                case SUPPRESS -> new PolicyDecision(TriggerDecision.SUPPRESS, buildMetadata(assessment, "full"));
-            };
-        });
+        return switch (assessment.tier()) {
+            case NONE -> base;
+            case ANNOTATE -> new PolicyDecision(base.decision(), buildMetadata(assessment, "annotate"));
+            case DEMOTE -> new PolicyDecision(TriggerDecision.SUPPRESS, buildMetadata(assessment, "demote"));
+            case SUPPRESS -> new PolicyDecision(TriggerDecision.SUPPRESS, buildMetadata(assessment, "full"));
+        };
     }
 
     private boolean isSafetyCritical(SituationDefinition definition) {

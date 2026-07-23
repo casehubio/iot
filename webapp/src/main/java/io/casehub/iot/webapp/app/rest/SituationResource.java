@@ -355,14 +355,13 @@ public class SituationResource {
         String tenancyId = principal.tenancyId();
 
         var context = situationStore.find(request.situationId(), correlationKey, tenancyId)
-                                    .await().indefinitely().orElse(null);
+                                    .orElse(null);
 
         dismissalRecorder.recordDismissal(
                 request.situationId(), correlationKey, tenancyId, context, request.reason());
 
         if (context != null) {
-            situationStore.remove(request.situationId(), correlationKey, tenancyId)
-                          .await().indefinitely();
+            situationStore.remove(request.situationId(), correlationKey, tenancyId);
             changeEvent.fireAsync(new io.casehub.ras.api.SituationChangeEvent(
                     tenancyId, request.situationId(), correlationKey,
                     io.casehub.ras.api.SituationChangeEvent.ChangeType.DISMISSED, context));
