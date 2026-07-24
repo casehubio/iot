@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
-public class DeviceCommandWorkerFunction implements Function<Map<String, Object>, WorkerResult> {
+public class DeviceCommandWorkerFunction implements Function<Map<String, Object>, WorkerResult<Map<String, Object>>> {
 
     private final Instance<DeviceProvider> providers;
     private final DeviceRegistry deviceRegistry;
@@ -22,7 +22,7 @@ public class DeviceCommandWorkerFunction implements Function<Map<String, Object>
     }
 
     @Override
-    public WorkerResult apply(Map<String, Object> input) {
+    public WorkerResult<Map<String, Object>> apply(Map<String, Object> input) {
         String targetDeviceId = (String) input.get("targetDeviceId");
         if (targetDeviceId == null) {
             return WorkerResult.failed("Missing required field: targetDeviceId");
