@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
-public class HumanDecisionWorkerFunction implements Function<Map<String, Object>, WorkerResult> {
+public class HumanDecisionWorkerFunction implements Function<Map<String, Object>, WorkerResult<Map<String, Object>>> {
 
     private final WorkItemCreator workItemCreator;
 
@@ -20,7 +20,7 @@ public class HumanDecisionWorkerFunction implements Function<Map<String, Object>
     }
 
     @Override
-    public WorkerResult apply(Map<String, Object> input) {
+    public WorkerResult<Map<String, Object>> apply(Map<String, Object> input) {
         String caseId           = str(input, "caseId");
         String caseType         = str(input, "caseType");
         String planItemId       = str(input, "planItemId");

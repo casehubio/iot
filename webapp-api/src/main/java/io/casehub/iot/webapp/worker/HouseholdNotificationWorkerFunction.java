@@ -9,10 +9,10 @@ import java.util.function.Function;
  * Stub implementation for household notifications.
  * Real integration with ConnectorService will be wired in Task 4's descriptors.
  */
-public class HouseholdNotificationWorkerFunction implements Function<Map<String, Object>, WorkerResult> {
+public class HouseholdNotificationWorkerFunction implements Function<Map<String, Object>, WorkerResult<Map<String, Object>>> {
 
     @Override
-    public WorkerResult apply(Map<String, Object> input) {
+    public WorkerResult<Map<String, Object>> apply(Map<String, Object> input) {
         String tenancyId = (String) input.get("tenancyId");
         String message = (String) input.get("message");
 
