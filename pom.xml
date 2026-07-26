@@ -21,6 +21,7 @@
 
     <properties>
         <version.drools>10.1.0</version.drools>
+        <quarkus-mcp-server.version>1.11.1</quarkus-mcp-server.version>
     </properties>
 
     <dependencyManagement>
@@ -68,6 +69,11 @@
             <dependency>
                 <groupId>io.casehub</groupId>
                 <artifactId>casehub-iot-bridge-server</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-iot-mcp</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -232,6 +238,7 @@
         <module>bridge-persistence-jpa</module>
         <module>bridge</module>
         <module>bridge-server</module>
+        <module>mcp</module>
         <module>webapp-api</module>
         <module>webapp-drools</module>
         <module>webapp</module>
