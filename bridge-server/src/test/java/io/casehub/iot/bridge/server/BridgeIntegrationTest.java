@@ -46,7 +46,7 @@ class BridgeIntegrationTest {
 
         provider.onSnapshot("test-tenant", List.of(sw, light, thermo));
 
-        List<DeviceEntity> discovered = provider.discover().await().indefinitely();
+        List<DeviceEntity> discovered = provider.discover();
         assertThat(discovered).hasSize(3);
         assertThat(discovered).extracting(DeviceEntity::deviceId)
                 .containsExactlyInAnyOrder(
@@ -62,7 +62,7 @@ class BridgeIntegrationTest {
 
         provider.onSnapshot("test-tenant", List.of(sw, thermo));
 
-        List<DeviceEntity> discovered = provider.discover().await().indefinitely();
+        List<DeviceEntity> discovered = provider.discover();
         assertThat(discovered).anySatisfy(d -> {
             assertThat(d).isInstanceOf(SwitchDevice.class);
             assertThat(d.deviceClass()).isEqualTo(DeviceClass.SWITCH);
@@ -88,7 +88,7 @@ class BridgeIntegrationTest {
                 Fixtures.EPOCH, "bridge");
         provider.onStateChange(event, "test-tenant");
 
-        List<DeviceEntity> discovered = provider.discover().await().indefinitely();
+        List<DeviceEntity> discovered = provider.discover();
         assertThat(discovered).hasSize(1);
 
         SwitchDevice updated = (SwitchDevice) discovered.stream()

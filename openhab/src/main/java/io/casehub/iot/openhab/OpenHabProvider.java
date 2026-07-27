@@ -6,12 +6,12 @@ import io.casehub.iot.api.DeviceEntity;
 import io.casehub.iot.api.ProviderStatus;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.quarkus.arc.lookup.LookupIfProperty;
-import io.smallrye.mutiny.Uni;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
 
@@ -20,7 +20,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * OpenHAB implementation of the {@link DeviceProvider} SPI.
@@ -59,10 +58,11 @@ public class OpenHabProvider implements DeviceProvider {
                         .orElseGet(() -> OpenHabDiscovery.resolve(config.discoveryTimeoutSeconds()));
                     var authFilter = new OpenHabAuthFilter(config.auth());
                     sseClient.init(resolvedUrl, authFilter);
-                    sseClient.connect().subscribe().with(
-                        v -> {},
-                        e -> LOG.warnf(e, "OpenHAB initial connect failed")
-                    );
+                    try {
+                        sseClient.connect();
+                    } catch (Exception e) {
+                        LOG.warnf(e, "OpenHAB initial connect failed");
+                    }
                 }
             }
         }
@@ -100,32 +100,32 @@ public class OpenHabProvider implements DeviceProvider {
     }
 
     @Override
-    public Uni<List<DeviceEntity>> discover() {
+    public List<DeviceEntity> discover() {
         ensureSseConnected();
-        return getRestClient().getItems("Equipment", true)
-            .map(items -> items.stream()
-                .map(i -> mapper.mapEquipment(i, Instant.now()))
-                .filter(Objects::nonNull)
-                .toList());
+        return getRestClient().getItems("Equipment", true).stream()
+                              .map(i -> mapper.mapEquipment(i, Instant.now()))
+                              .filter(Objects::nonNull)
+                              .toList();
     }
 
     @Override
-    public Uni<CommandResult> dispatch(DeviceCommand command) {
+    public CommandResult dispatch(DeviceCommand command) {
         String commandValue = buildCommandValue(command);
         if (commandValue == null) {
-            return Uni.createFrom().item(CommandResult.FAILED);
+            return CommandResult.FAILED;
         }
 
         String targetItem = sseClient.resolveTargetItem(command);
         if (targetItem == null) {
-            return Uni.createFrom().item(CommandResult.FAILED);
+            return CommandResult.FAILED;
         }
 
-        return getRestClient().sendCommand(targetItem, commandValue)
-            .map(resp -> resp.getStatus() < 300 ? CommandResult.SENT : CommandResult.FAILED)
-            .onFailure(WebApplicationException.class).recoverWithItem(CommandResult.FAILED)
-            .onFailure(ProcessingException.class).recoverWithItem(CommandResult.FAILED)
-            .onFailure(TimeoutException.class).recoverWithItem(CommandResult.TIMEOUT);
+        try {
+            Response resp = getRestClient().sendCommand(targetItem, commandValue);
+            return resp.getStatus() < 300 ? CommandResult.SENT : CommandResult.FAILED;
+        } catch (WebApplicationException | ProcessingException e) {
+            return CommandResult.FAILED;
+        }
     }
 
     String buildCommandValue(DeviceCommand command) {

@@ -230,179 +230,98 @@ On-demand only (loaded when case detail opens). No polling.
 
 ---
 
-## §4 Generic Queue Toolkit (casehub-platform)
+## §4 Subject View Toolkit (casehub-platform)
 
-**Scope: cross-repo issue → casehub-platform**
+**Scope: cross-repo — casehub-platform**
 
-**Module split:** `QueueSubject`, `QueueEntry`, and `QueueEntryStatus` (interfaces and
-enums) live in `platform-api` — they are types with no runtime dependency.
-`AbstractQueueEntity` (`@MappedSuperclass`) and `AbstractQueueService` (JPA criteria
-queries) live in a new `platform-queue` module — they are runtime components requiring
-JPA. This respects `platform-api`'s "types only, no runtime behaviour" constraint.
+**Modules:** `platform-api` (SPI types), `platform-view` (core), `platform-view-jpa`
+(JPA-backed), `platform-view-inmem` (in-memory, for test and Pi).
 
-Platform provides template classes. Each domain builds its own concrete queue.
+The original spec proposed a generic queue toolkit (`AbstractQueueEntity`,
+`AbstractQueueService` with enqueue/claim/release/escalate). What shipped instead is
+a **declarative label-based view system** — subjects appear in views as their labels
+change, rather than being explicitly enqueued and claimed.
 
-### QueueSubject interface
+### SubjectViewSpec
 
 ```java
-interface QueueSubject {
-    UUID subjectId();
-    String subjectType();
-    String tenancyId();
+record SubjectViewSpec(
+    UUID id,
+    String name,
+    String tenancyId,
+    String labelPattern,   // e.g. "severity:high AND type:iot-alert"
+    Path scope,
+    String sortField,
+    String sortDirection,
+    String additionalConditions,
+    Instant createdAt
+) {}
+```
+
+A named, persisted filter definition. Operators and AI agents see cases that match
+the label pattern — no explicit enqueue step. Cases enter and leave views as labels
+are added or removed during case lifecycle.
+
+### SubjectViewQuery<S>
+
+```java
+interface SubjectViewQuery<S> {
+    List<S> findByView(SubjectViewSpec view);
+    List<S> findByView(SubjectViewSpec view, int offset, int limit);
+    long countByView(SubjectViewSpec view);
 }
 ```
 
-### QueueEntry<S> contract
+Generic — any domain provides a concrete implementation for its subject type.
+
+### SubjectViewStore
 
 ```java
-interface QueueEntry<S extends QueueSubject> {
-    UUID entryId();
-    String queueName();
-    S subject();
-    QueueEntryStatus status();  // PENDING, CLAIMED, COMPLETED, ESCALATED
-    String assignedTo();
-    Set<String> candidateGroups();
-    int priority();
-    Map<String, String> labels();
-    Instant enqueuedAt();
-    Instant claimedAt();
-    Instant completedAt();
-    Instant escalatedAt();
-    String escalationReason();
-    String metadata();  // JSON text for domain-specific context (e.g., AiEscalationContext)
+interface SubjectViewStore {
+    SubjectViewSpec save(SubjectViewSpec spec);
+    Optional<SubjectViewSpec> findById(UUID id);
+    List<SubjectViewSpec> findByTenancy(String tenancyId);
+    boolean delete(UUID id);
 }
 ```
 
-### AbstractQueueEntity<S> (@MappedSuperclass)
+CRUD for view definitions. JPA and in-memory implementations provided by platform.
 
-```java
-@MappedSuperclass
-public abstract class AbstractQueueEntity<S> {
-    @Id UUID id;
-    @Version Long version;
-    String queueName;
-    @Enumerated QueueEntryStatus status;
-    String assignedTo;
-    String candidateGroups;
-    int priority;
-    @Column(columnDefinition = "TEXT") String labels;    // JSON
-    Instant enqueuedAt;
-    Instant claimedAt;
-    Instant completedAt;
-    Instant escalatedAt;
-    String escalationReason;
-    @Column(columnDefinition = "TEXT") String metadata;  // JSON — domain-specific context
+### Why views instead of queues
 
-    public abstract S getSubject();
-}
-```
+Queue semantics (claim/release/escalate) proved unnecessary for the case triage
+use case. Operators need filtered views of active cases — the case lifecycle itself
+handles state transitions (open → working → resolved). Label-based filtering is
+more composable: operators create custom views by combining label predicates, without
+predefined queue definitions.
 
-Each domain extends and adds the real FK to its subject entity.
-
-### AbstractQueueService<S, E>
-
-Shared queue operations:
-- `enqueue(S subject, String queueName, Set<String> candidateGroups, int priority, Map<String, String> labels)`
-- `claim(UUID entryId, String claimantId)` — atomic with optimistic locking
-- `release(UUID entryId)` — return to pool
-- `complete(UUID entryId, String outcome)`
-- `escalate(UUID entryId, String targetQueue, String reason)` — move to different queue
-- `findPending(String queueName, String candidateGroup, Map<String, String> labelFilter)`
-- `countByQueue(String queueName)` — dashboard aggregation
-
-Uses JPA criteria queries on `AbstractQueueEntity` fields — works for any concrete entity.
-
-### Queue events (CDI)
-
-Each domain defines its own concrete event types to avoid type erasure issues with
-CDI generic event observation. The platform documents the pattern; domains implement:
-
-```java
-// Pattern (platform documents, domains implement):
-// record {Domain}QueueEntryCreated({Domain}QueueEntry entry) {}
-// record {Domain}QueueEntryClaimed({Domain}QueueEntry entry, String claimantId) {}
-// record {Domain}QueueEntryCompleted({Domain}QueueEntry entry, String outcome) {}
-// record {Domain}QueueEntryEscalated({Domain}QueueEntry entry, String fromQueue, String toQueue) {}
-```
-
-Concrete types per domain (e.g., `CaseQueueEntryCreated`) ensure CDI observers
-fire only for the correct entity type — no type erasure ambiguity.
-
-### What platform does NOT own
-
-Queue definitions (which queues exist, candidate groups, escalation policies) —
-that's domain configuration.
+Queue semantics remain available in the engine's local `engine/queue` module for
+scenarios that need explicit claim/release (e.g., automated processing with
+contention). This is engine-local, not a platform SPI.
 
 ---
 
-## §5 Case Queue Implementation (engine)
+## §5 Case Triage via Subject Views (engine)
 
-**Scope: cross-repo issue → casehub-engine. Depends on: §4**
+**Scope: cross-repo — casehub-engine. Uses: §4 subject view toolkit**
 
-### CaseQueueEntry entity
+The engine's `engine/queue` module provides case queue management with claim/release
+semantics. The subject view toolkit (§4) provides the filtering layer — operators see
+cases matching view specs, and the engine queue handles work assignment.
 
-Table: `case_queue_entry`
+### CaseQueueViewManager
 
-| Column | Type | Source |
-|--------|------|--------|
-| id | UUID | PK, inherited |
-| version | BIGINT | inherited, @Version |
-| case_id | UUID | FK → case_instance, NOT NULL |
-| queue_name | VARCHAR | inherited |
-| status | VARCHAR | inherited |
-| assigned_to | VARCHAR | inherited |
-| candidate_groups | VARCHAR | inherited |
-| priority | INT | inherited |
-| labels | TEXT | inherited, JSON |
-| enqueued_at | TIMESTAMPTZ | inherited |
-| claimed_at | TIMESTAMPTZ | inherited |
-| completed_at | TIMESTAMPTZ | inherited |
-| escalated_at | TIMESTAMPTZ | inherited |
-| escalation_reason | TEXT | inherited |
-| metadata | TEXT | inherited, JSON |
-| case_type | VARCHAR | domain-specific, denormalized |
-| case_definition_name | VARCHAR | domain-specific, denormalized |
+Bridges the subject view toolkit with the engine's case model. Implements
+`SubjectViewQuery<CaseInstance>` — resolves view specs against active cases using
+label matching.
 
-Indexes:
-- `(queue_name, status, priority)` — queue listing
-- `(case_id)` — lookup by case
-- `(assigned_to, status)` — "my claimed cases"
-- `(candidate_groups, status)` — group-based queue view
+### CaseQueueEntryManager
 
-### CaseQueueService
+Engine-local queue entry management with state machine:
+`PENDING → CLAIMED → COMPLETED` or `PENDING → ESCALATED`.
 
-Extends `AbstractQueueService<CaseInstance, CaseQueueEntry>`. Adds:
-- `enqueueCase(CaseInstance, String queueName, Set<String> candidateGroups, int priority)` —
-  copies caseType and caseDefinitionName
-- `findByCaseType(String queueName, String caseType)` — filtered by denormalized column
-
-### Case queue events (CDI)
-
-```java
-record CaseQueueEntryCreated(CaseQueueEntry entry) {}
-record CaseQueueEntryClaimed(CaseQueueEntry entry, String claimantId) {}
-record CaseQueueEntryCompleted(CaseQueueEntry entry, String outcome) {}
-record CaseQueueEntryEscalated(CaseQueueEntry entry, String fromQueue, String toQueue) {}
-```
-
-Fired by `CaseQueueService` via `fireAsync()` on state transitions — consistent with
-the engine's established pattern for lifecycle events. Observers must use
-`@ObservesAsync`.
-
-### CaseQueueRouter (CDI observer)
-
-Listens for `CaseLifecycleEvent` on case creation. Delegates to
-`CaseQueueRoutingStrategy` SPI:
-
-```java
-void onCaseStarted(@ObservesAsync CaseLifecycleEvent event) {
-    if (!"CaseStarted".equals(event.eventType())) return;
-    QueueRoutingDecision decision = routingStrategy.route(event);
-    if (decision.shouldEnqueue()) {
-        caseQueueService.enqueueCase(...);
-    }
-}
-```
+Operations: enqueue, claim (optimistic locking), release, complete, escalate.
+These are engine concerns — not exposed as a platform SPI.
 
 ### CaseQueueRoutingStrategy SPI
 

@@ -48,7 +48,7 @@ class HomeAssistantRestClientTest {
                 ]
                 """));
 
-        var states = restClient.getStates().await().indefinitely();
+        var states = restClient.getStates();
 
         assertThat(states).hasSize(2);
         assertThat(states.get(0).entityId()).isEqualTo("light.kitchen");
@@ -61,8 +61,7 @@ class HomeAssistantRestClientTest {
         server().enqueue(StubbedResponse.json(200, "[]"));
 
         var body = new HaServiceCallDto("light.kitchen", Map.of("brightness", 200));
-        var response = restClient.callService("light", "turn_on", body)
-                .await().indefinitely();
+        var response = restClient.callService("light", "turn_on", body);
 
         assertThat(response.getStatus()).isEqualTo(200);
     }
@@ -71,7 +70,7 @@ class HomeAssistantRestClientTest {
     void authorizationHeaderSent() {
         server().enqueue(StubbedResponse.json(200, "[]"));
 
-        restClient.getStates().await().indefinitely();
+        restClient.getStates();
 
         var request = server().takeRequest();
         assertThat(request).isNotNull();
@@ -83,8 +82,7 @@ class HomeAssistantRestClientTest {
         server().enqueue(StubbedResponse.json(200, "[]"));
 
         var body = new HaServiceCallDto("switch.hallway", Map.of());
-        restClient.callService("switch", "turn_off", body)
-                .await().indefinitely();
+        restClient.callService("switch", "turn_off", body);
 
         var request = server().takeRequest();
         assertThat(request).isNotNull();

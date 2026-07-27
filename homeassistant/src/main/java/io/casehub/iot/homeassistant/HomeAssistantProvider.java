@@ -8,12 +8,12 @@ import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.homeassistant.internal.HaServiceCallDto;
 import io.casehub.iot.homeassistant.internal.ServiceCallSpec;
 import io.quarkus.arc.lookup.LookupIfProperty;
-import io.smallrye.mutiny.Uni;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
 
@@ -21,7 +21,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Home Assistant implementation of the {@link DeviceProvider} SPI.
@@ -96,22 +95,23 @@ public class HomeAssistantProvider implements DeviceProvider {
     }
 
     @Override
-    public Uni<List<DeviceEntity>> discover() {
+    public List<DeviceEntity> discover() {
         ensureWebSocketConnected();
-        return getRestClient().getStates().map(mapper::mapAll);
+        return mapper.mapAll(getRestClient().getStates());
     }
 
     @Override
-    public Uni<CommandResult> dispatch(DeviceCommand command) {
+    public CommandResult dispatch(DeviceCommand command) {
         ServiceCallSpec spec = buildServiceCall(command);
         if (spec == null) {
-            return Uni.createFrom().item(CommandResult.FAILED);
+            return CommandResult.FAILED;
         }
-        return getRestClient().callService(spec.domain(), spec.service(), spec.body())
-            .map(resp -> resp.getStatus() < 300 ? CommandResult.SENT : CommandResult.FAILED)
-            .onFailure(WebApplicationException.class).recoverWithItem(CommandResult.FAILED)
-            .onFailure(ProcessingException.class).recoverWithItem(CommandResult.FAILED)
-            .onFailure(TimeoutException.class).recoverWithItem(CommandResult.TIMEOUT);
+        try {
+            Response resp = getRestClient().callService(spec.domain(), spec.service(), spec.body());
+            return resp.getStatus() < 300 ? CommandResult.SENT : CommandResult.FAILED;
+        } catch (WebApplicationException | ProcessingException e) {
+            return CommandResult.FAILED;
+        }
     }
 
     private ServiceCallSpec buildServiceCall(DeviceCommand command) {

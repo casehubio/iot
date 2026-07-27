@@ -3,14 +3,18 @@ package io.casehub.iot.mcp;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.casehub.iot.api.CommandResult;
 import io.casehub.iot.api.DeviceClass;
+import io.casehub.iot.api.IoTCommandAuditEvent;
 import io.casehub.iot.api.LightDevice;
 import io.casehub.iot.api.Temperature;
 import io.casehub.iot.api.ThermostatDevice;
 import io.casehub.iot.api.ThermostatMode;
 import io.casehub.iot.api.spi.DeviceProvider;
+import io.casehub.iot.api.spi.DeviceStateHistoryProvider;
 import io.casehub.iot.testing.MockDeviceProvider;
 import io.casehub.iot.testing.MockDeviceRegistry;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +25,7 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class IoTDeviceMcpToolTest {
@@ -32,6 +37,8 @@ class IoTDeviceMcpToolTest {
     private MockDeviceRegistry registry;
     private MockDeviceProvider provider;
     private Instance<DeviceProvider> providers;
+    private Event<IoTCommandAuditEvent> auditEvents;
+    private Instance<DeviceStateHistoryProvider> historyProviders;
     private IoTDeviceMcpTool tool;
 
     @SuppressWarnings("unchecked")
@@ -40,8 +47,11 @@ class IoTDeviceMcpToolTest {
         registry = new MockDeviceRegistry();
         provider = new MockDeviceProvider("test-provider");
         providers = mock(Instance.class);
+        auditEvents = mock(Event.class);
+        historyProviders = mock(Instance.class);
         when(providers.stream()).thenReturn(java.util.stream.Stream.of(provider));
-        tool = new IoTDeviceMcpTool(registry, providers, MAPPER);
+        when(historyProviders.isResolvable()).thenReturn(false);
+        tool = new IoTDeviceMcpTool(registry, providers, MAPPER, auditEvents, historyProviders);
     }
 
     private LightDevice light() {
@@ -215,8 +225,7 @@ class IoTDeviceMcpToolTest {
         registry.addDevice(light());
         var failingProvider = mock(DeviceProvider.class);
         when(failingProvider.providerId()).thenReturn("test-provider");
-        when(failingProvider.dispatch(any())).thenReturn(
-                io.smallrye.mutiny.Uni.createFrom().failure(new RuntimeException("connection lost")));
+        when(failingProvider.dispatch(any())).thenThrow(new RuntimeException("connection lost"));
         when(providers.stream()).thenReturn(java.util.stream.Stream.of(failingProvider));
         String result = tool.sendCommand("light.living_room", "turn_on", null);
         assertThat(result).startsWith("Failed: ");
@@ -244,7 +253,7 @@ class IoTDeviceMcpToolTest {
     @Test
     void sendCommandReportsFailedResult() {
         registry.addDevice(light());
-        provider.setDispatchResult(io.casehub.iot.api.CommandResult.FAILED);
+        provider.setDispatchResult(CommandResult.FAILED);
         when(providers.stream()).thenReturn(java.util.stream.Stream.of(provider));
         String result = tool.sendCommand("light.living_room", "turn_on", null);
         assertThat(result).contains("result: FAILED");
@@ -254,9 +263,104 @@ class IoTDeviceMcpToolTest {
     @Test
     void sendCommandReportsTimeoutResult() {
         registry.addDevice(light());
-        provider.setDispatchResult(io.casehub.iot.api.CommandResult.TIMEOUT);
+        provider.setDispatchResult(CommandResult.TIMEOUT);
         when(providers.stream()).thenReturn(java.util.stream.Stream.of(provider));
         String result = tool.sendCommand("light.living_room", "turn_on", null);
         assertThat(result).contains("result: TIMEOUT");
+    }
+
+    @Test
+    void sendCommandFiresAuditEvent() {
+        registry.addDevice(light());
+        when(providers.stream()).thenReturn(java.util.stream.Stream.of(provider));
+        tool.sendCommand("light.living_room", "turn_on", null);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(IoTCommandAuditEvent.class);
+        verify(auditEvents).fireAsync(captor.capture());
+        IoTCommandAuditEvent event = captor.getValue();
+        assertThat(event.deviceId()).isEqualTo("light.living_room");
+        assertThat(event.action()).isEqualTo("turn_on");
+        assertThat(event.result()).isEqualTo(CommandResult.SENT);
+        assertThat(event.dispatchedBy()).isEqualTo("mcp-agent");
+        assertThat(event.providerId()).isEqualTo("test-provider");
+        assertThat(event.correlationId()).isNotNull();
+        assertThat(event.timestamp()).isNotNull();
+    }
+
+    // --- iot_get_history ---
+
+    @Test
+    void getHistoryReturnsUnavailableWhenNoProvider() {
+        String result = tool.getHistory("light.living_room", null, null, null);
+        assertThat(result).contains("not available");
+    }
+
+    @Test
+    void getHistoryReturnsEntries() throws Exception {
+        var historyProvider = mock(DeviceStateHistoryProvider.class);
+        when(historyProviders.isResolvable()).thenReturn(true);
+        when(historyProviders.get()).thenReturn(historyProvider);
+
+        var entry = new DeviceStateHistoryProvider.HistoryEntry(
+                "light.living_room", "LIGHT", light(),
+                java.util.List.of("isOn", "brightness"), NOW);
+        when(historyProvider.findHistory("light.living_room", null, null, 50))
+                .thenReturn(java.util.List.of(entry));
+
+        String result = tool.getHistory("light.living_room", null, null, null);
+        var array = MAPPER.readTree(result);
+        assertThat(array.isArray()).isTrue();
+        assertThat(array).hasSize(1);
+        assertThat(array.get(0).get("deviceId").asText()).isEqualTo("light.living_room");
+    }
+
+    @Test
+    void getHistoryRespectsLimit() {
+        var historyProvider = mock(DeviceStateHistoryProvider.class);
+        when(historyProviders.isResolvable()).thenReturn(true);
+        when(historyProviders.get()).thenReturn(historyProvider);
+        when(historyProvider.findHistory("light.living_room", null, null, 10))
+                .thenReturn(java.util.List.of());
+
+        tool.getHistory("light.living_room", null, null, 10);
+        verify(historyProvider).findHistory("light.living_room", null, null, 10);
+    }
+
+    @Test
+    void getHistoryCapsLimitAt200() {
+        var historyProvider = mock(DeviceStateHistoryProvider.class);
+        when(historyProviders.isResolvable()).thenReturn(true);
+        when(historyProviders.get()).thenReturn(historyProvider);
+        when(historyProvider.findHistory("light.living_room", null, null, 200))
+                .thenReturn(java.util.List.of());
+
+        tool.getHistory("light.living_room", null, null, 999);
+        verify(historyProvider).findHistory("light.living_room", null, null, 200);
+    }
+
+    @Test
+    void getHistoryReturnsNoHistoryMessage() {
+        var historyProvider = mock(DeviceStateHistoryProvider.class);
+        when(historyProviders.isResolvable()).thenReturn(true);
+        when(historyProviders.get()).thenReturn(historyProvider);
+        when(historyProvider.findHistory("nonexistent", null, null, 50))
+                .thenReturn(java.util.List.of());
+
+        String result = tool.getHistory("nonexistent", null, null, null);
+        assertThat(result).contains("No history found");
+    }
+
+    @Test
+    void sendCommandFiresAuditEventOnFailure() {
+        registry.addDevice(light());
+        var failingProvider = mock(DeviceProvider.class);
+        when(failingProvider.providerId()).thenReturn("test-provider");
+        when(failingProvider.dispatch(any())).thenThrow(new RuntimeException("boom"));
+        when(providers.stream()).thenReturn(java.util.stream.Stream.of(failingProvider));
+        tool.sendCommand("light.living_room", "turn_on", null);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(IoTCommandAuditEvent.class);
+        verify(auditEvents).fireAsync(captor.capture());
+        assertThat(captor.getValue().result()).isEqualTo(CommandResult.FAILED);
     }
 }

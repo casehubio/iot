@@ -9,7 +9,6 @@ import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
 import io.quarkus.websockets.next.WebSocketClient;
 import io.quarkus.websockets.next.WebSocketClientConnection;
-import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
@@ -86,23 +85,14 @@ public class BridgeCloudClient {
 
     // visible for testing
     void handleCommand(BridgeMessage.Command cmd, WebSocketClientConnection connection) {
-        Uni<CommandResult> result;
         try {
-            result = commandDispatcher.dispatch(cmd.command());
+            CommandResult result = commandDispatcher.dispatch(cmd.command());
+            sendResponse(cmd, result, connection);
         } catch (Exception e) {
-            LOG.errorf(e, "Command dispatch threw synchronously for correlation %s",
-                    cmd.correlationId());
+            LOG.errorf(e, "Command dispatch failed for correlation %s",
+                       cmd.correlationId());
             sendResponse(cmd, CommandResult.FAILED, connection);
-            return;
-        }
-        result.subscribe().with(
-                r -> sendResponse(cmd, r, connection),
-                failure -> {
-                    LOG.errorf(failure, "Command dispatch failed for correlation %s",
-                            cmd.correlationId());
-                    sendResponse(cmd, CommandResult.FAILED, connection);
-                });
-    }
+        }}
 
     private void sendResponse(BridgeMessage.Command cmd, CommandResult result,
                                WebSocketClientConnection connection) {

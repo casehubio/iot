@@ -130,19 +130,17 @@ public class BridgeConnectionManager {
         List<DeviceEntity> allDevices = new ArrayList<>();
         for (DeviceProvider provider : providers) {
             try {
-                List<DeviceEntity> devices = provider.discover()
-                        .await().indefinitely();
+                List<DeviceEntity> devices = provider.discover();
                 allDevices.addAll(devices);
             } catch (Exception e) {
                 LOG.warnf("Failed to discover devices from provider %s: %s",
-                        provider.providerId(), e.getMessage());
+                          provider.providerId(), e.getMessage());
             }
         }
         var snapshot = new BridgeMessage.StateSnapshot(
                 tenancyId, Instant.now(), allDevices);
         send(snapshot);
-        LOG.infof("Sent state snapshot with %d devices", allDevices.size());
-    }
+        LOG.infof("Sent state snapshot with %d devices", allDevices.size());}
 
     private void scheduleReconnect(int initialDelaySeconds) {
         Thread.ofVirtual().name("bridge-reconnect").start(() -> {

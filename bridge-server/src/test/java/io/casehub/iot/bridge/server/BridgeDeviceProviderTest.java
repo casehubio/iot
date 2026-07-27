@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.casehub.iot.api.CommandResult;
-import io.casehub.iot.api.bridge.BridgeAuditEvent;
-import jakarta.enterprise.event.Event;
 import io.casehub.iot.api.DeviceClass;
 import io.casehub.iot.api.DeviceCommand;
 import io.casehub.iot.api.DeviceEntity;
@@ -13,16 +11,17 @@ import io.casehub.iot.api.LightDevice;
 import io.casehub.iot.api.ProviderStatus;
 import io.casehub.iot.api.StateChangeEvent;
 import io.casehub.iot.api.SwitchDevice;
+import io.casehub.iot.api.bridge.BridgeAuditEvent;
 import io.casehub.iot.api.bridge.BridgeMessage;
 import io.casehub.iot.testing.Fixtures;
 import io.quarkus.websockets.next.WebSocketConnection;
 import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.event.Event;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +70,7 @@ class BridgeDeviceProviderTest {
 
         provider.onSnapshot("site-a", List.of(sw, light));
 
-        List<DeviceEntity> discovered = provider.discover().await().indefinitely();
+        List<DeviceEntity> discovered = provider.discover();
         assertThat(discovered).hasSize(2);
         assertThat(discovered).extracting(DeviceEntity::deviceId)
                 .containsExactlyInAnyOrder("site-a/switch-hallway-1", "site-a/light-living-1");
@@ -175,23 +174,24 @@ class BridgeDeviceProviderTest {
         provider.onSnapshot("site-a", List.of(sw));
         provider.onSnapshot("site-b", List.of(light));
 
-        List<DeviceEntity> discovered = provider.discover().await().indefinitely();
+        List<DeviceEntity> discovered = provider.discover();
         assertThat(discovered).hasSize(2);
         assertThat(discovered).extracting(DeviceEntity::deviceId)
                 .containsExactlyInAnyOrder("site-a/switch-hallway-1", "site-b/light-living-1");
     }
 
-    // --- Dispatch tests (new) ---
+    // --- Dispatch tests ---
 
     @Test
-    void dispatchSendsCommandAndCorrelatesResponse() {
+    void dispatchSendsCommandAndCorrelatesResponse() throws Exception {
         List<String> sent = new ArrayList<>();
         registry.register("site-a", mockSendableConnection(sent, Uni.createFrom().voidItem()));
 
         DeviceCommand cmd = DeviceCommand.turnOn("site-a/switch-1", Map.of(), "test", "corr-1");
 
         AtomicReference<CommandResult> resultRef = new AtomicReference<>();
-        provider.dispatch(cmd).subscribe().with(resultRef::set);
+        Thread vt = Thread.ofVirtual().start(() -> resultRef.set(provider.dispatch(cmd)));
+        Thread.sleep(50);
 
         assertThat(sent).hasSize(1);
 
@@ -204,6 +204,7 @@ class BridgeDeviceProviderTest {
         assertThat(cmdMsg.command().action()).isEqualTo("turn_on");
 
         provider.completeCommand("site-a", "corr-1", CommandResult.SENT);
+        vt.join();
 
         assertThat(resultRef.get()).isEqualTo(CommandResult.SENT);
     }
@@ -212,7 +213,7 @@ class BridgeDeviceProviderTest {
     void dispatchFailsWhenAgentNotConnected() {
         DeviceCommand cmd = DeviceCommand.turnOn("site-a/switch-hallway-1", Map.of(), "test", "corr-1");
 
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
     }
@@ -223,24 +224,28 @@ class BridgeDeviceProviderTest {
 
         DeviceCommand cmd = DeviceCommand.turnOn("site-a/switch-1", Map.of(), "test", "corr-1");
 
-        CommandResult result = provider.dispatch(cmd).await().atMost(Duration.ofSeconds(5));
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.TIMEOUT);
     }
 
     @Test
-    void dispatchGeneratesCorrelationIdWhenNull() {
+    void dispatchGeneratesCorrelationIdWhenNull() throws Exception {
         List<String> sent = new ArrayList<>();
         registry.register("site-a", mockSendableConnection(sent, Uni.createFrom().voidItem()));
 
         DeviceCommand cmd = new DeviceCommand("site-a/switch-1", "turn_on", Map.of(), "test", null);
 
-        provider.dispatch(cmd).subscribe().with(r -> {});
+        Thread vt = Thread.ofVirtual().start(() -> provider.dispatch(cmd));
+        Thread.sleep(50);
 
         assertThat(sent).hasSize(1);
         BridgeMessage.Command cmdMsg = (BridgeMessage.Command) deserialize(sent.get(0));
         assertThat(cmdMsg.correlationId()).isNotNull().isNotBlank();
         assertThat(cmdMsg.command().correlationId()).isEqualTo(cmdMsg.correlationId());
+
+        provider.completeCommand("site-a", cmdMsg.correlationId(), CommandResult.SENT);
+        vt.join();
     }
 
     @Test
@@ -250,13 +255,13 @@ class BridgeDeviceProviderTest {
 
         DeviceCommand cmd = DeviceCommand.turnOn("site-a/switch-1", Map.of(), "test", "corr-1");
 
-        CommandResult result = provider.dispatch(cmd).await().atMost(Duration.ofSeconds(2));
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
     }
 
     @Test
-    void concurrentDispatchesResolveCorrectly() {
+    void concurrentDispatchesResolveCorrectly() throws Exception {
         registry.register("site-a", mockSendableConnection(new ArrayList<>(), Uni.createFrom().voidItem()));
 
         DeviceCommand cmd1 = DeviceCommand.turnOn("site-a/switch-1", Map.of(), "test", "corr-1");
@@ -264,11 +269,15 @@ class BridgeDeviceProviderTest {
 
         AtomicReference<CommandResult> result1 = new AtomicReference<>();
         AtomicReference<CommandResult> result2 = new AtomicReference<>();
-        provider.dispatch(cmd1).subscribe().with(result1::set);
-        provider.dispatch(cmd2).subscribe().with(result2::set);
+        Thread vt1 = Thread.ofVirtual().start(() -> result1.set(provider.dispatch(cmd1)));
+        Thread vt2 = Thread.ofVirtual().start(() -> result2.set(provider.dispatch(cmd2)));
+        Thread.sleep(50);
 
         provider.completeCommand("site-a", "corr-2", CommandResult.SENT);
         provider.completeCommand("site-a", "corr-1", CommandResult.FAILED);
+
+        vt1.join();
+        vt2.join();
 
         assertThat(result1.get()).isEqualTo(CommandResult.FAILED);
         assertThat(result2.get()).isEqualTo(CommandResult.SENT);
@@ -280,24 +289,26 @@ class BridgeDeviceProviderTest {
 
         DeviceCommand cmd = DeviceCommand.turnOn("site-a/switch-1", Map.of(), "test", "corr-1");
 
-        CommandResult result = provider.dispatch(cmd).await().atMost(Duration.ofSeconds(5));
+        CommandResult result = provider.dispatch(cmd);
         assertThat(result).isEqualTo(CommandResult.TIMEOUT);
 
         provider.completeCommand("site-a", "corr-1", CommandResult.SENT);
     }
 
     @Test
-    void crossTenancyResponseIsNoOp() {
+    void crossTenancyResponseIsNoOp() throws Exception {
         registry.register("site-a", mockSendableConnection(new ArrayList<>(), Uni.createFrom().voidItem()));
 
         DeviceCommand cmd = DeviceCommand.turnOn("site-a/switch-1", Map.of(), "test", "corr-1");
 
         AtomicReference<CommandResult> resultRef = new AtomicReference<>();
-        provider.dispatch(cmd).subscribe().with(resultRef::set);
+        Thread vt = Thread.ofVirtual().start(() -> resultRef.set(provider.dispatch(cmd)));
+        Thread.sleep(50);
 
         provider.completeCommand("site-b", "corr-1", CommandResult.SENT);
 
-        assertThat(resultRef.get()).isNull();
+        vt.join();
+        assertThat(resultRef.get()).isEqualTo(CommandResult.TIMEOUT);
     }
 
     // --- Helpers ---

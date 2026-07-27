@@ -5,7 +5,6 @@ import io.casehub.iot.api.DeviceCommand;
 import io.casehub.iot.api.DeviceEntity;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
@@ -46,19 +45,19 @@ public class BridgeCommandDispatcher {
         this.registry = registry;
     }
 
-    public Uni<CommandResult> dispatch(DeviceCommand command) {
+    public CommandResult dispatch(DeviceCommand command) {
         if (providerMap.isEmpty()) {
-            return Uni.createFrom().item(CommandResult.FAILED);
+            return CommandResult.FAILED;
         }
 
         Optional<DeviceEntity> device = registry.findById(command.targetDeviceId());
         if (device.isEmpty()) {
-            return Uni.createFrom().item(CommandResult.FAILED);
+            return CommandResult.FAILED;
         }
 
         DeviceProvider provider = providerMap.get(device.get().providerId());
         if (provider == null) {
-            return Uni.createFrom().item(CommandResult.FAILED);
+            return CommandResult.FAILED;
         }
 
         return provider.dispatch(command);

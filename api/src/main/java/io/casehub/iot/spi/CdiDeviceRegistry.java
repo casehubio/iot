@@ -6,19 +6,19 @@ import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.quarkus.arc.DefaultBean;
 import io.quarkus.runtime.StartupEvent;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.ObservesAsync;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.ObservesAsync;
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
-import org.jboss.logging.Logger;
 
 @ApplicationScoped
 @DefaultBean
@@ -32,47 +32,45 @@ public class CdiDeviceRegistry implements DeviceRegistry {
     private volatile Map<String, DeviceEntity> devices = Map.of();
 
     void onStartup(@Observes StartupEvent event) {
-        refresh().await().indefinitely();
+        refresh();
     }
 
     @Override
-    public Uni<Void> refresh() {
-        return Uni.join().all(
-                StreamSupport.stream(providers.spliterator(), false)
-                    .map(p -> p.discover()
-                        .onFailure().invoke(e -> LOG.warnf(e, "Provider %s failed during discover", p.providerId()))
-                        .onFailure().recoverWithItem(List.of()))
-                    .toList()
-            ).andCollectFailures()
-            .map(listOfLists -> {
-                synchronized (CdiDeviceRegistry.this) {
-                    Map<String, DeviceEntity> next = new HashMap<>();
-                    listOfLists.forEach(list -> list.forEach(d -> next.put(d.deviceId(), d)));
-                    devices = Map.copyOf(next);
-                }
-                return (Void) null;
-            });
+    public void refresh() {
+        Map<String, DeviceEntity> next = new HashMap<>();
+        for (DeviceProvider p : providers) {
+            try {
+                p.discover().forEach(d -> next.put(d.deviceId(), d));
+            } catch (Exception e) {
+                LOG.warnf(e, "Provider %s failed during discover", p.providerId());
+            }
+        }
+        synchronized (this) {
+            devices = Map.copyOf(next);
+        }
     }
 
     @Override
-    public Uni<Void> refresh(String providerId) {
+    public void refresh(String providerId) {
         DeviceProvider target = StreamSupport.stream(providers.spliterator(), false)
-                .filter(p -> p.providerId().equals(providerId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unknown provider: " + providerId));
+                                             .filter(p -> p.providerId().equals(providerId))
+                                             .findFirst()
+                                             .orElseThrow(() -> new IllegalArgumentException("Unknown provider: " + providerId));
 
-        return target.discover()
-                .onFailure().invoke(e -> LOG.warnf(e, "Provider %s failed during discover", providerId))
-                .onFailure().recoverWithItem(List.of())
-                .map(discovered -> {
-                    synchronized (CdiDeviceRegistry.this) {
-                        Map<String, DeviceEntity> next = new HashMap<>(devices);
-                        next.entrySet().removeIf(e -> e.getValue().providerId().equals(providerId));
-                        discovered.forEach(d -> next.put(d.deviceId(), d));
-                        devices = Map.copyOf(next);
-                    }
-                    return (Void) null;
-                });
+        List<DeviceEntity> discovered;
+        try {
+            discovered = target.discover();
+        } catch (Exception e) {
+            LOG.warnf(e, "Provider %s failed during discover", providerId);
+            discovered = List.of();
+        }
+
+        synchronized (this) {
+            Map<String, DeviceEntity> next = new HashMap<>(devices);
+            next.entrySet().removeIf(e -> e.getValue().providerId().equals(providerId));
+            discovered.forEach(d -> next.put(d.deviceId(), d));
+            devices = Map.copyOf(next);
+        }
     }
 
     void onStateChange(@ObservesAsync StateChangeEvent event) {

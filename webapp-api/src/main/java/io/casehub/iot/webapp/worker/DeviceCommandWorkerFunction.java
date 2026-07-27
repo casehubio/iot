@@ -67,7 +67,7 @@ public class DeviceCommandWorkerFunction implements Function<Map<String, Object>
                 UUID.randomUUID().toString()
         );
 
-        CommandResult result = provider.dispatch(command).await().indefinitely();
+        CommandResult result = provider.dispatch(command);
 
         return WorkerResult.of(Map.of(
                 "result", result.name(),

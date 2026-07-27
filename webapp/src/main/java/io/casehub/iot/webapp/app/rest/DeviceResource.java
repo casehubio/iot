@@ -157,7 +157,7 @@ public class DeviceResource {
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Provider not found: " + device.providerId()));
 
-        var result = provider.dispatch(command).await().indefinitely();
+        var result = provider.dispatch(command);
 
         return new CommandResponse(
                 deviceId,

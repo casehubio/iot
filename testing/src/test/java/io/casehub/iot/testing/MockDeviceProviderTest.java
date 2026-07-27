@@ -35,14 +35,14 @@ class MockDeviceProviderTest {
     @Test
     void discoverReturnsAddedDevices() {
         provider.addDevice(sw("sw1"));
-        var devices = provider.discover().await().indefinitely();
+        var devices = provider.discover();
         assertThat(devices).hasSize(1);
         assertThat(devices.get(0).deviceId()).isEqualTo("sw1");
     }
 
     @Test
     void discoverReturnsEmptyWhenNothingAdded() {
-        assertThat(provider.discover().await().indefinitely()).isEmpty();
+        assertThat(provider.discover()).isEmpty();
     }
 
     @Test
@@ -50,7 +50,7 @@ class MockDeviceProviderTest {
         provider.addDevice(sw("sw1"));
         var updated = sw("sw1").toBuilder().available(false).build();
         provider.addDevice(updated);
-        var devices = provider.discover().await().indefinitely();
+        var devices = provider.discover();
         assertThat(devices).hasSize(1);
         assertThat(devices.get(0).available()).isFalse();
     }
@@ -59,7 +59,7 @@ class MockDeviceProviderTest {
     void removeDeviceRemovesFromDiscovery() {
         provider.addDevice(sw("sw1"));
         provider.removeDevice("sw1");
-        assertThat(provider.discover().await().indefinitely()).isEmpty();
+        assertThat(provider.discover()).isEmpty();
     }
 
     @Test
@@ -67,26 +67,26 @@ class MockDeviceProviderTest {
         provider.addDevice(sw("sw1"));
         provider.addDevice(sw("sw2"));
         provider.clear();
-        assertThat(provider.discover().await().indefinitely()).isEmpty();
+        assertThat(provider.discover()).isEmpty();
     }
 
     @Test
     void dispatchRecordsCommand() {
         var cmd = DeviceCommand.turnOff("sw1", "actor", "corr");
-        provider.dispatch(cmd).await().indefinitely();
+        provider.dispatch(cmd);
         assertThat(provider.dispatchedCommands()).containsExactly(cmd);
     }
 
     @Test
     void dispatchDefaultResultIsSent() {
-        assertThat(provider.dispatch(DeviceCommand.turnOff("sw1", "a", "c")).await().indefinitely())
+        assertThat(provider.dispatch(DeviceCommand.turnOff("sw1", "a", "c")))
             .isEqualTo(CommandResult.SENT);
     }
 
     @Test
     void dispatchReturnsConfiguredResult() {
         provider.setDispatchResult(CommandResult.FAILED);
-        assertThat(provider.dispatch(DeviceCommand.turnOff("sw1", "a", "c")).await().indefinitely())
+        assertThat(provider.dispatch(DeviceCommand.turnOff("sw1", "a", "c")))
             .isEqualTo(CommandResult.FAILED);
     }
 
@@ -103,7 +103,7 @@ class MockDeviceProviderTest {
 
     @Test
     void clearDispatchedCommandsClearsLog() {
-        provider.dispatch(DeviceCommand.turnOff("sw1", "a", "c")).await().indefinitely();
+        provider.dispatch(DeviceCommand.turnOff("sw1", "a", "c"));
         provider.clearDispatchedCommands();
         assertThat(provider.dispatchedCommands()).isEmpty();
     }

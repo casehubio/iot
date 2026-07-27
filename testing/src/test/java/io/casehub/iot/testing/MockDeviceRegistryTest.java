@@ -59,13 +59,13 @@ class MockDeviceRegistryTest {
 
     @Test
     void refreshIsNoOp() {
-        registry.refresh().await().indefinitely();
+        registry.refresh();
         assertThat(registry.findAll()).hasSize(2);
     }
 
     @Test
     void perProviderRefreshIsNoOp() {
-        registry.refresh("test").await().indefinitely();
+        registry.refresh("test");
         assertThat(registry.findAll()).hasSize(2);
     }
 

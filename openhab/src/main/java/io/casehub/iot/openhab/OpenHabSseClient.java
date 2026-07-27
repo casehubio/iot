@@ -13,7 +13,6 @@ import io.casehub.iot.openhab.internal.OpenHabStatePayloadDto;
 import io.casehub.iot.openhab.internal.OpenHabStatusInfoDto;
 import io.casehub.iot.openhab.internal.OpenHabThingDto;
 import io.casehub.iot.openhab.internal.OpenHabThingTypeDto;
-import io.smallrye.mutiny.Uni;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -175,20 +174,7 @@ public class OpenHabSseClient {
 
     // ---- public API ----
 
-    /**
-     * Connects to OpenHAB: discovers Equipment and Things via REST, then subscribes to SSE events.
-     *
-     * <p>Layered discovery pipeline:</p>
-     * <ol>
-     *   <li>Phase 1 — Equipment mapping (existing semantic model)</li>
-     *   <li>Phase 2 — Build Thing indexes + enhance Equipment availability from Thing status</li>
-     *   <li>Phase 3 — Thing mapping for unmapped Things (when enabled)</li>
-     *   <li>Phase 4 — Fetch item states for unmapped Things</li>
-     * </ol>
-     *
-     * @return completes when the initial REST discovery finishes; SSE subscription is fire-and-forget
-     */
-    public Uni<Void> connect() {
+    public void connect() {
         io.smallrye.mutiny.subscription.Cancellable old = sseSubscription;
         if (old != null) {
             old.cancel();
@@ -198,18 +184,16 @@ public class OpenHabSseClient {
         fireStatus(ProviderStatus.CONNECTING);
         firstEventReceived = false;
 
-        return Uni.combine().all().unis(
-            restClient.getItems("Equipment", true),
-            restClient.getThings()
-                .onFailure().recoverWithItem(List.of()),
-            categoryMapCached != null
-                ? Uni.createFrom().item(List.<OpenHabThingTypeDto>of())
-                : restClient.getThingTypes().onFailure().recoverWithItem(List.of())
-        ).asTuple()
-        .chain(tuple -> {
-            List<OpenHabItemDto> equipments = tuple.getItem1();
-            List<OpenHabThingDto> things = tuple.getItem2();
-            List<OpenHabThingTypeDto> thingTypes = tuple.getItem3();
+        try {
+            List<OpenHabItemDto>  equipments = restClient.getItems("Equipment", true);
+            List<OpenHabThingDto> things;
+            try {things = restClient.getThings();} catch (Exception e) {things = List.of();}
+            List<OpenHabThingTypeDto> thingTypes;
+            if (categoryMapCached != null) {
+                thingTypes = List.of();
+            } else {
+                try {thingTypes = restClient.getThingTypes();} catch (Exception e) {thingTypes = List.of();}
+            }
 
             if (categoryMapCached == null && !thingTypes.isEmpty()) {
                 Map<String, String> map = new HashMap<>();
@@ -219,43 +203,32 @@ public class OpenHabSseClient {
                     }
                 }
                 categoryMapCached = Map.copyOf(map);
-                thingResolver = new OpenHabThingResolver(tenancyId, categoryMapCached);
+                thingResolver     = new OpenHabThingResolver(tenancyId, categoryMapCached);
             }
 
-            // Phase 1: Equipment mapping (existing)
             populateCaches(equipments);
             Set<String> coveredItems = buildCoveredItemsSet(equipments);
 
-            // Phase 2: Build indexes + enhance availability (always)
             buildThingIndexes(things, coveredItems);
             enhanceAvailabilityFromThings(things, coveredItems);
 
-            // Phase 3: Thing mapping (only when enabled)
             boolean thingDiscovery = config != null && config.thingDiscoveryEnabled();
-            if (!thingDiscovery) {
-                return Uni.createFrom().voidItem();
-            }
-
-            List<OpenHabThingDto> unmappedThings = filterUnmapped(things, coveredItems);
-            if (unmappedThings.isEmpty()) {
-                return Uni.createFrom().voidItem();
-            }
-
-            // Phase 4: Fetch item states for unmapped Things
-            return restClient.getAllItems()
-                .onFailure().recoverWithItem(List.of())
-                .invoke(allItems -> {
+            if (thingDiscovery) {
+                List<OpenHabThingDto> unmappedThings = filterUnmapped(things, coveredItems);
+                if (!unmappedThings.isEmpty()) {
+                    List<OpenHabItemDto> allItems;
+                    try {allItems = restClient.getAllItems();} catch (Exception e) {allItems = List.of();}
                     Map<String, OpenHabItemDto> itemLookup = buildFilteredItemLookup(allItems, unmappedThings);
                     populateThingCaches(unmappedThings, itemLookup);
-                });
-        })
-        .invoke(v -> subscribeSse())
-        .replaceWithVoid()
-        .onFailure().invoke(e -> {
+                }
+            }
+
+            subscribeSse();
+        } catch (Exception e) {
             LOG.warnf(e, "OpenHAB discovery failed");
             fireStatus(ProviderStatus.DISCONNECTED);
             scheduleReconnect();
-        });
+        }
     }
 
     public ProviderStatus currentStatus() {
@@ -918,13 +891,14 @@ public class OpenHabSseClient {
         double capped = Math.min(base, reconnectMaxSeconds());
         double jittered = capped * (0.75 + 0.5 * ThreadLocalRandom.current().nextDouble());
         LOG.infof("Scheduling OpenHAB reconnect attempt %d in %.1fs", attempt + 1, jittered);
-        executor.schedule(() -> connect().subscribe().with(
-            v -> {},
-            e -> {
+        executor.schedule(() -> {
+            try {
+                connect();
+            } catch (Exception e) {
                 LOG.warnf(e, "OpenHAB reconnect attempt %d failed", attempt + 1);
                 scheduleReconnect();
             }
-        ), (long) (jittered * 1000), TimeUnit.MILLISECONDS);
+        }, (long) (jittered * 1000), TimeUnit.MILLISECONDS);
     }
 
     private int reconnectBaseSeconds() {

@@ -12,21 +12,22 @@ import io.casehub.iot.api.bridge.BridgeAuditEventType;
 import io.casehub.iot.api.bridge.BridgeMessage;
 import io.casehub.iot.api.bridge.DeviceIdUtils;
 import io.casehub.iot.api.spi.DeviceProvider;
-import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.subscription.UniEmitter;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Server-side {@link DeviceProvider} that presents remote bridge-agent devices as local.
@@ -56,7 +57,7 @@ public class BridgeDeviceProvider implements DeviceProvider {
     private final ConcurrentHashMap<String, Map<String, DeviceEntity>> tenancyDevices =
             new ConcurrentHashMap<>();
 
-    private final ConcurrentHashMap<String, UniEmitter<? super CommandResult>> pendingCommands =
+    private final ConcurrentHashMap<String, CompletableFuture<CommandResult>> pendingCommands =
             new ConcurrentHashMap<>();
 
     @Inject
@@ -71,10 +72,10 @@ public class BridgeDeviceProvider implements DeviceProvider {
     }
 
     public void completeCommand(String tenancyId, String correlationId, CommandResult result) {
-        String compositeKey = tenancyId + "/" + correlationId;
-        UniEmitter<? super CommandResult> emitter = pendingCommands.remove(compositeKey);
-        if (emitter != null) {
-            emitter.complete(result);
+        String                           compositeKey = tenancyId + "/" + correlationId;
+        CompletableFuture<CommandResult> future       = pendingCommands.remove(compositeKey);
+        if (future != null) {
+            future.complete(result);
         }
     }
 
@@ -84,25 +85,23 @@ public class BridgeDeviceProvider implements DeviceProvider {
     }
 
     @Override
-    public Uni<List<DeviceEntity>> discover() {
-        return Uni.createFrom().item(() -> {
-            List<DeviceEntity> all = new ArrayList<>();
-            for (Map<String, DeviceEntity> devices : tenancyDevices.values()) {
-                all.addAll(devices.values());
-            }
-            return List.copyOf(all);
-        });
+    public List<DeviceEntity> discover() {
+        List<DeviceEntity> all = new ArrayList<>();
+        for (Map<String, DeviceEntity> devices : tenancyDevices.values()) {
+            all.addAll(devices.values());
+        }
+        return List.copyOf(all);
     }
 
     @Override
-    public Uni<CommandResult> dispatch(DeviceCommand command) {
+    public CommandResult dispatch(DeviceCommand command) {
         String tenancyId = DeviceIdUtils.extractTenancyId(command.targetDeviceId());
         if (registry.getSession(tenancyId).isEmpty()) {
-            return Uni.createFrom().item(CommandResult.FAILED);
+            return CommandResult.FAILED;
         }
 
         String correlationId = command.correlationId() != null
-                ? command.correlationId() : UUID.randomUUID().toString();
+                               ? command.correlationId() : UUID.randomUUID().toString();
         String localId = DeviceIdUtils.stripPrefix(command.targetDeviceId());
         DeviceCommand localCommand = new DeviceCommand(
                 localId, command.action(), command.parameters(),
@@ -119,24 +118,35 @@ public class BridgeDeviceProvider implements DeviceProvider {
             json = mapper.writeValueAsString(bridgeCommand);
         } catch (JsonProcessingException e) {
             LOG.errorf(e, "Failed to serialize command [correlationId=%s]", correlationId);
-            return Uni.createFrom().item(CommandResult.FAILED);
+            return CommandResult.FAILED;
         }
 
-        var connection = registry.getSession(tenancyId).orElseThrow();
+        var    connection   = registry.getSession(tenancyId).orElseThrow();
         String compositeKey = tenancyId + "/" + correlationId;
 
-        return Uni.createFrom().<CommandResult>emitter(emitter -> {
-            pendingCommands.put(compositeKey, emitter);
-            connection.sendText(json).subscribe().with(
-                    success -> { },
-                    failure -> {
-                        pendingCommands.remove(compositeKey);
-                        emitter.complete(CommandResult.FAILED);
-                    });
-        })
-        .ifNoItem().after(Duration.ofSeconds(config.commandTimeoutSeconds()))
-        .recoverWithItem(CommandResult.TIMEOUT)
-        .onTermination().invoke(() -> pendingCommands.remove(compositeKey));
+        CompletableFuture<CommandResult> future = new CompletableFuture<>();
+        pendingCommands.put(compositeKey, future);
+
+        connection.sendText(json).subscribe().with(
+                success -> {},
+                failure -> {
+                    pendingCommands.remove(compositeKey);
+                    future.complete(CommandResult.FAILED);
+                });
+
+        try {
+            return future.get(config.commandTimeoutSeconds(), TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            pendingCommands.remove(compositeKey);
+            return CommandResult.TIMEOUT;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            pendingCommands.remove(compositeKey);
+            return CommandResult.FAILED;
+        } catch (ExecutionException e) {
+            pendingCommands.remove(compositeKey);
+            return CommandResult.FAILED;
+        }
     }
 
     @Override

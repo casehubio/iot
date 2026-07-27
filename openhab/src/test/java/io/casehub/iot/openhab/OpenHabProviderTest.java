@@ -44,7 +44,7 @@ class OpenHabProviderTest {
                 ]
                 """);
 
-        List<DeviceEntity> devices = provider.discover().await().indefinitely();
+        List<DeviceEntity> devices = provider.discover();
 
         assertThat(devices).hasSize(2);
         assertThat(devices).extracting(DeviceEntity::deviceId)
@@ -56,7 +56,7 @@ class OpenHabProviderTest {
         // sseClient returns null from resolveTargetItem (no cached equipment with this ID)
         DeviceCommand cmd = DeviceCommand.turnOn("NonExistent_Device",
                 Map.of(), "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
     }
@@ -65,7 +65,7 @@ class OpenHabProviderTest {
     void dispatchReturnsFailedOnUnknownAction() {
         DeviceCommand cmd = new DeviceCommand("Light_Kitchen",
                 "unknown_action", Map.of(), "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
     }
@@ -74,7 +74,7 @@ class OpenHabProviderTest {
     void discoverySendsBearerAuthHeader() {
         OpenHabMockServerResource.setEquipmentBody("[]");
 
-        provider.discover().await().indefinitely();
+        provider.discover();
 
         assertThat(OpenHabMockServerResource.lastAuthHeader.get())
                 .isEqualTo("Bearer test-token");

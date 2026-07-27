@@ -42,7 +42,7 @@ class BridgeCommandDispatcherTest {
         var dispatcher = new BridgeCommandDispatcher(List.of(haProvider, ohProvider), registry);
 
         var cmd = new DeviceCommand("light-1", "turn_on", Map.of(), "cloud", "corr-1");
-        CommandResult result = dispatcher.dispatch(cmd).await().indefinitely();
+        CommandResult result = dispatcher.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.SENT);
         assertThat(ohProvider.dispatchedCommands()).hasSize(1);
@@ -57,7 +57,7 @@ class BridgeCommandDispatcherTest {
         var dispatcher = new BridgeCommandDispatcher(List.of(provider), registry);
 
         var cmd = new DeviceCommand("unknown-device", "turn_on", Map.of(), "cloud", "corr-1");
-        CommandResult result = dispatcher.dispatch(cmd).await().indefinitely();
+        CommandResult result = dispatcher.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
         assertThat(provider.dispatchedCommands()).isEmpty();
@@ -72,7 +72,7 @@ class BridgeCommandDispatcherTest {
         var dispatcher = new BridgeCommandDispatcher(List.of(provider), registry);
 
         var cmd = new DeviceCommand("switch-hallway-1", "turn_on", Map.of(), "cloud", "corr-1");
-        CommandResult result = dispatcher.dispatch(cmd).await().indefinitely();
+        CommandResult result = dispatcher.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
     }
@@ -83,7 +83,7 @@ class BridgeCommandDispatcherTest {
         var dispatcher = new BridgeCommandDispatcher(List.of(), registry);
 
         var cmd = new DeviceCommand("switch-1", "turn_on", Map.of(), "cloud", "corr-1");
-        CommandResult result = dispatcher.dispatch(cmd).await().indefinitely();
+        CommandResult result = dispatcher.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
     }

@@ -7,7 +7,6 @@ import io.casehub.iot.api.CommandResult;
 import io.casehub.iot.api.DeviceCommand;
 import io.casehub.iot.api.bridge.BridgeMessage;
 import io.quarkus.websockets.next.WebSocketClientConnection;
-import io.smallrye.mutiny.Uni;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -102,8 +101,8 @@ class BridgeCloudClientTest {
         @Override public <T extends io.casehub.iot.api.DeviceEntity> List<T> findByClass(Class<T> c) { return List.of(); }
         @Override public List<io.casehub.iot.api.DeviceEntity> findByTenancyId(String t) { return List.of(); }
         @Override public List<io.casehub.iot.api.DeviceEntity> findAll() { return List.of(); }
-        @Override public Uni<Void> refresh() { return Uni.createFrom().voidItem(); }
-        @Override public Uni<Void> refresh(String providerId) { return Uni.createFrom().voidItem(); }
+        @Override public void refresh() { }
+        @Override public void refresh(String providerId) { }
     }
 
     private static class StubDispatcher extends BridgeCommandDispatcher {
@@ -112,14 +111,14 @@ class BridgeCloudClientTest {
             super(List.of(), new EmptyRegistry());
             this.result = result;
         }
-        @Override public Uni<CommandResult> dispatch(DeviceCommand command) {
-            return Uni.createFrom().item(result);
+        @Override public CommandResult dispatch(DeviceCommand command) {
+            return result;
         }
     }
 
     private static class ThrowingDispatcher extends BridgeCommandDispatcher {
         ThrowingDispatcher() { super(List.of(), new EmptyRegistry()); }
-        @Override public Uni<CommandResult> dispatch(DeviceCommand command) {
+        @Override public CommandResult dispatch(DeviceCommand command) {
             throw new RuntimeException("Synchronous dispatch failure");
         }
     }

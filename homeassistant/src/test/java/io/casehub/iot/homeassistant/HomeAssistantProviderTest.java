@@ -4,15 +4,14 @@ import io.casehub.iot.api.CommandResult;
 import io.casehub.iot.api.DeviceCommand;
 import io.casehub.iot.api.DeviceEntity;
 import io.casehub.iot.api.ProviderStatus;
+import io.casehub.iot.homeassistant.TestHttpServerResource.RecordedRequest;
+import io.casehub.iot.homeassistant.TestHttpServerResource.StubbedResponse;
+import io.casehub.iot.homeassistant.TestHttpServerResource.TestHttpServer;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import io.casehub.iot.homeassistant.TestHttpServerResource.StubbedResponse;
-import io.casehub.iot.homeassistant.TestHttpServerResource.RecordedRequest;
-import io.casehub.iot.homeassistant.TestHttpServerResource.TestHttpServer;
 
 import java.util.List;
 import java.util.Map;
@@ -49,7 +48,7 @@ class HomeAssistantProviderTest {
                 ]
                 """));
 
-        List<DeviceEntity> devices = provider.discover().await().indefinitely();
+        List<DeviceEntity> devices = provider.discover();
 
         assertThat(devices).hasSize(3);
         assertThat(devices).extracting(DeviceEntity::deviceId)
@@ -62,7 +61,7 @@ class HomeAssistantProviderTest {
 
         DeviceCommand cmd = DeviceCommand.turnOn("light.kitchen",
                 Map.of("brightness", 200), "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.SENT);
 
@@ -80,7 +79,7 @@ class HomeAssistantProviderTest {
 
         DeviceCommand cmd = DeviceCommand.turnOn("light.kitchen",
                 Map.of(), "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
     }
@@ -89,7 +88,7 @@ class HomeAssistantProviderTest {
     void dispatchReturnsFailedOnUnknownAction() {
         DeviceCommand cmd = new DeviceCommand("light.kitchen",
                 "unknown_action", Map.of(), "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.FAILED);
     }
@@ -100,7 +99,7 @@ class HomeAssistantProviderTest {
 
         DeviceCommand cmd = DeviceCommand.setVolume("media_player.speaker",
                 65, "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.SENT);
 
@@ -126,7 +125,7 @@ class HomeAssistantProviderTest {
         server().enqueue(StubbedResponse.json(200, "[]"));
 
         DeviceCommand cmd = DeviceCommand.turnOff("switch.hallway", "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.SENT);
 
@@ -141,7 +140,7 @@ class HomeAssistantProviderTest {
         server().enqueue(StubbedResponse.json(200, "[]"));
 
         DeviceCommand cmd = DeviceCommand.lock("lock.front_door", "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.SENT);
 
@@ -155,7 +154,7 @@ class HomeAssistantProviderTest {
         server().enqueue(StubbedResponse.json(200, "[]"));
 
         DeviceCommand cmd = DeviceCommand.unlock("lock.front_door", "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.SENT);
 
@@ -169,7 +168,7 @@ class HomeAssistantProviderTest {
         server().enqueue(StubbedResponse.json(200, "[]"));
 
         DeviceCommand cmd = DeviceCommand.setPosition("cover.blinds", 75, "user1", "corr1");
-        CommandResult result = provider.dispatch(cmd).await().indefinitely();
+        CommandResult result = provider.dispatch(cmd);
 
         assertThat(result).isEqualTo(CommandResult.SENT);
 

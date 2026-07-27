@@ -8,7 +8,6 @@ import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.worker.api.WorkerOutcome;
 import io.casehub.worker.api.WorkerResult;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.inject.Instance;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +56,7 @@ class DeviceCommandWorkerFunctionTest {
 
         when(deviceRegistry.findById("light-1")).thenReturn(Optional.of(device));
         when(deviceProvider.dispatch(any(DeviceCommand.class)))
-                .thenReturn(Uni.createFrom().item(CommandResult.SENT));
+                .thenReturn(CommandResult.SENT);
 
         var input = Map.<String, Object>of(
                 "targetDeviceId", "light-1",

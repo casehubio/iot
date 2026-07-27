@@ -25,7 +25,7 @@ mvn --batch-mode deploy -DskipTests
 
 | Module | Artifact | Purpose |
 |--------|----------|---------|
-| `api` | `casehub-iot-api` | Core SPIs (reactive `Uni<>`), typed device class hierarchy, and `IoTCloudEventAdapter` (`StateChangeEvent → CloudEvent`). Depends on `casehub-platform-api`. **Public API, semver discipline** |
+| `api` | `casehub-iot-api` | Core SPIs (blocking, virtual-thread-aligned per ADR-0005), typed device class hierarchy, `IoTCloudEventAdapter`, `IoTCommandAuditEvent`, and `DeviceStateHistoryProvider`. Depends on `casehub-platform-api`. **Public API, semver discipline** |
 | `homeassistant` | `casehub-iot-homeassistant` | Home Assistant provider (REST + WebSocket) and HA supplement types |
 | `openhab` | `casehub-iot-openhab` | OpenHAB provider (REST + SSE, semantic model) and OpenHAB supplement types |
 | `testing` | `casehub-iot-testing` | MockDeviceProvider, fixture devices (Java `Fixtures` + YAML `DeviceFixtureLoader`), `DeviceTypeHandler` SPI, StateChangeEventPublisher — test scope only |
@@ -34,12 +34,13 @@ mvn --batch-mode deploy -DskipTests
 | `bridge` | `casehub-iot-bridge` | Local bridge agent (standalone Quarkus app) — event relay with CDI-discovered filter chain, WebSocket cloud client, command dispatch |
 | `bridge-server` | `casehub-iot-bridge-server` | Cloud-side `BridgeDeviceProvider implements DeviceProvider` — remote devices look local. Library added as dependency by cloud consumers. |
 | `mcp` | `casehub-iot-mcp` | MCP tool surface (`iot_get_devices`, `iot_get_state`, `iot_send_command`). Library — add with `quarkus-mcp-server-http` to any Quarkus app for LLM agent device access. |
-| `webapp-api` | `casehub-iot-webapp-api` | Reusable IoT JavaSwitch ganglia, case descriptors, worker functions, ActionRiskClassifier, REST interfaces. Tier 1 — no JPA, no Quarkus runtime. |
+| `webapp-api` | `casehub-iot-webapp-api` | Reusable IoT JavaSwitch ganglia, case descriptors, worker functions, ActionRiskClassifier, `DismissalGangliaObserver`, REST interfaces. Tier 1 — no JPA, no Quarkus runtime. |
 | `webapp-drools` | `casehub-iot-webapp-drools` | DroolsCEP temporal pattern ganglia (`SustainedTemperatureRiseRule`, `MultiRoomMotionRule`). Activates by classpath presence. |
 | `webapp` | `casehub-iot-webapp` | Standalone Quarkus app — operational console with RAS situational awareness, case orchestration, REST API, SSE, TypeScript pages via Quinoa. Three-datasource Flyway layout. |
 
 ## Key Rules
 
+- All SPIs (`DeviceProvider`, `DeviceRegistry`, `DeviceStateHistoryProvider`) are **blocking** — designed for virtual threads per ADR-0005. No `Uni<>` return types in the SPI layer. Implementations that need async internals (e.g. BridgeDeviceProvider WebSocket) block at the method boundary.
 - `casehub-iot-api` is a **public API surface**. No breaking changes without a major version bump. Community automations in casehub-life and beyond depend on it.
 - Vendor supplement types (HA, OpenHAB) extend common types only for fields that have no cross-vendor equivalent. Common interface first, supplement last resort.
 - Device class vocabulary is aligned with the Matter Device Type Library.

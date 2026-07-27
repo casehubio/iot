@@ -5,19 +5,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.iot.api.CommandResult;
 import io.casehub.iot.api.DeviceClass;
 import io.casehub.iot.api.DeviceCommand;
+import io.casehub.iot.api.IoTCommandAuditEvent;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
+import io.casehub.iot.api.spi.DeviceStateHistoryProvider;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.smallrye.common.annotation.Blocking;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -28,14 +33,20 @@ public class IoTDeviceMcpTool {
     private final DeviceRegistry deviceRegistry;
     private final Instance<DeviceProvider> providers;
     private final ObjectMapper objectMapper;
+    private final Event<IoTCommandAuditEvent> auditEvents;
+    private final Instance<DeviceStateHistoryProvider> historyProviders;
 
     @Inject
     public IoTDeviceMcpTool(final DeviceRegistry deviceRegistry,
                             final Instance<DeviceProvider> providers,
-                            final ObjectMapper objectMapper) {
+                            final ObjectMapper objectMapper,
+                            final Event<IoTCommandAuditEvent> auditEvents,
+                            final Instance<DeviceStateHistoryProvider> historyProviders) {
         this.deviceRegistry = deviceRegistry;
         this.providers = providers;
         this.objectMapper = objectMapper;
+        this.auditEvents = auditEvents;
+        this.historyProviders = historyProviders;
     }
 
     @Tool(name = "iot_get_devices",
@@ -142,7 +153,7 @@ public class IoTDeviceMcpTool {
             return "Failed: Provider not found: " + device.providerId();
         }
 
-        String correlationId = java.util.UUID.randomUUID().toString();
+        String correlationId = UUID.randomUUID().toString();
         var command = new DeviceCommand(
                 deviceId,
                 action,
@@ -151,26 +162,76 @@ public class IoTDeviceMcpTool {
                 correlationId
         );
 
+        CommandResult result;
         try {
-            var result = providerOpt.get().dispatch(command)
-                                    .await().atMost(java.time.Duration.ofSeconds(30));
-
-            if (result == CommandResult.SENT) {
-                return "Command " + action + " sent to " + deviceId
-                       + " (result=SENT, correlationId=" + correlationId + ")";
-            }
-            return "Command " + action + " to " + deviceId
-                   + " result: " + result.name()
-                   + " (correlationId=" + correlationId + ")";
+            result = providerOpt.get().dispatch(command);
         } catch (final Exception e) {
             LOG.warnf("iot_send_command failed [%s]: %s",
                       e.getClass().getSimpleName(), e.getMessage());
-            if (e instanceof io.smallrye.mutiny.TimeoutException) {
-                return "Failed: Command timed out after 30s"
-                       + " (correlationId=" + correlationId + ")";
-            }
+            result = CommandResult.FAILED;
+            fireAuditEvent(command, result, device.providerId());
+            return "Failed: " + e.getMessage();
+        }
+
+        fireAuditEvent(command, result, device.providerId());
+
+        if (result == CommandResult.SENT) {
+            return "Command " + action + " sent to " + deviceId
+                   + " (result=SENT, correlationId=" + correlationId + ")";
+        }
+        return "Command " + action + " to " + deviceId
+               + " result: " + result.name()
+               + " (correlationId=" + correlationId + ")";
+    }
+
+    @Tool(name = "iot_get_history",
+          description = "Get state change history for a device. Returns timestamped "
+                      + "state snapshots with changed capabilities. Requires a "
+                      + "history provider (available in webapp deployments).")
+    @Blocking
+    public String getHistory(
+            @ToolArg(description = "The device ID to query history for.") final String deviceId,
+            @ToolArg(description = "Start time (ISO-8601, e.g. '2026-07-01T00:00:00Z'). "
+                                 + "Omit for no lower bound.",
+                     required = false) final String from,
+            @ToolArg(description = "End time (ISO-8601). Omit for no upper bound.",
+                     required = false) final String to,
+            @ToolArg(description = "Maximum number of entries to return (default 50, max 200).",
+                     required = false) final Integer limit) {
+
+        if (!historyProviders.isResolvable()) {
+            return "Failed: Device state history is not available in this deployment.";
+        }
+
+        var historyProvider = historyProviders.get();
+        Instant fromInstant = from != null ? Instant.parse(from) : null;
+        Instant toInstant = to != null ? Instant.parse(to) : null;
+        int effectiveLimit = limit != null ? Math.min(limit, 200) : 50;
+
+        var entries = historyProvider.findHistory(deviceId, fromInstant, toInstant, effectiveLimit);
+
+        if (entries.isEmpty()) {
+            return "No history found for device: " + deviceId;
+        }
+
+        try {
+            return objectMapper.writeValueAsString(entries);
+        } catch (final JsonProcessingException e) {
+            LOG.warnf("iot_get_history failed [%s]: %s",
+                    e.getClass().getSimpleName(), e.getMessage());
             return "Failed: " + e.getMessage();
         }
     }
 
+    private void fireAuditEvent(DeviceCommand command, CommandResult result, String providerId) {
+        auditEvents.fireAsync(new IoTCommandAuditEvent(
+                command.targetDeviceId(),
+                command.action(),
+                command.parameters(),
+                result,
+                command.dispatchedBy(),
+                command.correlationId(),
+                providerId,
+                Instant.now()));
+    }
 }
