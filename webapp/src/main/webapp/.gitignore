@@ -3,3 +3,4 @@ dist
 .vite
 *.log
 package-lock.json
+.casehub-packages/

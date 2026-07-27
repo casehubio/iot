@@ -6,11 +6,23 @@
     "build": "tsc && vite build"
   },
   "dependencies": {
-    "@casehubio/pages-runtime": "file:../../../../../pages/packages/pages-runtime",
-    "@casehubio/pages-ui": "file:../../../../../pages/packages/pages-ui",
-    "@casehubio/pages-data": "file:../../../../../pages/packages/pages-data",
-    "@casehubio/pages-viz": "file:../../../../../pages/packages/pages-viz",
-    "@casehubio/pages-component": "file:../../../../../pages/packages/pages-component"
+    "@casehubio/pages-component": "*",
+    "@casehubio/pages-data": "*",
+    "@casehubio/pages-runtime": "*",
+    "@casehubio/pages-ui": "*",
+    "@casehubio/pages-viz": "*"
+  },
+  "resolutions": {
+    "@casehubio/pages-component": "portal:./.casehub-packages/packages/pages-component",
+    "@casehubio/pages-data": "portal:./.casehub-packages/packages/pages-data",
+    "@casehubio/pages-primitives": "portal:./.casehub-packages/packages/pages-primitives",
+    "@casehubio/pages-runtime": "portal:./.casehub-packages/packages/pages-runtime",
+    "@casehubio/pages-table": "portal:./.casehub-packages/packages/pages-table",
+    "@casehubio/pages-ui": "portal:./.casehub-packages/packages/pages-ui",
+    "@casehubio/pages-ui-components": "portal:./.casehub-packages/packages/pages-ui-components",
+    "@casehubio/pages-ui-tokens": "portal:./.casehub-packages/packages/pages-ui-tokens",
+    "@casehubio/pages-viz": "portal:./.casehub-packages/packages/pages-viz",
+    "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core"
   },
   "devDependencies": {
     "typescript": "^5.4",
