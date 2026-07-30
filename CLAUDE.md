@@ -48,9 +48,9 @@ mvn --batch-mode deploy -DskipTests
 | `bridge` | `casehub-iot-bridge` | Local bridge agent (standalone Quarkus app) — event relay with CDI-discovered filter chain, WebSocket cloud client, command dispatch |
 | `bridge-server` | `casehub-iot-bridge-server` | Cloud-side `BridgeDeviceProvider implements DeviceProvider` — remote devices look local. Library added as dependency by cloud consumers. |
 | `mcp` | `casehub-iot-mcp` | MCP tool surface (`iot_get_devices`, `iot_get_state`, `iot_send_command`). Library — add with `quarkus-mcp-server-http` to any Quarkus app for LLM agent device access. |
-| `webapp-api` | `casehub-iot-webapp-api` | Reusable IoT JavaSwitch ganglia, case descriptors, worker functions, ActionRiskClassifier, `DismissalGangliaObserver`, REST interfaces. Tier 1 — no JPA, no Quarkus runtime. |
+| `webapp-api` | `casehub-iot-webapp-api` | Reusable IoT JavaSwitch ganglia, case descriptors, worker functions, ActionRiskClassifier, `DismissalGangliaObserver`, REST interfaces, AI resolution data records (`AiResolutionPlan`, `AiResolutionPromptBuilder`). Tier 1 — no JPA, no Quarkus runtime. |
 | `webapp-drools` | `casehub-iot-webapp-drools` | DroolsCEP temporal pattern ganglia (`SustainedTemperatureRiseRule`, `MultiRoomMotionRule`). Activates by classpath presence. |
-| `webapp` | `casehub-iot-webapp` | Standalone Quarkus app — operational console with RAS situational awareness, case orchestration, REST API, SSE, TypeScript pages via Quinoa. Three-datasource Flyway layout. |
+| `webapp` | `casehub-iot-webapp` | Standalone Quarkus app — operational console with RAS situational awareness, case orchestration, REST API, SSE, TypeScript pages via Quinoa, `IoTAiResolutionAgent` (LLM resolution via `@Scheduled` polling). Three-datasource Flyway layout. |
 
 ## Key Rules
 
