@@ -13,7 +13,7 @@ import io.casehub.engine.common.spi.cache.CaseInstanceCache;
 import io.casehub.engine.queue.model.CaseQueueEntry;
 import io.casehub.engine.queue.model.QueueEntryStatus;
 import io.casehub.engine.queue.service.CaseQueueService;
-import io.casehub.engine.queue.spi.CaseQueueEntryStore;
+
 import io.casehub.iot.webapp.cbr.IoTCbrRetrievalService;
 import io.casehub.iot.webapp.cbr.ResolutionSuggestion;
 import io.casehub.iot.webapp.resolution.AiEscalationContext;
@@ -55,7 +55,7 @@ public class IoTAiResolutionAgent {
     private static final long[] RETRY_DELAYS_MS = {5_000, 15_000};
 
     @Inject CaseQueueService queueService;
-    @Inject CaseQueueEntryStore entryStore;
+
     @Inject CaseInstanceCache caseCache;
     @Inject IoTCbrRetrievalService retrievalService;
     @Inject ActionRiskClassifier riskClassifier;
@@ -70,6 +70,9 @@ public class IoTAiResolutionAgent {
     @Inject @VirtualThreads
     ExecutorService virtualThreads;
 
+    @Inject io.casehub.iot.api.spi.DeviceRegistry deviceRegistry;
+    @Inject jakarta.enterprise.inject.Instance<io.casehub.iot.api.spi.DeviceProvider> deviceProviders;
+
     Agent llmAgent;
     Function<Map<String, Object>, WorkerResult<Map<String, Object>>> deviceCommandFn;
 
@@ -80,18 +83,35 @@ public class IoTAiResolutionAgent {
     @PostConstruct
     void init() {
         List<SubjectViewSpec> views = viewStore.findByTenancy(tenancyId);
-        aiResolutionViewId = views.stream()
-                .filter(v -> "iot-ai-resolution".equals(v.name()))
-                .map(SubjectViewSpec::id)
-                .findFirst()
-                .orElse(null);
+        aiResolutionViewId     = views.stream()
+                                      .filter(v -> "iot-ai-resolution".equals(v.name()))
+                                      .map(SubjectViewSpec::id)
+                                      .findFirst()
+                                      .orElse(null);
         operatorAssistedViewId = views.stream()
-                .filter(v -> "iot-operator-assisted".equals(v.name()))
-                .map(SubjectViewSpec::id)
-                .findFirst()
-                .orElse(null);
-        llmSemaphore = new Semaphore(config.maxConcurrentLlmCalls());
-    }
+                                      .filter(v -> "iot-operator-assisted".equals(v.name()))
+                                      .map(SubjectViewSpec::id)
+                                      .findFirst()
+                                      .orElse(null);
+        llmSemaphore           = new Semaphore(config.maxConcurrentLlmCalls());
+
+        if (llmAgent == null) {
+            llmAgent = Agent.builder()
+                            .systemPrompt("You are an IoT resolution agent. Given a situation and past resolutions, "
+                                          + "decide whether to EXECUTE a resolution plan or ESCALATE to a human operator. "
+                                          + "Respond with a JSON object containing: decision (EXECUTE or ESCALATE), reasoning, "
+                                          + "actions (list of action specs with actionType, targetDeviceId, parameters, rationale), "
+                                          + "and escalationReason (if escalating).")
+                            .userMessage("{{prompt}}")
+                            .model(config.modelType())
+                            .responseSchema(AiResolutionPlan.class)
+                            .build();
+        }
+
+        if (deviceCommandFn == null) {
+            deviceCommandFn = new io.casehub.iot.webapp.worker.DeviceCommandWorkerFunction(
+                    deviceProviders, deviceRegistry);
+        }}
 
     public void poll() {
         if (!config.enabled() || aiResolutionViewId == null || operatorAssistedViewId == null) {
@@ -235,14 +255,9 @@ public class IoTAiResolutionAgent {
     }
 
     private boolean statusGuardPasses(CaseQueueEntry entry) {
-        var current = entryStore.findById(entry.getId());
-        if (current.isEmpty()) {
-            return false;
-        }
-        CaseQueueEntry e = current.get();
-        return e.getStatus() == QueueEntryStatus.CLAIMED
-                && e.getViewId().equals(aiResolutionViewId);
-    }
+        return queueService.findByView(aiResolutionViewId, tenancyId).stream()
+                           .anyMatch(e -> e.getId().equals(entry.getId())
+                                          && e.getStatus() == QueueEntryStatus.CLAIMED);}
 
     private void executeActions(AiResolutionPlan plan, CaseQueueEntry entry,
                                  CaseInstance instance, List<ResolutionSuggestion> suggestions) {

@@ -15,7 +15,7 @@ import io.casehub.engine.common.spi.cache.CaseInstanceCache;
 import io.casehub.engine.queue.model.CaseQueueEntry;
 import io.casehub.engine.queue.model.QueueEntryStatus;
 import io.casehub.engine.queue.service.CaseQueueService;
-import io.casehub.engine.queue.spi.CaseQueueEntryStore;
+
 import io.casehub.iot.webapp.cbr.IoTCbrRetrievalService;
 import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.platform.api.view.SubjectViewStore;
@@ -50,7 +50,7 @@ class IoTAiResolutionAgentTest {
     private static final UUID OPERATOR_VIEW_ID = UUID.randomUUID();
 
     private CaseQueueService queueService;
-    private CaseQueueEntryStore entryStore;
+
     private CaseInstanceCache caseCache;
     private IoTCbrRetrievalService retrievalService;
     private ActionRiskClassifier riskClassifier;
@@ -66,7 +66,7 @@ class IoTAiResolutionAgentTest {
     @SuppressWarnings("unchecked")
     void setUp() throws Exception {
         queueService = mock(CaseQueueService.class);
-        entryStore = mock(CaseQueueEntryStore.class);
+
         caseCache = mock(CaseInstanceCache.class);
         retrievalService = mock(IoTCbrRetrievalService.class);
         riskClassifier = mock(ActionRiskClassifier.class);
@@ -96,7 +96,7 @@ class IoTAiResolutionAgentTest {
 
         agent = new IoTAiResolutionAgent();
         inject(agent, "queueService", queueService);
-        inject(agent, "entryStore", entryStore);
+
         inject(agent, "caseCache", caseCache);
         inject(agent, "retrievalService", retrievalService);
         inject(agent, "riskClassifier", riskClassifier);
@@ -133,9 +133,8 @@ class IoTAiResolutionAgentTest {
         when(retrievalService.retrieve(any(), any(), eq(TENANCY))).thenReturn(List.of());
         when(llmAgent.execute(any())).thenReturn(llmExecuteResult());
         when(riskClassifier.classify(any(), any())).thenReturn(new RiskDecision.Autonomous());
-        when(entryStore.findById(entry.getId())).thenReturn(Optional.of(entry));
         when(deviceCommandFn.apply(any())).thenReturn(WorkerResult.of(Map.of("result", "SUCCESS")));
-        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of());
+        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of(entry));
 
         agent.poll();
 
@@ -210,13 +209,9 @@ class IoTAiResolutionAgentTest {
         CaseQueueEntry entry = pendingEntry(caseId);
         CaseInstance instance = caseInstance(caseId, "hvac-anomaly");
 
-        CaseQueueEntry movedEntry = new CaseQueueEntry(entry.getId(), caseId, TENANCY,
-            OPERATOR_VIEW_ID, "iot-operator-assisted", QueueEntryStatus.PENDING, Instant.now());
-
         setupStandardMocks(entry, instance);
         when(llmAgent.execute(any())).thenReturn(llmExecuteResult());
         when(riskClassifier.classify(any(), any())).thenReturn(new RiskDecision.Autonomous());
-        when(entryStore.findById(entry.getId())).thenReturn(Optional.of(movedEntry));
         when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of());
 
         agent.poll();
@@ -244,11 +239,10 @@ class IoTAiResolutionAgentTest {
         setupStandardMocks(entry, instance);
         when(llmAgent.execute(any())).thenReturn(WorkerResult.of(planMap));
         when(riskClassifier.classify(any(), any())).thenReturn(new RiskDecision.Autonomous());
-        when(entryStore.findById(entry.getId())).thenReturn(Optional.of(entry));
         when(deviceCommandFn.apply(any()))
             .thenReturn(WorkerResult.of(Map.of("result", "SUCCESS")))
             .thenReturn(WorkerResult.failed("Device unreachable"));
-        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of());
+        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of(entry));
 
         agent.poll();
 
