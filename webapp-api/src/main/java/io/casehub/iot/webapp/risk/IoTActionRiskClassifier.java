@@ -38,6 +38,7 @@ public class IoTActionRiskClassifier implements ActionRiskClassifier {
                     StaticSetStrategy.of("iot-operator"),
                     null,
                     "casehubio/iot/oversight",
+                    null,
                     null);
         }
 
@@ -47,6 +48,7 @@ public class IoTActionRiskClassifier implements ActionRiskClassifier {
                 StaticSetStrategy.of("iot-admin"),
                 null,
                 "casehubio/iot/oversight",
+                null,
                 null);
     }
 }
