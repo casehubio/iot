@@ -54,7 +54,8 @@ public class CbrRetentionJob {
                 IOT_DOMAIN,
                 null,
                 config.maxAgeDays().orElse(null),
-                config.maxCasesPerType().orElse(null));
+                config.maxCasesPerType().orElse(null),
+                null);
 
         final int deleted = store.purge(policy);
 

@@ -201,6 +201,30 @@ Implemented by `JpaDeviceStateHistoryProvider` in the webapp module. Not availab
 
 ---
 
+## AI Resolution Queue Endpoints
+
+`ResolutionQueueResource` in the webapp module exposes the AI resolution pipeline. Both endpoints require `iot-viewer` role and filter by tenancy.
+
+### GET /api/resolution/queue
+
+Lists queue entries across the `iot-ai-resolution` and `iot-operator-assisted` views, enriched with device context from the case working layer.
+
+Query parameters:
+- `view` (optional) -- `ai-resolution` or `operator-assisted` (default: both)
+- `status` (optional) -- `PENDING`, `CLAIMED`, or `REVOKED` (default: PENDING + CLAIMED, excluding REVOKED)
+
+Returns `List<QueueEntrySummary>` -- each entry carries `entryId`, `caseId`, `caseType`, `viewName`, `status`, `assignedTo`, timestamps, and device identity fields (`deviceId`, `deviceClass`, `roomType`, `situationId`).
+
+### GET /api/resolution/queue/{entryId}
+
+Full triage detail for a single queue entry. Enriches with CBR suggestions (loaded on demand via `IoTCbrRetrievalService`), escalation context (`AiEscalationContext`), and execution results from the case working layer.
+
+Returns `QueueEntryDetail` -- wraps `QueueEntrySummary` plus `workingContext`, `suggestions`, `escalationContext`, and `executionResults`.
+
+Response records are in `webapp-api` (`io.casehub.iot.webapp.resolution`).
+
+---
+
 ## MCP Tools
 
 The `mcp` module (`casehub-iot-mcp`) provides four tools for LLM agent integration via `IoTDeviceMcpTool` (`@ApplicationScoped`):

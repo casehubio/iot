@@ -166,7 +166,7 @@ class CaseResourceSuggestionsTest {
         when(registry.findByName("hvac-anomaly")).thenReturn(Optional.of(definition));
 
         var planTrace = new io.casehub.neocortex.memory.cbr.PlanTrace(
-                "bind-1", "device-control", "set-temp", "SUCCESS", 1, Map.of());
+                "bind-1", "device-control", "set-temp", "SUCCESS", 1, Map.of(), null);
         var suggestion = new ResolutionSuggestion(
                 "past-1", 0.87, "Temp spike", "Filter replaced", "RESOLVED",
                 0.95, Map.of(), Map.of(), List.of(planTrace));
