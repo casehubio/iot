@@ -39,6 +39,7 @@ class IoTDeviceMcpToolTest {
     private Instance<DeviceProvider> providers;
     private Event<IoTCommandAuditEvent> auditEvents;
     private Instance<DeviceStateHistoryProvider> historyProviders;
+    private McpIdentityContext identityContext;
     private IoTDeviceMcpTool tool;
 
     @SuppressWarnings("unchecked")
@@ -51,7 +52,10 @@ class IoTDeviceMcpToolTest {
         historyProviders = mock(Instance.class);
         when(providers.stream()).thenReturn(java.util.stream.Stream.of(provider));
         when(historyProviders.isResolvable()).thenReturn(false);
-        tool = new IoTDeviceMcpTool(registry, providers, MAPPER, auditEvents, historyProviders);
+        identityContext = mock(McpIdentityContext.class);
+        when(identityContext.tenancyId()).thenReturn("default-tenant");
+        when(identityContext.actorId()).thenReturn("mcp-agent");
+        tool = new IoTDeviceMcpTool(registry, providers, MAPPER, auditEvents, historyProviders, identityContext);
     }
 
     private LightDevice light() {
@@ -304,7 +308,7 @@ class IoTDeviceMcpToolTest {
         var entry = new DeviceStateHistoryProvider.HistoryEntry(
                 "light.living_room", "LIGHT", light(),
                 java.util.List.of("isOn", "brightness"), NOW);
-        when(historyProvider.findHistory("light.living_room", null, null, 50))
+        when(historyProvider.findHistory("light.living_room", "default-tenant", null, null, 50))
                 .thenReturn(java.util.List.of(entry));
 
         String result = tool.getHistory("light.living_room", null, null, null);
@@ -319,11 +323,11 @@ class IoTDeviceMcpToolTest {
         var historyProvider = mock(DeviceStateHistoryProvider.class);
         when(historyProviders.isResolvable()).thenReturn(true);
         when(historyProviders.get()).thenReturn(historyProvider);
-        when(historyProvider.findHistory("light.living_room", null, null, 10))
+        when(historyProvider.findHistory("light.living_room", "default-tenant", null, null, 10))
                 .thenReturn(java.util.List.of());
 
         tool.getHistory("light.living_room", null, null, 10);
-        verify(historyProvider).findHistory("light.living_room", null, null, 10);
+        verify(historyProvider).findHistory("light.living_room", "default-tenant", null, null, 10);
     }
 
     @Test
@@ -331,11 +335,11 @@ class IoTDeviceMcpToolTest {
         var historyProvider = mock(DeviceStateHistoryProvider.class);
         when(historyProviders.isResolvable()).thenReturn(true);
         when(historyProviders.get()).thenReturn(historyProvider);
-        when(historyProvider.findHistory("light.living_room", null, null, 200))
+        when(historyProvider.findHistory("light.living_room", "default-tenant", null, null, 200))
                 .thenReturn(java.util.List.of());
 
         tool.getHistory("light.living_room", null, null, 999);
-        verify(historyProvider).findHistory("light.living_room", null, null, 200);
+        verify(historyProvider).findHistory("light.living_room", "default-tenant", null, null, 200);
     }
 
     @Test
@@ -343,7 +347,7 @@ class IoTDeviceMcpToolTest {
         var historyProvider = mock(DeviceStateHistoryProvider.class);
         when(historyProviders.isResolvable()).thenReturn(true);
         when(historyProviders.get()).thenReturn(historyProvider);
-        when(historyProvider.findHistory("nonexistent", null, null, 50))
+        when(historyProvider.findHistory("nonexistent", "default-tenant", null, null, 50))
                 .thenReturn(java.util.List.of());
 
         String result = tool.getHistory("nonexistent", null, null, null);
@@ -363,4 +367,84 @@ class IoTDeviceMcpToolTest {
         verify(auditEvents).fireAsync(captor.capture());
         assertThat(captor.getValue().result()).isEqualTo(CommandResult.FAILED);
     }
+// --- RBAC and tenancy ---
+
+    @Test
+    void getDevicesFiltersByTenancy() throws Exception {
+        registry.addDevices(light(), thermostat());
+        String   result = tool.getDevices(null, null, null);
+        JsonNode array  = MAPPER.readTree(result);
+        assertThat(array).hasSize(2);
+    }
+
+    @Test
+    void getStateRejectsDeviceFromOtherTenant() {
+        registry.addDevice(light());
+        when(identityContext.tenancyId()).thenReturn("other-tenant");
+        String result = tool.getState("light.living_room");
+        assertThat(result).isEqualTo("Device not found: light.living_room");
+    }
+
+    @Test
+    void getStateAllowsSameTenantDevice() throws Exception {
+        registry.addDevice(thermostat());
+        String   result = tool.getState("thermostat.hallway");
+        JsonNode node   = MAPPER.readTree(result);
+        assertThat(node.get("deviceId").asText()).isEqualTo("thermostat.hallway");
+    }
+
+    @Test
+    void sendCommandUsesActorId() {
+        registry.addDevice(light());
+        when(identityContext.actorId()).thenReturn("test-user");
+        when(providers.stream()).thenReturn(java.util.stream.Stream.of(provider));
+        tool.sendCommand("light.living_room", "turn_on", null);
+        assertThat(provider.dispatchedCommands()).hasSize(1);
+        assertThat(provider.dispatchedCommands().get(0).dispatchedBy()).isEqualTo("test-user");
+    }
+
+    @Test
+    void sendCommandRejectsDeviceFromOtherTenant() {
+        registry.addDevice(light());
+        when(identityContext.tenancyId()).thenReturn("other-tenant");
+        String result = tool.sendCommand("light.living_room", "turn_on", null);
+        assertThat(result).isEqualTo("Failed: Device not found: light.living_room");
+    }
+
+    @Test
+    void getHistoryRejectsDeviceFromOtherTenant() {
+        var historyProvider = mock(DeviceStateHistoryProvider.class);
+        when(historyProvider.findHistory("light.living_room", "other-tenant", null, null, 50))
+                .thenReturn(java.util.List.of());
+        when(historyProviders.isResolvable()).thenReturn(true);
+        when(historyProviders.get()).thenReturn(historyProvider);
+        when(identityContext.tenancyId()).thenReturn("other-tenant");
+        registry.addDevice(light());
+        String result = tool.getHistory("light.living_room", null, null, null);
+        assertThat(result).contains("No history found");
+    }
+
+    @Test
+    void getHistoryAllowsSameTenantDevice() throws Exception {
+        var entry = new DeviceStateHistoryProvider.HistoryEntry(
+                "light.living_room", "LIGHT", light(), java.util.List.of("state"), NOW);
+        var historyProvider = mock(DeviceStateHistoryProvider.class);
+        when(historyProvider.findHistory("light.living_room", "default-tenant", null, null, 50))
+                .thenReturn(java.util.List.of(entry));
+        when(historyProviders.isResolvable()).thenReturn(true);
+        when(historyProviders.get()).thenReturn(historyProvider);
+        registry.addDevice(light());
+        String result = tool.getHistory("light.living_room", null, null, null);
+        assertThat(result).contains("light.living_room");
+    }
+
+    @Test
+    void getHistoryRejectsInvalidDateFormat() {
+        var historyProvider = mock(DeviceStateHistoryProvider.class);
+        when(historyProviders.isResolvable()).thenReturn(true);
+        when(historyProviders.get()).thenReturn(historyProvider);
+        String result = tool.getHistory("light.living_room", "not-a-date", null, null);
+        assertThat(result).contains("Failed: Invalid date format");
+    }
+
 }

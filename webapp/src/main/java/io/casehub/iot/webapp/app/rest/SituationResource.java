@@ -1,5 +1,6 @@
 package io.casehub.iot.webapp.app.rest;
 
+import io.casehub.iot.api.IoTRoles;
 import io.casehub.iot.webapp.app.persistence.IoTSituationDefinitionEntity;
 import io.casehub.iot.webapp.rest.SituationDefinitionRequest;
 import io.casehub.platform.api.identity.CurrentPrincipal;
@@ -129,7 +130,7 @@ public class SituationResource {
      */
     @GET
     @Path("/definitions")
-    @RolesAllowed("iot-viewer")
+    @RolesAllowed(IoTRoles.VIEWER)
     public List<SituationDefinitionResponse> listDefinitions() {
         var runtimeDefs = em.createQuery(
                                     "SELECT s FROM IoTSituationDefinitionEntity s WHERE s.tenancyId = :tenancyId",
@@ -161,7 +162,7 @@ public class SituationResource {
      */
     @POST
     @Path("/definitions")
-    @RolesAllowed("iot-admin")
+    @RolesAllowed(IoTRoles.ADMIN)
     @Transactional
     public SituationDefinitionResponse createDefinition(SituationDefinitionRequest request) {
         // Check for existing definition with same situationId for this tenant
@@ -211,7 +212,7 @@ public class SituationResource {
      */
     @PUT
     @Path("/definitions/{situationId}")
-    @RolesAllowed("iot-admin")
+    @RolesAllowed(IoTRoles.ADMIN)
     @Transactional
     public SituationDefinitionResponse updateDefinition(
             @PathParam("situationId") String situationId,
@@ -264,7 +265,7 @@ public class SituationResource {
      */
     @DELETE
     @Path("/definitions/{situationId}")
-    @RolesAllowed("iot-admin")
+    @RolesAllowed(IoTRoles.ADMIN)
     @Transactional
     public void deleteDefinition(@PathParam("situationId") String situationId) {
         int deleted = em.createQuery(
@@ -281,7 +282,7 @@ public class SituationResource {
 
     @GET
     @Path("/{situationId}/suggestions")
-    @RolesAllowed("iot-viewer")
+    @RolesAllowed(IoTRoles.VIEWER)
     public io.casehub.iot.webapp.rest.SituationSuggestionsResponse getSuggestions(
             @PathParam("situationId") String situationId) {
         var terminal = java.util.EnumSet.of(
@@ -336,7 +337,7 @@ public class SituationResource {
      */
     @GET
     @Path("/active")
-    @RolesAllowed("iot-viewer")
+    @RolesAllowed(IoTRoles.VIEWER)
     public List<ActiveSituationResponse> listActive() {
         // TODO: implement once RAS persistence is integrated
         // Query: SELECT * FROM ras_situation_context WHERE tenancy_id = :tenancyId AND terminated_at IS NULL

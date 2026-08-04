@@ -240,6 +240,8 @@ Gets state change history for a device. Parameters:
 
 Requires a `DeviceStateHistoryProvider` implementation (available in webapp deployments). Returns "not available" when no provider is present.
 
+**Security:** Tools are annotated `@RolesAllowed(IoTRoles.VIEWER)` (read tools) and `@RolesAllowed(IoTRoles.OPERATOR)` (command tool). Role constants are in `IoTRoles` (`casehub-iot-api`). Enforcement requires the host app to have a security extension (`quarkus-oidc`, `quarkus-security`) — in unsecured hosts (bridge), annotations are inert. All queries are tenancy-filtered via `McpIdentityContext`, which resolves the caller's tenant from `CurrentPrincipal` when available, falling back to `casehub.iot.tenancy-id` config. Command audit events include `tenancyId` and the authenticated `actorId`.
+
 **Host-agnostic:** injects `DeviceRegistry` and `Instance<DeviceProvider>` -- sees whatever providers the host app configures.
 
 ---

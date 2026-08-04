@@ -8,6 +8,11 @@ import java.util.Optional;
 public interface DeviceRegistry {
     Optional<DeviceEntity> findById(String deviceId);
 
+    default Optional<DeviceEntity> findById(String deviceId, String tenancyId) {
+        return findById(deviceId).filter(d -> d.tenancyId().equals(tenancyId));
+    }
+
+
     <T extends DeviceEntity> List<T> findByClass(Class<T> deviceClass);
 
     List<DeviceEntity> findByTenancyId(String tenancyId);

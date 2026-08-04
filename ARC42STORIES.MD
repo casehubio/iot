@@ -72,7 +72,7 @@ PREFIX: `IOT` (issues only — foundation-tier modules use issue refs directly)
 - **Matter alignment:** Device class vocabulary aligned with the Matter Device Type Library — industry-standard device categorization.
 - **Test-scope only:** `iot-testing` is never a compile or runtime dependency.
 - **Bridge is stateless:** `iot-bridge` has no domain logic — pure event forwarding and command relay.
-- **Authorization-agnostic:** `iot-api` does not enforce authorization. Application tier (casehub-life) handles permission checks before dispatch.
+- **Authorization-agnostic:** `iot-api` does not enforce authorization; it may define role name constants used by consuming modules for annotation-based access control. Application tier (casehub-life) handles permission checks before dispatch.
 - **Production-first:** Before writing any class, apply: "Would this class exist in a production system built to this chapter and no further?" If no — do not build it.
 
 ### Dependencies

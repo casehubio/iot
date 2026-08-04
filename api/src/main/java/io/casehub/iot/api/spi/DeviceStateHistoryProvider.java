@@ -15,5 +15,5 @@ public interface DeviceStateHistoryProvider {
         Instant occurredAt
     ) {}
 
-    List<HistoryEntry> findHistory(String deviceId, Instant from, Instant to, int limit);
+    List<HistoryEntry> findHistory(String deviceId, String tenancyId, Instant from, Instant to, int limit);
 }

@@ -1,8 +1,9 @@
 package io.casehub.iot.webapp.app.rest;
 
-import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.api.DeviceCommand;
+import io.casehub.iot.api.IoTRoles;
 import io.casehub.iot.api.spi.DeviceProvider;
+import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.webapp.app.persistence.IoTDeviceStateHistoryEntity;
 import io.casehub.iot.webapp.rest.CommandRequest;
 import io.casehub.iot.webapp.rest.CommandResponse;
@@ -14,7 +15,15 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 import java.time.Instant;
@@ -62,29 +71,29 @@ public class DeviceResource {
      * @return filtered list of devices
      */
     @GET
-    @RolesAllowed("iot-viewer")
+    @RolesAllowed(IoTRoles.VIEWER)
     public List<DeviceResponse> list(
             @QueryParam("deviceClass") String deviceClass,
             @QueryParam("providerId") String providerId,
             @QueryParam("available") Boolean available
-    ) {
+                                    ) {
         return deviceRegistry.findAll().stream()
-                .filter(d -> filterByTenancy(d.tenancyId()))
-                .filter(d -> deviceClass == null || d.deviceClass().name().equals(deviceClass))
-                .filter(d -> providerId == null || d.providerId().equals(providerId))
-                .filter(d -> available == null || d.available() == available)
-                .map(d -> new DeviceResponse(
-                        d.deviceId(),
-                        d.providerId(),
-                        d.tenancyId(),
-                        d.deviceClass().name(),
-                        d.label(),
-                        d.location(),
-                        d.available(),
-                        d.capabilities(),
-                        d.lastUpdated()
-                ))
-                .toList();
+                             .filter(d -> filterByTenancy(d.tenancyId()))
+                             .filter(d -> deviceClass == null || d.deviceClass().name().equals(deviceClass))
+                             .filter(d -> providerId == null || d.providerId().equals(providerId))
+                             .filter(d -> available == null || d.available() == available)
+                             .map(d -> new DeviceResponse(
+                                     d.deviceId(),
+                                     d.providerId(),
+                                     d.tenancyId(),
+                                     d.deviceClass().name(),
+                                     d.label(),
+                                     d.location(),
+                                     d.available(),
+                                     d.capabilities(),
+                                     d.lastUpdated()
+                             ))
+                             .toList();
     }
 
     /**
@@ -96,10 +105,10 @@ public class DeviceResource {
      */
     @GET
     @Path("/{deviceId}")
-    @RolesAllowed("iot-viewer")
+    @RolesAllowed(IoTRoles.VIEWER)
     public DeviceResponse get(@PathParam("deviceId") String deviceId) {
         var device = deviceRegistry.findById(deviceId)
-                .orElseThrow(() -> new NotFoundException("Device not found: " + deviceId));
+                                   .orElseThrow(() -> new NotFoundException("Device not found: " + deviceId));
 
         if (!filterByTenancy(device.tenancyId())) {
             throw new NotFoundException("Device not found: " + deviceId);
@@ -127,14 +136,14 @@ public class DeviceResource {
      */
     @POST
     @Path("/{deviceId}/commands")
-    @RolesAllowed("iot-operator")
+    @RolesAllowed(IoTRoles.OPERATOR)
     @Transactional
     public CommandResponse dispatch(
             @PathParam("deviceId") String deviceId,
             CommandRequest request
-    ) {
+                                   ) {
         var device = deviceRegistry.findById(deviceId)
-                .orElseThrow(() -> new NotFoundException("Device not found: " + deviceId));
+                                   .orElseThrow(() -> new NotFoundException("Device not found: " + deviceId));
 
         if (!filterByTenancy(device.tenancyId())) {
             throw new NotFoundException("Device not found: " + deviceId);
@@ -147,15 +156,15 @@ public class DeviceResource {
                 deviceId,
                 request.action(),
                 request.parameters(),
-                principal.tenancyId(), // dispatchedBy
+                principal.actorId(), // dispatchedBy
                 correlationId
         );
 
         // Find provider and dispatch
         var provider = providers.stream()
-                .filter(p -> p.providerId().equals(device.providerId()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Provider not found: " + device.providerId()));
+                                .filter(p -> p.providerId().equals(device.providerId()))
+                                .findFirst()
+                                .orElseThrow(() -> new IllegalStateException("Provider not found: " + device.providerId()));
 
         var result = provider.dispatch(command);
 
@@ -178,15 +187,15 @@ public class DeviceResource {
      */
     @GET
     @Path("/{deviceId}/history")
-    @RolesAllowed("iot-viewer")
+    @RolesAllowed(IoTRoles.VIEWER)
     public List<StateHistoryResponse> history(
             @PathParam("deviceId") String deviceId,
             @QueryParam("from") Instant from,
             @QueryParam("to") Instant to,
             @QueryParam("limit") @DefaultValue("100") int limit
-    ) {
+                                             ) {
         var device = deviceRegistry.findById(deviceId)
-                .orElseThrow(() -> new NotFoundException("Device not found: " + deviceId));
+                                   .orElseThrow(() -> new NotFoundException("Device not found: " + deviceId));
 
         if (!filterByTenancy(device.tenancyId())) {
             throw new NotFoundException("Device not found: " + deviceId);
@@ -202,7 +211,7 @@ public class DeviceResource {
                 ORDER BY h.occurredAt DESC
                 """,
                 IoTDeviceStateHistoryEntity.class
-        );
+                                  );
 
         query.setParameter("deviceId", deviceId);
         query.setParameter("tenancyId", principal.tenancyId());
@@ -211,20 +220,17 @@ public class DeviceResource {
         query.setMaxResults(limit);
 
         return query.getResultList().stream()
-                .map(h -> new StateHistoryResponse(
-                        h.getDeviceId(),
-                        h.getDeviceClass(),
-                        h.getStateSnapshot(),
-                        Arrays.asList(h.getChangedCapabilities()),
-                        h.getOccurredAt()
-                ))
-                .toList();
+                    .map(h -> new StateHistoryResponse(
+                            h.getDeviceId(),
+                            h.getDeviceClass(),
+                            h.getStateSnapshot(),
+                            Arrays.asList(h.getChangedCapabilities()),
+                            h.getOccurredAt()
+                    ))
+                    .toList();
     }
 
-    private boolean filterByTenancy(String deviceTenancyId) {
-        // Null tenancy ID means system-wide device (bridge agents, cross-tenant providers)
-        return deviceTenancyId == null || deviceTenancyId.equals(principal.tenancyId());
-    }
+    private boolean filterByTenancy(String deviceTenancyId) {return deviceTenancyId.equals(principal.tenancyId());}
 
     /**
      * State history response record.
