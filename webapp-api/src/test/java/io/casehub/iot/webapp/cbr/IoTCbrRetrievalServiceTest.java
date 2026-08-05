@@ -132,7 +132,7 @@ class IoTCbrRetrievalServiceTest {
     @Test
     void retrieve_mapsScoredCasesToSuggestions() {
         var planTrace = new PlanTrace("bind-1", "device-control", "set-temp",
-                "SUCCESS", 1, Map.of());
+                "SUCCESS", 1, Map.of(), null);
         var cbrCase = new PlanCbrCase(
                 "Temperature spike", "Replaced filter", "RESOLVED", 0.95,
                 Map.of("deviceClass", FeatureValue.string("thermostat")),

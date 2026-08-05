@@ -225,6 +225,37 @@ Response records are in `webapp-api` (`io.casehub.iot.webapp.resolution`).
 
 ---
 
+## Metrics and Health (webapp)
+
+The webapp module exposes Micrometer metrics via Prometheus and MicroProfile Health readiness checks.
+
+### Prometheus Endpoint
+
+`GET /q/metrics` -- Prometheus-format metrics. All AI resolution metrics use the prefix `casehub.iot.ai.resolution`:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `poll.duration` | Timer | Synchronous poll dispatch and sweep duration |
+| `llm.call.duration` | Timer | Per-attempt LLM call latency (tags: `outcome`) |
+| `entry.duration` | Timer | Entry processing time from claim to outcome (tags: `outcome`) |
+| `action.execution.duration` | Timer | Sequential action execution time (tags: `outcome`) |
+| `entries.processed` | Counter | Entries by terminal outcome (tags: `outcome`, `cbr.band`) |
+| `claim.contention` | Counter | Claim race losses (normal concurrency) |
+| `llm.retries` | Counter | Transient LLM retry attempts |
+| `actions.executed` | Counter | Device command executions (tags: `succeeded`) |
+| `semaphore.available` | Gauge | Available LLM concurrency permits |
+| `queue.pending` | Gauge | PENDING entries at last poll |
+
+**Outcome tags:** `executed`, `llm-escalated`, `risk-gate`, `timeout`, `partial-failure`, `llm-error`, `case-not-found`, `status-guard-abort`, `error`.
+
+**CBR band tags:** `high` (>=0.85), `medium` (0.6-0.85), `low` (<0.6), `none` (queried, no matches), `unknown` (not queried).
+
+### Health Endpoint
+
+`GET /q/health/ready` -- includes `ai-resolution-agent` check. Reports UP when agent is enabled, both queue views are resolved, and the LLM agent is initialized. Data fields: `enabled`, `aiResolutionViewResolved`, `operatorAssistedViewResolved`, `semaphorePermits`.
+
+---
+
 ## MCP Tools
 
 The `mcp` module (`casehub-iot-mcp`) provides four tools for LLM agent integration via `IoTDeviceMcpTool` (`@ApplicationScoped`):

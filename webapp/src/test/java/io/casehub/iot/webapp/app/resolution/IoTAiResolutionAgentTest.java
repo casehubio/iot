@@ -15,12 +15,11 @@ import io.casehub.engine.common.spi.cache.CaseInstanceCache;
 import io.casehub.engine.queue.model.CaseQueueEntry;
 import io.casehub.engine.queue.model.QueueEntryStatus;
 import io.casehub.engine.queue.service.CaseQueueService;
-
 import io.casehub.iot.webapp.cbr.IoTCbrRetrievalService;
 import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.platform.api.view.SubjectViewStore;
-import io.casehub.worker.api.WorkerOutcome;
 import io.casehub.worker.api.WorkerResult;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -61,6 +61,8 @@ class IoTAiResolutionAgentTest {
     private Function<Map<String, Object>, WorkerResult<Map<String, Object>>> deviceCommandFn =
             mock(Function.class);
     private IoTAiResolutionAgent agent;
+    private SimpleMeterRegistry  meterRegistry;
+
 
     @BeforeEach
     @SuppressWarnings("unchecked")
@@ -108,6 +110,8 @@ class IoTAiResolutionAgentTest {
         inject(agent, "deviceCommandFn", deviceCommandFn);
         inject(agent, "objectMapper", new ObjectMapper());
         inject(agent, "virtualThreads", directExecutor);
+        meterRegistry = new SimpleMeterRegistry();
+        inject(agent, "registry", meterRegistry);
 
         agent.init();
     }
@@ -142,6 +146,14 @@ class IoTAiResolutionAgentTest {
         verify(llmAgent).execute(any());
         verify(deviceCommandFn).apply(any());
         verify(instance.getCaseContext()).set(eq("aiResolutionResults"), any());
+
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                "outcome", "executed", "cbr.band", "none")).isEqualTo(1.0);
+        assertThat(counterValue("casehub.iot.ai.resolution.actions.executed",
+                "succeeded", "true")).isGreaterThanOrEqualTo(1.0);
+        assertThat(timerCount("casehub.iot.ai.resolution.llm.call.duration",
+                "outcome", "success")).isEqualTo(1);
+        assertThat(timerCount("casehub.iot.ai.resolution.poll.duration")).isEqualTo(1);
     }
 
     @Test
@@ -158,6 +170,9 @@ class IoTAiResolutionAgentTest {
 
         verify(queueService).escalate(entry.getId(), TENANCY, OPERATOR_VIEW_ID);
         verify(deviceCommandFn, never()).apply(any());
+
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                "outcome", "llm-escalated", "cbr.band", "none")).isEqualTo(1.0);
     }
 
     @Test
@@ -187,6 +202,9 @@ class IoTAiResolutionAgentTest {
 
         verify(queueService).escalate(entry.getId(), TENANCY, OPERATOR_VIEW_ID);
         verify(deviceCommandFn, never()).apply(any());
+
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                "outcome", "risk-gate", "cbr.band", "none")).isEqualTo(1.0);
     }
 
     @Test
@@ -201,6 +219,9 @@ class IoTAiResolutionAgentTest {
         agent.poll();
 
         verify(queueService).escalate(entryId, TENANCY, OPERATOR_VIEW_ID);
+
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                "outcome", "timeout", "cbr.band", "unknown")).isEqualTo(1.0);
     }
 
     @Test
@@ -218,6 +239,9 @@ class IoTAiResolutionAgentTest {
 
         verify(deviceCommandFn, never()).apply(any());
         verify(queueService, never()).escalate(any(), any(), any());
+
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                "outcome", "status-guard-abort", "cbr.band", "none")).isEqualTo(1.0);
     }
 
     @Test
@@ -249,6 +273,13 @@ class IoTAiResolutionAgentTest {
         verify(queueService).escalate(entry.getId(), TENANCY, OPERATOR_VIEW_ID);
         verify(deviceCommandFn, times(2)).apply(any());
         verify(instance.getCaseContext(), times(2)).set(eq("aiEscalationContext"), any());
+
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                "outcome", "partial-failure", "cbr.band", "none")).isEqualTo(1.0);
+        assertThat(counterValue("casehub.iot.ai.resolution.actions.executed",
+                "succeeded", "false")).isEqualTo(1.0);
+        assertThat(counterValue("casehub.iot.ai.resolution.actions.executed",
+                "succeeded", "true")).isEqualTo(1.0);
     }
 
     @Test
@@ -265,6 +296,11 @@ class IoTAiResolutionAgentTest {
 
         verify(queueService).escalate(entry.getId(), TENANCY, OPERATOR_VIEW_ID);
         verify(llmAgent, times(1)).execute(any());
+
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                "outcome", "llm-error", "cbr.band", "none")).isEqualTo(1.0);
+        assertThat(timerCount("casehub.iot.ai.resolution.llm.call.duration",
+                "outcome", "error")).isEqualTo(1);
     }
 
     @Test
@@ -281,6 +317,10 @@ class IoTAiResolutionAgentTest {
 
         verify(queueService).escalate(entry.getId(), TENANCY, OPERATOR_VIEW_ID);
         verify(llmAgent, times(3)).execute(any());
+
+        assertThat(counterValue("casehub.iot.ai.resolution.llm.retries")).isEqualTo(2.0);
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                "outcome", "llm-error", "cbr.band", "none")).isEqualTo(1.0);
     }
 
     @Test
@@ -293,6 +333,24 @@ class IoTAiResolutionAgentTest {
 
         verifyNoInteractions(queueService);
     }
+
+    @Test
+    void claimContention_incrementsSeparateCounter() {
+        UUID           caseId = UUID.randomUUID();
+        CaseQueueEntry entry  = pendingEntry(caseId);
+
+        when(queueService.findPending(AI_VIEW_ID, TENANCY)).thenReturn(List.of(entry));
+        when(queueService.claim(entry.getId(), TENANCY, "iot-ai-agent"))
+                .thenThrow(new IllegalStateException("Already claimed"));
+        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of());
+
+        agent.poll();
+
+        assertThat(counterValue("casehub.iot.ai.resolution.claim.contention")).isEqualTo(1.0);
+        assertThat(counterValue("casehub.iot.ai.resolution.entries.processed",
+                                "outcome", "claim-failed")).isEqualTo(0.0);
+    }
+
 
     // --- helpers ---
 
@@ -364,4 +422,16 @@ class IoTAiResolutionAgentTest {
         f.setAccessible(true);
         f.set(target, value);
     }
+
+    private double counterValue(String name, String... tags) {
+        io.micrometer.core.instrument.Counter counter = meterRegistry.find(name).tags(tags).counter();
+        return counter != null ? counter.count() : 0.0;
+    }
+
+    private long timerCount(String name, String... tags) {
+        io.micrometer.core.instrument.Timer timer = meterRegistry.find(name).tags(tags).timer();
+        return timer != null ? timer.count() : 0;
+    }
+
+
 }

@@ -37,7 +37,7 @@ class AiResolutionPromptBuilderTest {
             Map.of("deviceClass", "thermostat"),
             Map.of("deviceClass", 1.0),
             List.of(new PlanTrace("check-filter", "device-control",
-                "set-temperature", "SUCCESS", 1, Map.of("target", 22)))
+                "set-temperature", "SUCCESS", 1, Map.of("target", 22), null))
         );
 
         String prompt = AiResolutionPromptBuilder.build(

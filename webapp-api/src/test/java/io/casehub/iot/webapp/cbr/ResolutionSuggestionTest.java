@@ -15,7 +15,7 @@ class ResolutionSuggestionTest {
     @Test
     void constructsWithAllFields() {
         var planStep = new PlanTrace("bind-1", "device-control", "set-temperature",
-                "SUCCESS", 1, Map.of("target", 22));
+                "SUCCESS", 1, Map.of("target", 22), null);
         var suggestion = new ResolutionSuggestion(
                 "case-123", 0.87, "Temperature rise", "Replaced filter",
                 "RESOLVED", 0.95,

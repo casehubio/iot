@@ -72,6 +72,9 @@ public class IoTAiResolutionAgent {
 
     @Inject io.casehub.iot.api.spi.DeviceRegistry deviceRegistry;
     @Inject jakarta.enterprise.inject.Instance<io.casehub.iot.api.spi.DeviceProvider> deviceProviders;
+    @Inject
+            io.micrometer.core.instrument.MeterRegistry                               registry;
+
 
     Agent llmAgent;
     Function<Map<String, Object>, WorkerResult<Map<String, Object>>> deviceCommandFn;
@@ -79,6 +82,8 @@ public class IoTAiResolutionAgent {
     private UUID aiResolutionViewId;
     private UUID operatorAssistedViewId;
     private Semaphore llmSemaphore;
+    private final java.util.concurrent.atomic.AtomicInteger pendingCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
 
     @PostConstruct
     void init() {
@@ -111,18 +116,34 @@ public class IoTAiResolutionAgent {
         if (deviceCommandFn == null) {
             deviceCommandFn = new io.casehub.iot.webapp.worker.DeviceCommandWorkerFunction(
                     deviceProviders, deviceRegistry);
-        }}
+        }
+
+        io.micrometer.core.instrument.Gauge.builder("casehub.iot.ai.resolution.semaphore.available",
+                                                    llmSemaphore, Semaphore::availablePermits)
+                                           .register(registry);
+
+        io.micrometer.core.instrument.Gauge.builder("casehub.iot.ai.resolution.queue.pending",
+                                                    pendingCount, java.util.concurrent.atomic.AtomicInteger::get)
+                                           .register(registry);
+    }
 
     public void poll() {
         if (!config.enabled() || aiResolutionViewId == null || operatorAssistedViewId == null) {
             return;
         }
-        processNewEntries();
-        sweepStaleEntries();
+        io.micrometer.core.instrument.Timer.Sample sample = io.micrometer.core.instrument.Timer.start(registry);
+        try {
+            processNewEntries();
+            sweepStaleEntries();
+        } finally {
+            sample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.poll.duration")
+                                                           .register(registry));
+        }
     }
 
     private void processNewEntries() {
         List<CaseQueueEntry> pending = queueService.findPending(aiResolutionViewId, tenancyId);
+        pendingCount.set(pending.size());
         for (CaseQueueEntry entry : pending) {
             virtualThreads.submit(() -> {
                 try {
@@ -140,54 +161,76 @@ public class IoTAiResolutionAgent {
             entry = queueService.claim(pendingEntry.getId(), tenancyId, config.agentId());
         } catch (IllegalStateException e) {
             LOG.debugf("Entry %s already claimed — skipping", pendingEntry.getId());
+            registry.counter("casehub.iot.ai.resolution.claim.contention").increment();
             return;
         }
 
-        UUID caseId = entry.getCaseId();
-        CaseInstance instance = caseCache.get(caseId);
-        if (instance == null) {
-            LOG.warnf("Case %s not found in cache — releasing entry", caseId);
-            return;
+        io.micrometer.core.instrument.Timer.Sample sample           = io.micrometer.core.instrument.Timer.start(registry);
+        String                                     outcome          = "error";
+        String                                     band             = "unknown";
+        boolean                                    cbrConfigPresent = false;
+
+        try {
+            UUID         caseId   = entry.getCaseId();
+            CaseInstance instance = caseCache.get(caseId);
+            if (instance == null) {
+                LOG.warnf("Case %s not found in cache — releasing entry", caseId);
+                outcome = "case-not-found";
+                return;
+            }
+
+            String caseType = instance.getCaseMetaModel().getName();
+            var    defOpt   = definitionRegistry.findByName(caseType);
+            if (defOpt.isEmpty()) {
+                escalateWithReason(entry, "Case definition not found: " + caseType, instance, List.of());
+                outcome = "case-not-found";
+                return;
+            }
+
+            CbrConfig cbrConfig = defOpt.get().getCbrConfig();
+            cbrConfigPresent = cbrConfig != null;
+            List<ResolutionSuggestion> suggestions;
+            if (cbrConfigPresent) {
+                var features = extractFeatures(instance);
+                suggestions = retrievalService.retrieve(cbrConfig, features, tenancyId);
+            } else {
+                suggestions = List.of();
+            }
+            band = cbrBand(suggestions, cbrConfigPresent);
+
+            writePreLlmContext(instance, suggestions);
+
+            AiResolutionPlan plan = callLlmWithRetry(entry, instance, suggestions);
+            if (plan == null) {
+                outcome = "llm-error";
+                return;
+            }
+
+            if (plan.decision() == Decision.ESCALATE) {
+                escalateWithReason(entry, plan.escalationReason(), instance, suggestions);
+                outcome = "llm-escalated";
+                return;
+            }
+
+            if (!riskCheckPasses(plan, entry, instance, caseType, suggestions)) {
+                outcome = "risk-gate";
+                return;
+            }
+
+            if (!statusGuardPasses(entry)) {
+                LOG.infof("Entry %s was moved by timeout sweep — aborting execution", entry.getId());
+                outcome = "status-guard-abort";
+                return;
+            }
+
+            outcome = executeActions(plan, entry, instance, suggestions);
+        } finally {
+            sample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.entry.duration")
+                                                           .tag("outcome", outcome)
+                                                           .register(registry));
+            registry.counter("casehub.iot.ai.resolution.entries.processed",
+                             "outcome", outcome, "cbr.band", band).increment();
         }
-
-        String caseType = instance.getCaseMetaModel().getName();
-        var defOpt = definitionRegistry.findByName(caseType);
-        if (defOpt.isEmpty()) {
-            escalateWithReason(entry, "Case definition not found: " + caseType, instance, List.of());
-            return;
-        }
-
-        CbrConfig cbrConfig = defOpt.get().getCbrConfig();
-        List<ResolutionSuggestion> suggestions;
-        if (cbrConfig != null) {
-            var features = extractFeatures(instance);
-            suggestions = retrievalService.retrieve(cbrConfig, features, tenancyId);
-        } else {
-            suggestions = List.of();
-        }
-
-        writePreLlmContext(instance, suggestions);
-
-        AiResolutionPlan plan = callLlmWithRetry(entry, instance, suggestions);
-        if (plan == null) {
-            return;
-        }
-
-        if (plan.decision() == Decision.ESCALATE) {
-            escalateWithReason(entry, plan.escalationReason(), instance, suggestions);
-            return;
-        }
-
-        if (!riskCheckPasses(plan, entry, instance, caseType, suggestions)) {
-            return;
-        }
-
-        if (!statusGuardPasses(entry)) {
-            LOG.infof("Entry %s was moved by timeout sweep — aborting execution", entry.getId());
-            return;
-        }
-
-        executeActions(plan, entry, instance, suggestions);
     }
 
     private AiResolutionPlan callLlmWithRetry(CaseQueueEntry entry, CaseInstance instance,
@@ -198,10 +241,17 @@ public class IoTAiResolutionAgent {
         for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {
                 llmSemaphore.acquire();
+                io.micrometer.core.instrument.Timer.Sample llmSample = io.micrometer.core.instrument.Timer.start(registry);
                 try {
                     WorkerResult<Map<String, Object>> result =
                             llmAgent.execute(Map.of("prompt", prompt));
+                    llmSample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.llm.call.duration")
+                                                                      .tag("outcome", "success").register(registry));
                     return objectMapper.convertValue(result.output(), AiResolutionPlan.class);
+                } catch (Exception e) {
+                    llmSample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.llm.call.duration")
+                                                                      .tag("outcome", "error").register(registry));
+                    throw e;
                 } finally {
                     llmSemaphore.release();
                 }
@@ -215,7 +265,8 @@ public class IoTAiResolutionAgent {
             } catch (Exception e) {
                 if (isTransient(e) && attempt < MAX_RETRIES) {
                     LOG.warnf("Transient LLM failure (attempt %d/%d): %s",
-                            attempt + 1, MAX_RETRIES + 1, e.getMessage());
+                              attempt + 1, MAX_RETRIES + 1, e.getMessage());
+                    registry.counter("casehub.iot.ai.resolution.llm.retries").increment();
                     try {
                         Thread.sleep(RETRY_DELAYS_MS[attempt]);
                     } catch (InterruptedException ie) {
@@ -225,7 +276,7 @@ public class IoTAiResolutionAgent {
                     }
                 } else {
                     escalateWithReason(entry, "LLM failure after retries: " + e.getMessage(),
-                            instance, suggestions);
+                                       instance, suggestions);
                     return null;
                 }
             }
@@ -259,11 +310,12 @@ public class IoTAiResolutionAgent {
                            .anyMatch(e -> e.getId().equals(entry.getId())
                                           && e.getStatus() == QueueEntryStatus.CLAIMED);}
 
-    private void executeActions(AiResolutionPlan plan, CaseQueueEntry entry,
-                                 CaseInstance instance, List<ResolutionSuggestion> suggestions) {
-        List<ExecutedActionResult> results = new ArrayList<>();
-        boolean allSucceeded = true;
+    private String executeActions(AiResolutionPlan plan, CaseQueueEntry entry,
+                                  CaseInstance instance, List<ResolutionSuggestion> suggestions) {
+        List<ExecutedActionResult> results      = new ArrayList<>();
+        boolean                    allSucceeded = true;
 
+        io.micrometer.core.instrument.Timer.Sample actionSample = io.micrometer.core.instrument.Timer.start(registry);
         for (PlannedActionSpec spec : plan.actions()) {
             Map<String, Object> input = Map.of(
                     "targetDeviceId", spec.targetDeviceId(),
@@ -274,39 +326,51 @@ public class IoTAiResolutionAgent {
 
             if (workerResult.outcome() instanceof io.casehub.worker.api.WorkerOutcome.Failed<?> failed) {
                 results.add(new ExecutedActionResult(spec, false, failed.reason()));
+                registry.counter("casehub.iot.ai.resolution.actions.executed",
+                                 "succeeded", "false").increment();
                 allSucceeded = false;
                 break;
             } else {
-                String outcome = workerResult.output() != null
-                        ? workerResult.output().toString() : "SUCCESS";
-                results.add(new ExecutedActionResult(spec, true, outcome));
+                String workerOutcome = workerResult.output() != null
+                                       ? workerResult.output().toString() : "SUCCESS";
+                results.add(new ExecutedActionResult(spec, true, workerOutcome));
+                registry.counter("casehub.iot.ai.resolution.actions.executed",
+                                 "succeeded", "true").increment();
             }
         }
+
+        String executionOutcome = allSucceeded ? "success" : "partial-failure";
+        actionSample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.action.execution.duration")
+                                                             .tag("outcome", executionOutcome).register(registry));
 
         if (allSucceeded) {
             instance.getCaseContext().set("aiResolutionResults", results);
             LOG.infof("AI resolution succeeded for case %s — %d actions executed",
-                    instance.getUuid(), results.size());
+                      instance.getUuid(), results.size());
+            return "executed";
         } else {
             instance.getCaseContext().set("aiResolutionResults", results);
             updateEscalationContext(instance, "Partial worker failure",
-                    suggestions, plan.reasoning(), plan.actions(), results);
+                                    suggestions, plan.reasoning(), plan.actions(), results);
             queueService.escalate(entry.getId(), tenancyId, operatorAssistedViewId);
             LOG.warnf("Partial failure for case %s — %d/%d actions executed, escalating",
-                    instance.getUuid(), results.stream().filter(ExecutedActionResult::succeeded).count(),
-                    plan.actions().size());
+                      instance.getUuid(), results.stream().filter(ExecutedActionResult::succeeded).count(),
+                      plan.actions().size());
+            return "partial-failure";
         }
     }
 
     private void sweepStaleEntries() {
-        List<CaseQueueEntry> all = queueService.findByView(aiResolutionViewId, tenancyId);
-        Instant threshold = Instant.now().minusSeconds(config.timeoutSeconds());
+        List<CaseQueueEntry> all       = queueService.findByView(aiResolutionViewId, tenancyId);
+        Instant              threshold = Instant.now().minusSeconds(config.timeoutSeconds());
         for (CaseQueueEntry entry : all) {
             if (entry.getStatus() == QueueEntryStatus.CLAIMED
-                    && entry.getClaimedAt() != null
-                    && entry.getClaimedAt().isBefore(threshold)) {
+                && entry.getClaimedAt() != null
+                && entry.getClaimedAt().isBefore(threshold)) {
                 LOG.warnf("Timeout sweep: escalating stale entry %s (claimed at %s)",
-                        entry.getId(), entry.getClaimedAt());
+                          entry.getId(), entry.getClaimedAt());
+                registry.counter("casehub.iot.ai.resolution.entries.processed",
+                                 "outcome", "timeout", "cbr.band", "unknown").increment();
                 queueService.escalate(entry.getId(), tenancyId, operatorAssistedViewId);
             }
         }
@@ -354,4 +418,36 @@ public class IoTAiResolutionAgent {
         }
         return false;
     }
+
+    boolean isReady() {
+        return config.enabled()
+               && aiResolutionViewId != null
+               && operatorAssistedViewId != null;
+    }
+
+    Map<String, Object> healthData() {
+        return Map.of(
+                "enabled", config.enabled(),
+                "aiResolutionViewResolved", aiResolutionViewId != null,
+                "operatorAssistedViewResolved", operatorAssistedViewId != null,
+                "semaphorePermits", llmSemaphore != null ? llmSemaphore.availablePermits() : 0);
+    }
+
+    static String cbrBand(List<ResolutionSuggestion> suggestions, boolean cbrConfigPresent) {
+        if (suggestions == null || !cbrConfigPresent) {
+            return "unknown";
+        }
+        if (suggestions.isEmpty()) {
+            return "none";
+        }
+        double max = suggestions.stream()
+                                .mapToDouble(ResolutionSuggestion::similarityScore)
+                                .max()
+                                .orElse(0.0);
+        if (max >= 0.85) {return "high";}
+        if (max >= 0.6) {return "medium";}
+        return "low";
+    }
+
+
 }
