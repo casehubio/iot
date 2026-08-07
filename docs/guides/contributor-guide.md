@@ -72,7 +72,7 @@ Provider modules extend common types only for fields that have no cross-vendor e
 | `mcp` | `casehub-iot-mcp` | -- | `IoTDeviceMcpTool @ApplicationScoped` -- 4 MCP tools (`iot_get_devices`, `iot_get_state`, `iot_send_command`, `iot_get_history`). Library module. Host-agnostic: injects `DeviceRegistry`, `Instance<DeviceProvider>`, `Instance<DeviceStateHistoryProvider>`, `Event<IoTCommandAuditEvent>`, `McpIdentityContext`. All methods `@Blocking` + `@RolesAllowed(IoTRoles.VIEWER/OPERATOR)`. Tenancy-filtered via `McpIdentityContext` (graceful fallback for unsecured hosts). |
 | `webapp-api` | `casehub-iot-webapp-api` | L7 | Reusable IoT ganglia (`TemperatureThresholdGanglion`, `PowerAnomalyGanglion`, `MotionAtTimeGanglion`, `LockStateGanglion`, `DeviceUnavailableGanglion`), case descriptors (`HvacAnomalyCaseDescriptor`, `SafetyAlertCaseDescriptor`, `SecurityAlertCaseDescriptor`, `GenericResponseCaseDescriptor`), worker functions (`DeviceCommandWorkerFunction`, `HouseholdNotificationWorkerFunction`, `HumanDecisionWorkerFunction`), `IoTActionRiskClassifier`, `DismissalGangliaObserver`, REST request/response records, CBR classes (`IoTCbrFeatureSchemas`, `IoTCbrFeatureExtractors`, `IoTCbrRetrievalService`, `ResolutionConfidence`, `ResolutionSuggestion`, `SuppressionEvaluator`, `WorkItemPredictionService`, `WorkItemFeatureExtractor`), AI resolution records (`AiResolutionPlan`, `AiResolutionPromptBuilder`, `PlannedActionSpec`, `ExecutedActionResult`, `AiEscalationContext`). Tier 1 -- no JPA, no Quarkus runtime. |
 | `webapp-drools` | `casehub-iot-webapp-drools` | L8 | DroolsCEP temporal pattern ganglia: `SustainedTemperatureRiseGanglion`, `MultiRoomMotionGanglion`. Event types: `TemperatureReading`, `MotionEvent`. Extractors: `TemperatureReadingExtractor`, `MotionEventExtractor`. Activates by classpath presence. |
-| `webapp` | `casehub-iot-webapp` | L9 | Standalone Quarkus app -- operational console. REST resources: `DeviceResource`, `CaseResource`, `SituationResource`, `WorkItemResource`, `HealthResource`, `ProviderResource`, `BridgeResource`, `DeviceSseResource`. Case engine wiring: `HvacAnomalyCaseHub`, `SafetyAlertCaseHub`, `SecurityAlertCaseHub`, `GenericResponseCaseHub`, `IoTCaseInputContributor`. CBR: `IoTCbrSchemaRegistration`, `IoTCbrRetrievalServiceProducer`, `CbrRetentionJob`, `WorkItemPredictionServiceProducer`, `WorkItemOutcomeRecorder`. Persistence: `JpaDeviceStateHistoryProvider`, `IoTDeviceStateHistoryEntity`, `IoTCaseCommandLogEntity`, `IoTSituationDefinitionEntity`, `StateHistoryRetentionJob`, `SuppressionLogEntry`. AI resolution: `IoTAiResolutionAgent`, `IoTAiResolutionConfig`. Triage: `IoTQueueViewInitializer`, `IoTTriageConfig`. Suppression: `IoTSuppressionProducer`, `SuppressionConfigMapping`, `SuppressionLogObserver`. Observer: `StateChangeHistoryObserver`. Situation: `JpaRuntimeSituationDefinitionProvider`. TypeScript pages via Quinoa. Three-datasource Flyway layout. |
+| `webapp` | `casehub-iot-webapp` | L9 | Standalone Quarkus app -- operational console. REST resources: `DeviceResource`, `CaseResource`, `SituationResource`, `WorkItemResource`, `HealthResource`, `ProviderResource`, `BridgeResource`, `DeviceSseResource`. Case engine wiring: `HvacAnomalyCaseHub`, `SafetyAlertCaseHub`, `SecurityAlertCaseHub`, `GenericResponseCaseHub`, `IoTCaseInputContributor`. CBR: `IoTCbrSchemaRegistration`, `IoTCbrRetrievalServiceProducer`, `CbrRetentionJob`, `WorkItemPredictionServiceProducer`, `WorkItemOutcomeRecorder`. Persistence: `JpaDeviceStateHistoryProvider`, `IoTDeviceStateHistoryEntity`, `IoTCaseCommandLogEntity`, `IoTSituationDefinitionEntity`, `StateHistoryRetentionJob`, `SuppressionLogEntry`. AI resolution: `IoTAiResolutionAgent`, `IoTAiResolutionConfig`, `IoTCbrReEvaluationObserver`. Triage: `IoTQueueViewInitializer`, `IoTTriageConfig`. Suppression: `IoTSuppressionProducer`, `SuppressionConfigMapping`, `SuppressionLogObserver`. Observer: `StateChangeHistoryObserver`. Situation: `JpaRuntimeSituationDefinitionProvider`. TypeScript pages via Quinoa. Three-datasource Flyway layout. |
 
 ---
 
@@ -293,6 +293,17 @@ Case-based reasoning for IoT situation resolution. Logic in webapp-api, CDI wiri
 - Records escalation context for human review
 
 **Config:** `IoTAiResolutionConfig` -- `@ConfigMapping` for poll interval, concurrency, timeouts.
+
+### CBR Re-Evaluation on Context Changes
+
+`IoTCbrReEvaluationObserver` (`@ApplicationScoped`) -- event-driven observer that detects when case context changes while a case is in the AI resolution queue:
+
+- Observes `CaseContextUpdatedEvent` (engine CDI event) for working layer changes
+- Filters by AI queue membership and debounces (30s per case)
+- Re-runs CBR retrieval with current features via `IoTCbrRetrievalService`
+- If similarity band drops below AI threshold, escalates to `iot-operator-assisted` or `iot-operator-manual` via `CaseQueueService.escalate()`
+- Downward-only re-routing (AI → operator queues, never the reverse)
+- Interacts with the agent through queue state -- existing status guard handles race conditions
 
 ### Persistence
 
