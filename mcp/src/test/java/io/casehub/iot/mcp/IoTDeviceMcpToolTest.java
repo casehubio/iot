@@ -446,5 +446,57 @@ class IoTDeviceMcpToolTest {
         String result = tool.getHistory("light.living_room", "not-a-date", null, null);
         assertThat(result).contains("Failed: Invalid date format");
     }
+// --- cross-tenant admin ---
+
+    @Test
+    void getDevicesReturnsCrossTenantDevicesForAdmin() throws Exception {
+        var otherTenantLight = new LightDevice.Builder()
+                                       .deviceId("light.other").deviceClass(DeviceClass.LIGHT)
+                                       .label("Other Tenant Light").available(true).lastUpdated(NOW)
+                                       .tenancyId("other-tenant").providerId("test-provider")
+                                       .on(true).build();
+        registry.addDevices(light(), otherTenantLight);
+        when(identityContext.isCrossTenantAdmin()).thenReturn(true);
+
+        String   result = tool.getDevices(null, null, null);
+        JsonNode array  = MAPPER.readTree(result);
+        assertThat(array).hasSize(2);
+    }
+
+    @Test
+    void getStateAllowsCrossTenantAdminToAccessOtherTenantDevice() throws Exception {
+        registry.addDevice(light());
+        when(identityContext.tenancyId()).thenReturn("other-tenant");
+        when(identityContext.isCrossTenantAdmin()).thenReturn(true);
+
+        String   result = tool.getState("light.living_room");
+        JsonNode node   = MAPPER.readTree(result);
+        assertThat(node.get("deviceId").asText()).isEqualTo("light.living_room");
+    }
+
+    @Test
+    void sendCommandAllowsCrossTenantAdminToCommandOtherTenantDevice() {
+        registry.addDevice(light());
+        when(identityContext.tenancyId()).thenReturn("other-tenant");
+        when(identityContext.isCrossTenantAdmin()).thenReturn(true);
+        when(providers.stream()).thenReturn(java.util.stream.Stream.of(provider));
+
+        String result = tool.sendCommand("light.living_room", "turn_on", null);
+        assertThat(result).contains("result=SENT");
+    }
+
+    @Test
+    void getHistoryPassesNullTenancyForCrossTenantAdmin() {
+        var historyProvider = mock(DeviceStateHistoryProvider.class);
+        when(historyProviders.isResolvable()).thenReturn(true);
+        when(historyProviders.get()).thenReturn(historyProvider);
+        when(identityContext.isCrossTenantAdmin()).thenReturn(true);
+        when(historyProvider.findHistory("light.living_room", null, null, null, 50))
+                .thenReturn(java.util.List.of());
+
+        tool.getHistory("light.living_room", null, null, null);
+        verify(historyProvider).findHistory("light.living_room", null, null, null, 50);
+    }
+
 
 }

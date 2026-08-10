@@ -21,7 +21,7 @@ public class JpaDeviceStateHistoryProvider implements DeviceStateHistoryProvider
                 """
                 SELECT h FROM IoTDeviceStateHistoryEntity h
                 WHERE h.deviceId = :deviceId
-                  AND h.tenancyId = :tenancyId
+                  AND (:tenancyId IS NULL OR h.tenancyId = :tenancyId)
                   AND (:from IS NULL OR h.occurredAt >= :from)
                   AND (:to IS NULL OR h.occurredAt <= :to)
                 ORDER BY h.occurredAt DESC
