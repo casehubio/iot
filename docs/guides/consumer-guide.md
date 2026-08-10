@@ -254,6 +254,18 @@ The webapp module exposes Micrometer metrics via Prometheus and MicroProfile Hea
 
 `GET /q/health/ready` -- includes `ai-resolution-agent` check. Reports UP when agent is enabled, both queue views are resolved, and the LLM agent is initialized. Data fields: `enabled`, `aiResolutionViewResolved`, `operatorAssistedViewResolved`, `semaphorePermits`.
 
+### Multi-Turn Conversation
+
+The AI resolution agent supports multi-turn LLM conversations for complex situations where single-shot resolution is insufficient. The agent opens an `AgentSession` (via platform `AgentProvider`) with read-only IoT MCP tools attached, allowing the LLM to query device state, read sensor history, and gather information across multiple turns before proposing a resolution plan.
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `casehub.iot.ai-resolution.conversation-mode` | `auto` | `single` (legacy single-shot), `multi` (always multi-turn), `auto` (session with single-turn exit for simple cases) |
+| `casehub.iot.ai-resolution.max-conversation-turns` | `5` | Max turns before auto-escalation |
+| `casehub.iot.ai-resolution.max-concurrent-sessions` | `1` | Concurrent multi-turn conversations (independent of LLM call semaphore) |
+
+In `auto` mode, every entry opens a session. Simple cases (LLM resolves on turn 1) close immediately. Complex cases continue up to `max-conversation-turns`. The conversation transcript is persisted to the case working context (`aiConversationTranscript`) on both resolution and escalation.
+
 ---
 
 ## MCP Tools

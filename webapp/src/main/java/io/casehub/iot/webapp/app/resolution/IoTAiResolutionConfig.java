@@ -32,4 +32,17 @@ public interface IoTAiResolutionConfig {
     @WithName("max-concurrent-llm-calls")
     @WithDefault("3")
     int maxConcurrentLlmCalls();
+
+    @WithName("conversation-mode")
+    @WithDefault("auto")
+    String conversationMode();
+
+    @WithName("max-conversation-turns")
+    @WithDefault("5")
+    int maxConversationTurns();
+
+    @WithName("max-concurrent-sessions")
+    @WithDefault("1")
+    int maxConcurrentSessions();
+
 }

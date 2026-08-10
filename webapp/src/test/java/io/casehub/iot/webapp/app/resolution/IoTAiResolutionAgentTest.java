@@ -16,8 +16,14 @@ import io.casehub.engine.queue.model.CaseQueueEntry;
 import io.casehub.engine.queue.model.QueueEntryStatus;
 import io.casehub.engine.queue.service.CaseQueueService;
 import io.casehub.iot.webapp.cbr.IoTCbrRetrievalService;
+import io.casehub.platform.agent.AgentEvent;
+import io.casehub.platform.agent.AgentProvider;
+import io.casehub.platform.agent.AgentSession;
+import io.casehub.platform.agent.AgentSessionInit;
+import io.casehub.platform.agent.AgentSessionLimitException;
 import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.platform.api.view.SubjectViewStore;
+import io.smallrye.mutiny.Multi;
 import io.casehub.worker.api.WorkerResult;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +66,8 @@ class IoTAiResolutionAgentTest {
     @SuppressWarnings("unchecked")
     private Function<Map<String, Object>, WorkerResult<Map<String, Object>>> deviceCommandFn =
             mock(Function.class);
+    private AgentProvider agentProvider;
+    private IoTAiResolutionConfig config;
     private IoTAiResolutionAgent agent;
     private SimpleMeterRegistry  meterRegistry;
 
@@ -77,11 +85,14 @@ class IoTAiResolutionAgentTest {
         llmAgent = mock(Agent.class);
         deviceCommandFn = mock(Function.class);
 
-        IoTAiResolutionConfig config = mock(IoTAiResolutionConfig.class);
+        config = mock(IoTAiResolutionConfig.class);
         when(config.enabled()).thenReturn(true);
         when(config.timeoutSeconds()).thenReturn(300);
         when(config.agentId()).thenReturn("iot-ai-agent");
         when(config.maxConcurrentLlmCalls()).thenReturn(3);
+        when(config.conversationMode()).thenReturn("single");
+        when(config.maxConversationTurns()).thenReturn(5);
+        when(config.maxConcurrentSessions()).thenReturn(1);
 
         when(viewStore.findByTenancy(TENANCY)).thenReturn(List.of(
             new SubjectViewSpec(AI_VIEW_ID, "iot-ai-resolution", TENANCY,
@@ -110,6 +121,8 @@ class IoTAiResolutionAgentTest {
         inject(agent, "deviceCommandFn", deviceCommandFn);
         inject(agent, "objectMapper", new ObjectMapper());
         inject(agent, "virtualThreads", directExecutor);
+        agentProvider = mock(AgentProvider.class);
+        inject(agent, "agentProvider", agentProvider);
         meterRegistry = new SimpleMeterRegistry();
         inject(agent, "registry", meterRegistry);
 
@@ -433,5 +446,195 @@ class IoTAiResolutionAgentTest {
         return timer != null ? timer.count() : 0;
     }
 
+    // --- multi-turn tests ---
 
+    @Test
+    void autoMode_resolvesOnFirstTurn() {
+        when(config.conversationMode()).thenReturn("auto");
+
+        UUID caseId = UUID.randomUUID();
+        CaseQueueEntry entry = pendingEntry(caseId);
+        CaseInstance instance = caseInstance(caseId, "hvac-anomaly");
+        setupStandardMocks(entry, instance);
+        when(riskClassifier.classify(any(), any())).thenReturn(new RiskDecision.Autonomous());
+        when(deviceCommandFn.apply(any())).thenReturn(WorkerResult.of(Map.of("result", "SUCCESS")));
+        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of(entry));
+
+        AgentSession session = mock(AgentSession.class);
+        when(agentProvider.openSession(any(AgentSessionInit.class))).thenReturn(session);
+        when(session.query(any())).thenReturn(resolvedEventStream());
+
+        agent.poll();
+
+        verify(session).query(any());
+        verify(session).close(any(java.time.Duration.class));
+        verify(deviceCommandFn).apply(any());
+        verify(instance.getCaseContext()).set(eq("aiConversationTranscript"), any());
+    }
+
+    @Test
+    void autoMode_multiTurnContinueThenResolve() {
+        when(config.conversationMode()).thenReturn("auto");
+        when(config.maxConversationTurns()).thenReturn(5);
+
+        UUID caseId = UUID.randomUUID();
+        CaseQueueEntry entry = pendingEntry(caseId);
+        CaseInstance instance = caseInstance(caseId, "hvac-anomaly");
+        setupStandardMocks(entry, instance);
+        when(riskClassifier.classify(any(), any())).thenReturn(new RiskDecision.Autonomous());
+        when(deviceCommandFn.apply(any())).thenReturn(WorkerResult.of(Map.of("result", "SUCCESS")));
+        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of(entry));
+
+        AgentSession session = mock(AgentSession.class);
+        when(agentProvider.openSession(any(AgentSessionInit.class))).thenReturn(session);
+        when(session.query(any()))
+                .thenReturn(continueEventStream("What is the outdoor temperature?"))
+                .thenReturn(resolvedEventStream());
+
+        agent.poll();
+
+        verify(session, times(2)).query(any());
+        verify(deviceCommandFn).apply(any());
+    }
+
+    @Test
+    void autoMode_maxTurnsExceeded_escalates() {
+        when(config.conversationMode()).thenReturn("auto");
+        when(config.maxConversationTurns()).thenReturn(2);
+
+        UUID caseId = UUID.randomUUID();
+        CaseQueueEntry entry = pendingEntry(caseId);
+        CaseInstance instance = caseInstance(caseId, "hvac-anomaly");
+        setupStandardMocks(entry, instance);
+
+        AgentSession session = mock(AgentSession.class);
+        when(agentProvider.openSession(any(AgentSessionInit.class))).thenReturn(session);
+        when(session.query(any()))
+                .thenReturn(continueEventStream("need more"))
+                .thenReturn(continueEventStream("still need more"));
+
+        agent.poll();
+
+        verify(queueService).escalate(entry.getId(), TENANCY, OPERATOR_VIEW_ID);
+        verify(deviceCommandFn, never()).apply(any());
+    }
+
+    @Test
+    void autoMode_escalateSignal() {
+        when(config.conversationMode()).thenReturn("auto");
+
+        UUID caseId = UUID.randomUUID();
+        CaseQueueEntry entry = pendingEntry(caseId);
+        CaseInstance instance = caseInstance(caseId, "hvac-anomaly");
+        setupStandardMocks(entry, instance);
+
+        AgentSession session = mock(AgentSession.class);
+        when(agentProvider.openSession(any(AgentSessionInit.class))).thenReturn(session);
+        when(session.query(any())).thenReturn(escalateEventStream("too complex"));
+
+        agent.poll();
+
+        verify(queueService).escalate(entry.getId(), TENANCY, OPERATOR_VIEW_ID);
+        verify(deviceCommandFn, never()).apply(any());
+    }
+
+    @Test
+    void autoMode_sessionLimitFallsBackToSingleShot() {
+        when(config.conversationMode()).thenReturn("auto");
+
+        UUID caseId = UUID.randomUUID();
+        CaseQueueEntry entry = pendingEntry(caseId);
+        CaseInstance instance = caseInstance(caseId, "hvac-anomaly");
+        setupStandardMocks(entry, instance);
+        when(riskClassifier.classify(any(), any())).thenReturn(new RiskDecision.Autonomous());
+        when(deviceCommandFn.apply(any())).thenReturn(WorkerResult.of(Map.of("result", "SUCCESS")));
+        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of(entry));
+        when(llmAgent.execute(any())).thenReturn(llmExecuteResult());
+
+        when(agentProvider.openSession(any(AgentSessionInit.class)))
+                .thenThrow(new AgentSessionLimitException(1));
+
+        agent.poll();
+
+        verify(llmAgent).execute(any());
+        verify(deviceCommandFn).apply(any());
+        assertThat(counterValue("casehub.iot.ai.resolution.session.fallback",
+                "reason", "limit")).isEqualTo(1.0);
+    }
+
+    @Test
+    void autoMode_sessionSemaphoreExhausted_fallsBackToSingleShot() throws Exception {
+        when(config.conversationMode()).thenReturn("auto");
+        when(config.maxConcurrentSessions()).thenReturn(1);
+
+        // Pre-acquire the semaphore so processMultiTurn can't get a permit
+        java.util.concurrent.Semaphore sem = new java.util.concurrent.Semaphore(1);
+        sem.acquire();
+        inject(agent, "sessionSemaphore", sem);
+
+        UUID caseId = UUID.randomUUID();
+        CaseQueueEntry entry = pendingEntry(caseId);
+        CaseInstance instance = caseInstance(caseId, "hvac-anomaly");
+        setupStandardMocks(entry, instance);
+        when(riskClassifier.classify(any(), any())).thenReturn(new RiskDecision.Autonomous());
+        when(deviceCommandFn.apply(any())).thenReturn(WorkerResult.of(Map.of("result", "SUCCESS")));
+        when(queueService.findByView(AI_VIEW_ID, TENANCY)).thenReturn(List.of(entry));
+        when(llmAgent.execute(any())).thenReturn(llmExecuteResult());
+
+        agent.poll();
+
+        verify(llmAgent).execute(any());
+        verifyNoInteractions(agentProvider);
+        assertThat(counterValue("casehub.iot.ai.resolution.session.fallback",
+                "reason", "semaphore")).isEqualTo(1.0);
+    }
+
+    @Test
+    void autoMode_sessionCleanupOnError() {
+        when(config.conversationMode()).thenReturn("auto");
+
+        UUID caseId = UUID.randomUUID();
+        CaseQueueEntry entry = pendingEntry(caseId);
+        CaseInstance instance = caseInstance(caseId, "hvac-anomaly");
+        setupStandardMocks(entry, instance);
+
+        AgentSession session = mock(AgentSession.class);
+        when(agentProvider.openSession(any(AgentSessionInit.class))).thenReturn(session);
+        when(session.query(any())).thenThrow(new RuntimeException("LLM exploded"));
+
+        agent.poll();
+
+        verify(session).close(any(java.time.Duration.class));
+        verify(queueService).escalate(entry.getId(), TENANCY, OPERATOR_VIEW_ID);
+    }
+
+    // --- multi-turn event stream helpers ---
+
+    private Multi<AgentEvent> resolvedEventStream() {
+        String json = "{\"signal\":\"RESOLVED\",\"reasoning\":\"resolved\","
+                + "\"actions\":[{\"actionType\":\"SET_TEMPERATURE\",\"targetDeviceId\":\"thermo-001\","
+                + "\"parameters\":{\"target\":22},\"rationale\":\"cool down\"}],"
+                + "\"escalationReason\":null,\"informationNeeded\":null}";
+        return Multi.createFrom().items(
+                new AgentEvent.TextDelta(json),
+                new AgentEvent.InvocationComplete(100, 50, 10, 0, 0, 0.01, 500, 480, "s1", 1, false));
+    }
+
+    private Multi<AgentEvent> continueEventStream(String infoNeeded) {
+        String json = "{\"signal\":\"CONTINUE\",\"reasoning\":\"need data\","
+                + "\"actions\":[],\"escalationReason\":null,"
+                + "\"informationNeeded\":\"" + infoNeeded + "\"}";
+        return Multi.createFrom().items(
+                new AgentEvent.TextDelta(json),
+                new AgentEvent.InvocationComplete(80, 40, 0, 0, 0, null, 300, 280, "s1", 1, false));
+    }
+
+    private Multi<AgentEvent> escalateEventStream(String reason) {
+        String json = "{\"signal\":\"ESCALATE\",\"reasoning\":\"cannot resolve\","
+                + "\"actions\":[],\"escalationReason\":\"" + reason + "\","
+                + "\"informationNeeded\":null}";
+        return Multi.createFrom().items(
+                new AgentEvent.TextDelta(json),
+                new AgentEvent.InvocationComplete(60, 30, 0, 0, 0, null, 200, 180, "s1", 1, false));
+    }
 }

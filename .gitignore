@@ -6,3 +6,4 @@ wksp
 .claude
 package-lock.json
 proj
+.build/

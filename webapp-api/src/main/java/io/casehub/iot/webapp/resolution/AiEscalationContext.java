@@ -9,5 +9,6 @@ public record AiEscalationContext(
         List<ResolutionSuggestion> consideredSuggestions,
         String partialAnalysis,
         List<PlannedActionSpec> partialPlan,
-        List<ExecutedActionResult> executedActions
+        List<ExecutedActionResult> executedActions,
+        ConversationTranscript transcript
 ) {}

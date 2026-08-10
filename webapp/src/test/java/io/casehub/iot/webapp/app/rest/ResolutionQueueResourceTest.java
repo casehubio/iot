@@ -327,7 +327,7 @@ class ResolutionQueueResourceTest {
         AiEscalationContext escalation = new AiEscalationContext(
             "Risk gate: LOCK requires approval", List.of(), "Analysis text",
             List.of(new PlannedActionSpec("LOCK", "lock-001", Map.of(), "Secure")),
-            null);
+            null, null);
 
         when(entryStore.findById(entry.getId())).thenReturn(Optional.of(entry));
         when(caseCache.get(caseId)).thenReturn(instance);

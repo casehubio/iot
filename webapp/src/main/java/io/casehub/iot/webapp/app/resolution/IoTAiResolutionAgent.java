@@ -19,9 +19,18 @@ import io.casehub.iot.webapp.cbr.ResolutionSuggestion;
 import io.casehub.iot.webapp.resolution.AiEscalationContext;
 import io.casehub.iot.webapp.resolution.AiResolutionPlan;
 import io.casehub.iot.webapp.resolution.AiResolutionPromptBuilder;
+import io.casehub.iot.webapp.resolution.ConversationTranscript;
 import io.casehub.iot.webapp.resolution.Decision;
 import io.casehub.iot.webapp.resolution.ExecutedActionResult;
+import io.casehub.iot.webapp.resolution.MultiTurnResponse;
 import io.casehub.iot.webapp.resolution.PlannedActionSpec;
+import io.casehub.iot.webapp.resolution.TurnSignal;
+import io.casehub.platform.agent.AgentEvent;
+import io.casehub.platform.agent.AgentMcpServer;
+import io.casehub.platform.agent.AgentProvider;
+import io.casehub.platform.agent.AgentSession;
+import io.casehub.platform.agent.AgentSessionInit;
+import io.casehub.platform.agent.AgentSessionLimitException;
 import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.platform.api.view.SubjectViewStore;
 import io.casehub.worker.api.PlannedAction;
@@ -41,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.function.Function;
@@ -75,6 +85,7 @@ public class IoTAiResolutionAgent {
     @Inject
             io.micrometer.core.instrument.MeterRegistry                               registry;
 
+    @Inject AgentProvider agentProvider;
 
     Agent llmAgent;
     Function<Map<String, Object>, WorkerResult<Map<String, Object>>> deviceCommandFn;
@@ -82,6 +93,8 @@ public class IoTAiResolutionAgent {
     private UUID aiResolutionViewId;
     private UUID operatorAssistedViewId;
     private Semaphore llmSemaphore;
+    private Semaphore sessionSemaphore;
+    private final ConcurrentHashMap<UUID, Instant> activeSessions = new ConcurrentHashMap<>();
     private final java.util.concurrent.atomic.AtomicInteger pendingCount = new java.util.concurrent.atomic.AtomicInteger(0);
 
 
@@ -99,6 +112,7 @@ public class IoTAiResolutionAgent {
                                       .findFirst()
                                       .orElse(null);
         llmSemaphore           = new Semaphore(config.maxConcurrentLlmCalls());
+        sessionSemaphore       = new Semaphore(config.maxConcurrentSessions());
 
         if (llmAgent == null) {
             llmAgent = Agent.builder()
@@ -200,30 +214,12 @@ public class IoTAiResolutionAgent {
 
             writePreLlmContext(instance, suggestions);
 
-            AiResolutionPlan plan = callLlmWithRetry(entry, instance, suggestions);
-            if (plan == null) {
-                outcome = "llm-error";
-                return;
+            String mode = config.conversationMode();
+            if ("single".equals(mode)) {
+                outcome = processSingleShot(entry, instance, caseType, suggestions);
+            } else {
+                outcome = processMultiTurn(entry, instance, caseType, suggestions);
             }
-
-            if (plan.decision() == Decision.ESCALATE) {
-                escalateWithReason(entry, plan.escalationReason(), instance, suggestions);
-                outcome = "llm-escalated";
-                return;
-            }
-
-            if (!riskCheckPasses(plan, entry, instance, caseType, suggestions)) {
-                outcome = "risk-gate";
-                return;
-            }
-
-            if (!statusGuardPasses(entry)) {
-                LOG.infof("Entry %s was moved by timeout sweep — aborting execution", entry.getId());
-                outcome = "status-guard-abort";
-                return;
-            }
-
-            outcome = executeActions(plan, entry, instance, suggestions);
         } finally {
             sample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.entry.duration")
                                                            .tag("outcome", outcome)
@@ -305,10 +301,156 @@ public class IoTAiResolutionAgent {
         return true;
     }
 
+    private String processSingleShot(CaseQueueEntry entry, CaseInstance instance,
+                                     String caseType, List<ResolutionSuggestion> suggestions) {
+        AiResolutionPlan plan = callLlmWithRetry(entry, instance, suggestions);
+        if (plan == null) {
+            return "llm-error";
+        }
+        if (plan.decision() == Decision.ESCALATE) {
+            escalateWithReason(entry, plan.escalationReason(), instance, suggestions);
+            return "llm-escalated";
+        }
+        if (!riskCheckPasses(plan, entry, instance, caseType, suggestions)) {
+            return "risk-gate";
+        }
+        if (!statusGuardPasses(entry)) {
+            LOG.infof("Entry %s was moved by timeout sweep — aborting execution", entry.getId());
+            return "status-guard-abort";
+        }
+        return executeActions(plan, entry, instance, suggestions);
+    }
+
+    private String processMultiTurn(CaseQueueEntry entry, CaseInstance instance,
+                                     String caseType, List<ResolutionSuggestion> suggestions) {
+        if (!sessionSemaphore.tryAcquire()) {
+            LOG.info("Session semaphore full — falling back to single-shot");
+            registry.counter("casehub.iot.ai.resolution.session.fallback",
+                    "reason", "semaphore").increment();
+            return processSingleShot(entry, instance, caseType, suggestions);
+        }
+
+        activeSessions.put(entry.getCaseId(), Instant.now());
+        AgentSession session = null;
+        try {
+            session = agentProvider.openSession(new AgentSessionInit(
+                    MULTI_TURN_SYSTEM_PROMPT,
+                    List.of(),
+                    java.time.Duration.ofSeconds(config.timeoutSeconds()),
+                    "iot-resolution-" + entry.getCaseId()));
+
+            io.micrometer.core.instrument.Timer.Sample convSample = io.micrometer.core.instrument.Timer.start(registry);
+            var collector = new AgentEventCollector(objectMapper);
+            var state = new MultiTurnResolutionState(new ConversationTranscript());
+
+            int maxTurns = config.maxConversationTurns();
+            for (int turn = 0; turn < maxTurns && !state.isTerminal(); turn++) {
+                String query = state.isFirstTurn()
+                        ? buildInitialQuery(instance, suggestions)
+                        : buildFollowUpQuery(state);
+
+                io.smallrye.mutiny.Multi<AgentEvent> events = session.query(query);
+                CollectedTurn collected = collector.collect(events);
+                state.addTurn(query, collected);
+
+                for (var tc : collected.toolCalls()) {
+                    registry.counter("casehub.iot.ai.resolution.conversation.tool.calls",
+                            "tool", tc.name()).increment();
+                }
+
+                if (collected.response() == null) {
+                    state.withEscalation("Failed to parse LLM response: " + collected.rawText());
+                } else {
+                    switch (collected.response().signal()) {
+                        case RESOLVED -> state.withResolution(collected.response().actions());
+                        case ESCALATE -> state.withEscalation(collected.response().escalationReason());
+                        case CONTINUE -> {}
+                    }
+                }
+            }
+
+            if (!state.isTerminal()) {
+                state.withEscalation("Max conversation turns exceeded");
+            }
+
+            instance.getCaseContext().set("aiConversationTranscript", state.transcript());
+
+            String convOutcome = state.resolution() != null ? "resolved" : "escalated";
+            convSample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.conversation.duration")
+                    .tag("outcome", convOutcome).tag("mode", config.conversationMode())
+                    .register(registry));
+            registry.summary("casehub.iot.ai.resolution.conversation.turns",
+                    "outcome", convOutcome).record(state.turnCount());
+            registry.counter("casehub.iot.ai.resolution.conversation.tokens",
+                    "type", "input").increment(state.transcript().totalInputTokens());
+            registry.counter("casehub.iot.ai.resolution.conversation.tokens",
+                    "type", "output").increment(state.transcript().totalOutputTokens());
+
+            if (state.resolution() != null) {
+                AiResolutionPlan plan = new AiResolutionPlan(
+                        Decision.EXECUTE, "multi-turn resolved",
+                        state.resolution(), null);
+                if (!riskCheckPasses(plan, entry, instance, caseType, suggestions)) {
+                    return "risk-gate";
+                }
+                if (!statusGuardPasses(entry)) {
+                    LOG.infof("Entry %s was moved by timeout sweep — aborting execution", entry.getId());
+                    return "status-guard-abort";
+                }
+                return executeActions(plan, entry, instance, suggestions);
+            } else {
+                updateEscalationContext(instance, state.escalationReason(),
+                        suggestions, null, null, null, state.transcript());
+                queueService.escalate(entry.getId(), tenancyId, operatorAssistedViewId);
+                return "multi-turn-escalated";
+            }
+        } catch (AgentSessionLimitException e) {
+            LOG.warn("AgentSession limit reached — falling back to single-shot");
+            registry.counter("casehub.iot.ai.resolution.session.fallback",
+                    "reason", "limit").increment();
+            return processSingleShot(entry, instance, caseType, suggestions);
+        } catch (Exception e) {
+            LOG.errorf(e, "Multi-turn conversation failed for entry %s", entry.getId());
+            escalateWithReason(entry, "Multi-turn error: " + e.getMessage(), instance, suggestions);
+            return "multi-turn-error";
+        } finally {
+            if (session != null) {
+                session.close(java.time.Duration.ofSeconds(5));
+            }
+            activeSessions.remove(entry.getCaseId());
+            sessionSemaphore.release();
+        }
+    }
+
+    private static final String MULTI_TURN_SYSTEM_PROMPT =
+            "You are an IoT resolution agent with access to device query tools. "
+            + "Gather information, analyze the situation, and propose a resolution plan. "
+            + "Respond with JSON: {\"signal\":\"CONTINUE|RESOLVED|ESCALATE\","
+            + "\"reasoning\":\"...\",\"actions\":[{\"actionType\":\"...\",\"targetDeviceId\":\"...\","
+            + "\"parameters\":{},\"rationale\":\"...\"}],\"escalationReason\":\"...\","
+            + "\"informationNeeded\":\"...\"}";
+
+    private String buildInitialQuery(CaseInstance instance, List<ResolutionSuggestion> suggestions) {
+        return AiResolutionPromptBuilder.build(
+                extractFeatures(instance), suggestions, AUTONOMOUS_ACTIONS)
+               + "\n\nRespond with JSON matching the schema in the system prompt.";
+    }
+
+    private String buildFollowUpQuery(MultiTurnResolutionState state) {
+        var last = state.lastResponse();
+        if (last != null && last.informationNeeded() != null) {
+            return "You requested: " + last.informationNeeded()
+                   + "\nUse the available tools to gather this information, "
+                   + "then respond with your updated assessment as JSON.";
+        }
+        return "Continue your analysis. Respond with JSON.";
+    }
+
     private boolean statusGuardPasses(CaseQueueEntry entry) {
         return queueService.findByView(aiResolutionViewId, tenancyId).stream()
                            .anyMatch(e -> e.getId().equals(entry.getId())
-                                          && e.getStatus() == QueueEntryStatus.CLAIMED);}
+                                          && e.getStatus() == QueueEntryStatus.CLAIMED);
+    }
 
     private String executeActions(AiResolutionPlan plan, CaseQueueEntry entry,
                                   CaseInstance instance, List<ResolutionSuggestion> suggestions) {
@@ -364,6 +506,9 @@ public class IoTAiResolutionAgent {
         List<CaseQueueEntry> all       = queueService.findByView(aiResolutionViewId, tenancyId);
         Instant              threshold = Instant.now().minusSeconds(config.timeoutSeconds());
         for (CaseQueueEntry entry : all) {
+            if (activeSessions.containsKey(entry.getCaseId())) {
+                continue;
+            }
             if (entry.getStatus() == QueueEntryStatus.CLAIMED
                 && entry.getClaimedAt() != null
                 && entry.getClaimedAt().isBefore(threshold)) {
@@ -377,7 +522,7 @@ public class IoTAiResolutionAgent {
     }
 
     private void writePreLlmContext(CaseInstance instance, List<ResolutionSuggestion> suggestions) {
-        var ctx = new AiEscalationContext("ai-resolution-in-progress", suggestions, null, null, null);
+        var ctx = new AiEscalationContext("ai-resolution-in-progress", suggestions, null, null, null, null);
         instance.getCaseContext().set("aiEscalationContext", ctx);
     }
 
@@ -391,7 +536,15 @@ public class IoTAiResolutionAgent {
                                           List<ResolutionSuggestion> suggestions,
                                           String analysis, List<PlannedActionSpec> plan,
                                           List<ExecutedActionResult> executed) {
-        var ctx = new AiEscalationContext(reason, suggestions, analysis, plan, executed);
+        updateEscalationContext(instance, reason, suggestions, analysis, plan, executed, null);
+    }
+
+    private void updateEscalationContext(CaseInstance instance, String reason,
+                                          List<ResolutionSuggestion> suggestions,
+                                          String analysis, List<PlannedActionSpec> plan,
+                                          List<ExecutedActionResult> executed,
+                                          ConversationTranscript transcript) {
+        var ctx = new AiEscalationContext(reason, suggestions, analysis, plan, executed, transcript);
         instance.getCaseContext().set("aiEscalationContext", ctx);
     }
 
