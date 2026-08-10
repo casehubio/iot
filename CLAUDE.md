@@ -8,7 +8,7 @@ type: java
 
 Foundation IoT device abstraction layer for the CaseHub ecosystem. Provides typed device class hierarchy, provider SPIs, and platform implementations for Home Assistant and OpenHAB. Consumed by application-tier repos (casehub-life, future property management, elder care) — never modified by them.
 
-**Design spec:** `docs/superpowers/specs/2026-06-05-iot-foundation-design.md`  
+**Design spec:** `docs/specs/2026-06-05-iot-foundation-design.md`  
 **Research:** Available in `casehubio/parent` — `docs/superpowers/research/2026-06-05-home-automation-research.md`
 
 ## Platform Docs
@@ -89,7 +89,7 @@ Protocols shared across all modules live in the **casehub garden** (`../garden/d
 
 | Skill | Writes to |
 |-------|-----------|
-| brainstorming (specs) | `docs/superpowers/specs/` |
+| brainstorming (specs) | `docs/specs/` |
 | writing-plans (plans) | workspace `plans/` |
 | handover | workspace `HANDOFF.md` |
 | idea-log | workspace `IDEAS.md` |
@@ -102,10 +102,10 @@ Protocols shared across all modules live in the **casehub garden** (`../garden/d
 | Artifact   | Destination | Notes |
 |------------|-------------|-------|
 | adr        | project     | lands in `docs/adr/` |
-| blog       | workspace   | staged here; published via publish-blog |
+| blog       | project     | lands in `docs/blog/` — promoted at work end |
 | design     | project     | |
 | snapshots  | workspace   | |
-| specs      | project     | lands in `docs/superpowers/specs/` |
+| specs      | project     | lands in `docs/specs/` |
 | plans      | workspace   | |
 | handover   | workspace   | |
 
