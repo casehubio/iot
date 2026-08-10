@@ -40,6 +40,32 @@ class McpIdentityContextTest {
         assertThat(ctx.actorId()).isEqualTo("mcp-agent");
     }
 
+    @Test
+    void isCrossTenantAdminReturnsPrincipalValue() {
+        var principal = new CurrentPrincipal() {
+            @Override
+            public String actorId()             {return "admin-1";}
+
+            @Override
+            public Set<String> groups()         {return Set.of();}
+
+            @Override
+            public String tenancyId()           {return "admin-tenant";}
+
+            @Override
+            public boolean isCrossTenantAdmin() {return true;}
+        };
+        var ctx = withPrincipal(principal);
+        assertThat(ctx.isCrossTenantAdmin()).isTrue();
+    }
+
+    @Test
+    void isCrossTenantAdminFallsBackToFalse() {
+        var ctx = withoutPrincipal();
+        assertThat(ctx.isCrossTenantAdmin()).isFalse();
+    }
+
+
     @SuppressWarnings("unchecked")
     private McpIdentityContext withPrincipal(CurrentPrincipal principal) {
         Instance<CurrentPrincipal> instance = mock(Instance.class);

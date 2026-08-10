@@ -16,3 +16,6 @@ CREATE INDEX idx_bridge_audit_device
 
 CREATE INDEX idx_bridge_audit_correlation
     ON bridge_audit_event (correlation_id);
+
+CREATE INDEX idx_bridge_audit_received_at
+    ON bridge_audit_event (received_at);

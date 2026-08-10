@@ -4,7 +4,7 @@ import io.casehub.iot.api.DeviceCommand;
 import io.casehub.iot.api.IoTRoles;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
-import io.casehub.iot.webapp.app.persistence.IoTDeviceStateHistoryEntity;
+import io.casehub.iot.api.spi.DeviceStateHistoryProvider;
 import io.casehub.iot.webapp.rest.CommandRequest;
 import io.casehub.iot.webapp.rest.CommandResponse;
 import io.casehub.iot.webapp.rest.DeviceResponse;
@@ -13,7 +13,6 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
@@ -27,7 +26,6 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,7 +58,7 @@ public class DeviceResource {
     CurrentPrincipal principal;
 
     @Inject
-    EntityManager em;
+    DeviceStateHistoryProvider historyProvider;
 
     /**
      * List all devices with optional filters.
@@ -176,15 +174,6 @@ public class DeviceResource {
         );
     }
 
-    /**
-     * Get state change history for a device.
-     *
-     * @param deviceId device ID
-     * @param from     start time (optional)
-     * @param to       end time (optional)
-     * @param limit    max results (default 100)
-     * @return list of state history entries
-     */
     @GET
     @Path("/{deviceId}/history")
     @RolesAllowed(IoTRoles.VIEWER)
@@ -194,40 +183,15 @@ public class DeviceResource {
             @QueryParam("to") Instant to,
             @QueryParam("limit") @DefaultValue("100") int limit
                                              ) {
-        var device = deviceRegistry.findById(deviceId)
-                                   .orElseThrow(() -> new NotFoundException("Device not found: " + deviceId));
-
-        if (!filterByTenancy(device.tenancyId())) {
-            throw new NotFoundException("Device not found: " + deviceId);
-        }
-
-        var query = em.createQuery(
-                """
-                SELECT h FROM IoTDeviceStateHistoryEntity h
-                WHERE h.deviceId = :deviceId
-                  AND h.tenancyId = :tenancyId
-                  AND (:from IS NULL OR h.occurredAt >= :from)
-                  AND (:to IS NULL OR h.occurredAt <= :to)
-                ORDER BY h.occurredAt DESC
-                """,
-                IoTDeviceStateHistoryEntity.class
-                                  );
-
-        query.setParameter("deviceId", deviceId);
-        query.setParameter("tenancyId", principal.tenancyId());
-        query.setParameter("from", from);
-        query.setParameter("to", to);
-        query.setMaxResults(limit);
-
-        return query.getResultList().stream()
-                    .map(h -> new StateHistoryResponse(
-                            h.getDeviceId(),
-                            h.getDeviceClass(),
-                            h.getStateSnapshot(),
-                            Arrays.asList(h.getChangedCapabilities()),
-                            h.getOccurredAt()
-                    ))
-                    .toList();
+        return historyProvider.findHistory(deviceId, principal.tenancyId(), from, to, limit).stream()
+                              .map(h -> new StateHistoryResponse(
+                                      h.deviceId(),
+                                      h.deviceClass(),
+                                      h.stateSnapshot(),
+                                      h.changedCapabilities(),
+                                      h.occurredAt()
+                              ))
+                              .toList();
     }
 
     private boolean filterByTenancy(String deviceTenancyId) {return deviceTenancyId.equals(principal.tenancyId());}

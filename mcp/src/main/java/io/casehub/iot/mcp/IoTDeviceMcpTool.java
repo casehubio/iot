@@ -71,7 +71,6 @@ public class IoTDeviceMcpTool {
             @ToolArg(description = "Filter by availability: true for online devices, "
                                    + "false for offline.",
                      required = false) final Boolean available) {
-
         final DeviceClass parsedClass;
         if (deviceClass != null && !deviceClass.isBlank()) {
             try {
@@ -86,12 +85,16 @@ public class IoTDeviceMcpTool {
             parsedClass = null;
         }
 
-        List<DeviceSummary> summaries = deviceRegistry.findByTenancyId(identityContext.tenancyId()).stream()
-                                                      .filter(d -> parsedClass == null || d.deviceClass() == parsedClass)
-                                                      .filter(d -> providerId == null || d.providerId().equals(providerId))
-                                                      .filter(d -> available == null || d.available() == available)
-                                                      .map(DeviceSummary::from)
-                                                      .toList();
+        var devices = identityContext.isCrossTenantAdmin()
+                      ? deviceRegistry.findAll()
+                      : deviceRegistry.findByTenancyId(identityContext.tenancyId());
+
+        List<DeviceSummary> summaries = devices.stream()
+                                               .filter(d -> parsedClass == null || d.deviceClass() == parsedClass)
+                                               .filter(d -> providerId == null || d.providerId().equals(providerId))
+                                               .filter(d -> available == null || d.available() == available)
+                                               .map(DeviceSummary::from)
+                                               .toList();
 
         try {
             return objectMapper.writeValueAsString(summaries);
@@ -112,17 +115,21 @@ public class IoTDeviceMcpTool {
             @ToolArg(description = "The device ID to query (e.g. 'light.living_room', "
                                    + "'sensor.outdoor_temp'). Use iot_get_devices to "
                                    + "discover available device IDs.") final String deviceId) {
-        return deviceRegistry.findById(deviceId, identityContext.tenancyId())
-                             .map(device -> {
-                                 try {
-                                     return objectMapper.writeValueAsString(device);
-                                 } catch (final JsonProcessingException e) {
-                                     LOG.warnf("iot_get_state failed [%s]: %s",
-                                               e.getClass().getSimpleName(), e.getMessage());
-                                     return "Failed: " + e.getMessage();
-                                 }
-                             })
-                             .orElse("Device not found: " + deviceId);
+        var deviceOpt = identityContext.isCrossTenantAdmin()
+                        ? deviceRegistry.findById(deviceId)
+                        : deviceRegistry.findById(deviceId, identityContext.tenancyId());
+
+        return deviceOpt
+                       .map(device -> {
+                           try {
+                               return objectMapper.writeValueAsString(device);
+                           } catch (final JsonProcessingException e) {
+                               LOG.warnf("iot_get_state failed [%s]: %s",
+                                         e.getClass().getSimpleName(), e.getMessage());
+                               return "Failed: " + e.getMessage();
+                           }
+                       })
+                       .orElse("Device not found: " + deviceId);
     }
 
     @Tool(name = "iot_send_command",
@@ -143,7 +150,10 @@ public class IoTDeviceMcpTool {
                                    + "{\"volume\": 75} for set_volume). Not needed for "
                                    + "turn_on, turn_off, lock, unlock.",
                      required = false) final Map<String, Object> parameters) {
-        var deviceOpt = deviceRegistry.findById(deviceId, identityContext.tenancyId());
+        var deviceOpt = identityContext.isCrossTenantAdmin()
+                        ? deviceRegistry.findById(deviceId)
+                        : deviceRegistry.findById(deviceId, identityContext.tenancyId());
+
         if (deviceOpt.isEmpty()) {
             LOG.warnf("iot_send_command failed: Device not found: %s", deviceId);
             return "Failed: Device not found: " + deviceId;
@@ -219,7 +229,8 @@ public class IoTDeviceMcpTool {
         }
         int effectiveLimit = limit != null ? Math.min(limit, 200) : 50;
 
-        var entries = historyProvider.findHistory(deviceId, identityContext.tenancyId(),
+        String tenancyId = identityContext.isCrossTenantAdmin() ? null : identityContext.tenancyId();
+        var entries = historyProvider.findHistory(deviceId, tenancyId,
                                                   fromInstant, toInstant, effectiveLimit);
 
         if (entries.isEmpty()) {

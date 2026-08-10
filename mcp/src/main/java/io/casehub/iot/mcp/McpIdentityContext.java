@@ -40,4 +40,12 @@ public class McpIdentityContext {
         }
         return "mcp-agent";
     }
+
+    public boolean isCrossTenantAdmin() {
+        if (isPrincipalAvailable()) {
+            return currentPrincipal.get().isCrossTenantAdmin();
+        }
+        return false;
+    }
+
 }
