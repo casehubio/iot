@@ -3,13 +3,10 @@ package io.casehub.iot.webapp.engine;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.webapp.worker.DeviceCommandWorkerFunction;
-import io.casehub.iot.webapp.worker.HouseholdNotificationWorkerFunction;
 import io.casehub.iot.webapp.worker.HumanDecisionWorkerFunction;
 import io.casehub.work.api.spi.WorkItemCreator;
 import io.casehub.worker.api.Worker;
 import jakarta.enterprise.inject.Instance;
-
-import java.util.List;
 
 import java.util.List;
 
@@ -40,19 +37,10 @@ public final class SecurityAlertCaseDescriptor {
         this.workItemCreator = workItemCreator;
     }
 
-    private static Worker householdNotificationWorker() {
-        return Worker.builder()
-                     .name("household-notification")
-                     .capabilityName("household-notification")
-                     .function(new HouseholdNotificationWorkerFunction())
-                     .build();
-    }
-
     public List<Worker> workers() {
         return List.of(
                 deviceCommandWorker(),
                 cameraActivationWorker(),
-                householdNotificationWorker(),
                 humanDecisionWorker()
                       );
     }

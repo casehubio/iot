@@ -123,6 +123,11 @@
             <groupId>io.casehub</groupId>
             <artifactId>casehub-platform-agent-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform-datasource-inmem</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <!-- Connectors -->
         <dependency>
