@@ -7,7 +7,7 @@ import io.casehub.neocortex.memory.MemoryDomain;
 import io.casehub.neocortex.memory.cbr.*;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.api.*;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -108,7 +108,7 @@ class WorkItemOutcomeRecorderTest {
     // --- helpers ---
 
     private static WorkItemOutcomeRecorder recorder(CbrCaseMemoryStore store,
-                                                     WorkItem workItem,
+                                                     WorkItemEntity workItem,
                                                      WorkItemCbrConfig config) {
         return new WorkItemOutcomeRecorder(store, id ->
                 workItem != null && workItem.id.equals(id)
@@ -116,8 +116,8 @@ class WorkItemOutcomeRecorderTest {
                 emptyCache(), config);
     }
 
-    private static WorkItem testWorkItem(WorkItemStatus status, String assignee, String payload) {
-        var wi = new WorkItem();
+    private static WorkItemEntity testWorkItem(WorkItemStatus status, String assignee, String payload) {
+        var wi = new WorkItemEntity();
         wi.id = UUID.randomUUID();
         wi.status = status;
         wi.title = "Test work item";

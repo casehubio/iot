@@ -37,7 +37,7 @@ A custom `WorkItemCbrCase` would require modifying serializer switch statements 
 
 **Data collection:**
 
-1. Fetch full `WorkItem` via `WorkItemService.findById(event.workItemId())` — the event carries only `workItemId`, `status`, `actor`, `outcome`, `candidateGroups`, `callerRef`, `tenancyId`. The entity has `title`, `description`, `priority`, `types`, `payload`, `createdAt`, `assignedAt`, `updatedAt`. Consistent with §4's data access pattern.
+1. Fetch full `WorkItemEntity` via `WorkItemService.findById(event.workItemId())` — the event carries only `workItemId`, `status`, `actor`, `outcome`, `candidateGroups`, `callerRef`, `tenancyId`. The entity has `title`, `description`, `priority`, `types`, `payload`, `createdAt`, `assignedAt`, `updatedAt`. Consistent with §4's data access pattern.
 2. Parse IoT context from the work item's `payload` field (JSON) — `caseId`, `caseType`, `workerName`, `deviceClass`, `roomType`, `eventTimestamp`, `situationId`. These are embedded at work item creation time (§5).
 3. Build `WorkItemContext` and extract features via `WorkItemFeatureExtractor.extractForRetain()`.
 
@@ -98,7 +98,7 @@ public record WorkItemContext(
 ) {}
 ```
 
-The observer builds this from the `WorkItem` entity + parsed payload. The REST endpoint builds it from the live work item + case context. Type conversions from `WorkItem` entity: `types` → `workItem.types.stream().map(t -> t.path).toList()`, `priority` → `workItem.priority.name()`.
+The observer builds this from the `WorkItemEntity` entity + parsed payload. The REST endpoint builds it from the live work item + case context. Type conversions from `WorkItemEntity` entity: `types` → `workItem.types.stream().map(t -> t.path).toList()`, `priority` → `workItem.priority.name()`.
 
 ### WorkItemFeatureExtractor
 
@@ -233,7 +233,7 @@ public record WorkItemPrediction(
 
 Requires `iot-viewer` role.
 
-**Dependencies:** Inject `WorkItemService` (from `casehub-work` runtime — `@ApplicationScoped` CDI bean) rather than using `EntityManager` directly. This avoids persistence unit boundary issues — `WorkItem` is managed by `casehub-work`'s persistence context, and `WorkItemService.findById()` handles entity access correctly. The existing placeholder methods on `WorkItemResource` (list, claim, complete) are separate concerns and do not affect the prediction endpoint.
+**Dependencies:** Inject `WorkItemService` (from `casehub-work` runtime — `@ApplicationScoped` CDI bean) rather than using `EntityManager` directly. This avoids persistence unit boundary issues — `WorkItemEntity` is managed by `casehub-work`'s persistence context, and `WorkItemService.findById()` handles entity access correctly. The existing placeholder methods on `WorkItemResource` (list, claim, complete) are separate concerns and do not affect the prediction endpoint.
 
 **Implementation:**
 

@@ -13,7 +13,7 @@ import io.casehub.platform.api.path.Path;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkItemStatusEvent;
 import io.casehub.work.api.spi.WorkItemObserver;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -38,9 +38,9 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
             WorkItemStatus.OBSOLETE);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final CbrCaseMemoryStore store;
-    private final Function<UUID, Optional<WorkItem>> workItemLookup;
-    private final CaseInstanceCache caseInstanceCache;
+    private final CbrCaseMemoryStore                       store;
+    private final Function<UUID, Optional<WorkItemEntity>> workItemLookup;
+    private final CaseInstanceCache                        caseInstanceCache;
     private final WorkItemCbrConfig config;
 
     @Inject
@@ -52,7 +52,7 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
     }
 
     WorkItemOutcomeRecorder(CbrCaseMemoryStore store,
-                             Function<UUID, Optional<WorkItem>> workItemLookup,
+                             Function<UUID, Optional<WorkItemEntity>> workItemLookup,
                              CaseInstanceCache caseInstanceCache,
                              WorkItemCbrConfig config) {
         this.store = store;
@@ -95,7 +95,7 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
         }
     }
 
-    private WorkItemContext buildContext(WorkItem workItem, WorkItemStatusEvent event) {
+    private WorkItemContext buildContext(WorkItemEntity workItem, WorkItemStatusEvent event) {
         var payload = parsePayload(workItem.payload);
         String deviceClass = (String) payload.get("deviceClass");
         String roomType = (String) payload.get("roomType");

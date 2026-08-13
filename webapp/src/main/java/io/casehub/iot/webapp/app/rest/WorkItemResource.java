@@ -6,6 +6,7 @@ import io.casehub.iot.webapp.cbr.WorkItemFeatureExtractor;
 import io.casehub.iot.webapp.cbr.WorkItemPrediction;
 import io.casehub.iot.webapp.cbr.WorkItemPredictionService;
 import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -139,7 +140,7 @@ public class WorkItemResource {
     }
 
     @SuppressWarnings("unchecked")
-    private WorkItemContext buildPredictionContext(io.casehub.work.runtime.model.WorkItem workItem) {
+    private WorkItemContext buildPredictionContext(WorkItemEntity workItem) {
         Map<String, Object> payload = Map.of();
         if (workItem.payload != null && !workItem.payload.isBlank()) {
             try {
