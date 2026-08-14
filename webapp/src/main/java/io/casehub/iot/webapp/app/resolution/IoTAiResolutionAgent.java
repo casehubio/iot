@@ -333,12 +333,10 @@ public class IoTAiResolutionAgent {
         activeSessions.put(entry.getCaseId(), Instant.now());
         AgentSession session = null;
         try {
-            session = agentProvider.openSession(new AgentSessionInit(
+            session = agentProvider.openSession(AgentSessionInit.of(
                     MULTI_TURN_SYSTEM_PROMPT,
-                    List.of(),
                     java.time.Duration.ofSeconds(config.timeoutSeconds()),
-                    "iot-resolution-" + entry.getCaseId(),
-                    null));
+                    "iot-resolution-" + entry.getCaseId()));
 
             io.micrometer.core.instrument.Timer.Sample convSample = io.micrometer.core.instrument.Timer.start(registry);
             var collector = new AgentEventCollector(objectMapper);
