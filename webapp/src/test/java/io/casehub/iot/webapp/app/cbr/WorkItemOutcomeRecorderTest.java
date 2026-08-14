@@ -7,7 +7,6 @@ import io.casehub.neocortex.memory.MemoryDomain;
 import io.casehub.neocortex.memory.cbr.*;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.api.*;
-import io.casehub.work.runtime.model.WorkItemEntity;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -28,7 +27,7 @@ class WorkItemOutcomeRecorderTest {
                 """);
         var recorder = recorder(store, workItem, enabledConfig());
 
-        recorder.onStatusChange(terminalEvent(workItem.id, WorkItemStatus.COMPLETED, "tech-1"));
+        recorder.onStatusChange(terminalEvent(workItem.id(), WorkItemStatus.COMPLETED, "tech-1"));
 
         assertThat(captured).hasSize(1);
         assertThat(captured.getFirst().outcome()).isEqualTo("COMPLETED");
@@ -53,7 +52,7 @@ class WorkItemOutcomeRecorderTest {
         var workItem = testWorkItem(WorkItemStatus.COMPLETED, "tech-1", "{}");
         var recorder = recorder(captureStore(captured), workItem, disabledConfig());
 
-        recorder.onStatusChange(terminalEvent(workItem.id, WorkItemStatus.COMPLETED, "tech-1"));
+        recorder.onStatusChange(terminalEvent(workItem.id(), WorkItemStatus.COMPLETED, "tech-1"));
 
         assertThat(captured).isEmpty();
     }
@@ -68,7 +67,7 @@ class WorkItemOutcomeRecorderTest {
                 """);
         var recorder = recorder(captureStore(captured), workItem, enabledConfig());
 
-        recorder.onStatusChange(terminalEvent(workItem.id, WorkItemStatus.COMPLETED, "tech-1"));
+        recorder.onStatusChange(terminalEvent(workItem.id(), WorkItemStatus.COMPLETED, "tech-1"));
 
         assertThat(captured).hasSize(1);
         var features = captured.getFirst().features();
@@ -82,7 +81,7 @@ class WorkItemOutcomeRecorderTest {
         var workItem = testWorkItem(WorkItemStatus.COMPLETED, "tech-1", null);
         var recorder = recorder(captureStore(captured), workItem, enabledConfig());
 
-        recorder.onStatusChange(terminalEvent(workItem.id, WorkItemStatus.COMPLETED, "tech-1"));
+        recorder.onStatusChange(terminalEvent(workItem.id(), WorkItemStatus.COMPLETED, "tech-1"));
 
         assertThat(captured).hasSize(1);
         var features = captured.getFirst().features();
@@ -93,12 +92,11 @@ class WorkItemOutcomeRecorderTest {
     @Test
     void solutionFallback_usesStatusNameWhenNoResolution() {
         var captured = new ArrayList<CbrCase>();
-        var workItem = testWorkItem(WorkItemStatus.CANCELLED, null, "{}");
-        workItem.resolution = null;
+        var workItem = testWorkItem(WorkItemStatus.CANCELLED, null, "{}", null);
         var recorder = recorder(captureStore(captured), workItem, enabledConfig());
 
         recorder.onStatusChange(new WorkItemStatusEvent(
-                WorkEventType.CANCELLED, workItem.id, WorkItemStatus.CANCELLED,
+                WorkEventType.CANCELLED, workItem.id(), WorkItemStatus.CANCELLED,
                 "system", null, null, null, null, null, "t1", Instant.now()));
 
         assertThat(captured).hasSize(1);
@@ -108,28 +106,32 @@ class WorkItemOutcomeRecorderTest {
     // --- helpers ---
 
     private static WorkItemOutcomeRecorder recorder(CbrCaseMemoryStore store,
-                                                     WorkItemEntity workItem,
+                                                     WorkItem workItem,
                                                      WorkItemCbrConfig config) {
         return new WorkItemOutcomeRecorder(store, id ->
-                workItem != null && workItem.id.equals(id)
+                workItem != null && workItem.id().equals(id)
                         ? Optional.of(workItem) : Optional.empty(),
                 emptyCache(), config);
     }
 
-    private static WorkItemEntity testWorkItem(WorkItemStatus status, String assignee, String payload) {
-        var wi = new WorkItemEntity();
-        wi.id = UUID.randomUUID();
-        wi.status = status;
-        wi.title = "Test work item";
-        wi.description = "Test description";
-        wi.priority = WorkItemPriority.HIGH;
-        wi.candidateGroups = "hvac-technicians";
-        wi.assigneeId = assignee;
-        wi.payload = payload;
-        wi.resolution = assignee != null ? "Resolved by " + assignee : null;
-        wi.createdAt = Instant.parse("2026-07-17T12:00:00Z");
-        wi.tenancyId = "t1";
-        return wi;
+    private static WorkItem testWorkItem(WorkItemStatus status, String assignee, String payload) {
+        return testWorkItem(status, assignee, payload, assignee != null ? "Resolved by " + assignee : null);
+    }
+
+    private static WorkItem testWorkItem(WorkItemStatus status, String assignee, String payload, String resolution) {
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .tenancyId("t1")
+                .title("Test work item")
+                .description("Test description")
+                .status(status)
+                .priority(WorkItemPriority.HIGH)
+                .candidateGroups("hvac-technicians")
+                .assigneeId(assignee)
+                .payload(payload)
+                .resolution(resolution)
+                .createdAt(Instant.parse("2026-07-17T12:00:00Z"))
+                .build();
     }
 
     private static WorkItemStatusEvent terminalEvent(UUID workItemId, WorkItemStatus status,

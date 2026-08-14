@@ -337,7 +337,8 @@ public class IoTAiResolutionAgent {
                     MULTI_TURN_SYSTEM_PROMPT,
                     List.of(),
                     java.time.Duration.ofSeconds(config.timeoutSeconds()),
-                    "iot-resolution-" + entry.getCaseId()));
+                    "iot-resolution-" + entry.getCaseId(),
+                    null));
 
             io.micrometer.core.instrument.Timer.Sample convSample = io.micrometer.core.instrument.Timer.start(registry);
             var collector = new AgentEventCollector(objectMapper);
