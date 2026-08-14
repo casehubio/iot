@@ -176,12 +176,12 @@ public class WorkItemResource {
         }
 
         return new WorkItemContext(
-                workItem.title, workItem.description,
-                workItem.types != null
-                ? workItem.types.stream().map(t -> t.path).toList()
+                workItem.title(), workItem.description(),
+                workItem.types() != null
+                ? java.util.List.copyOf(workItem.types())
                 : java.util.List.of(),
-                workItem.priority != null ? workItem.priority.name() : "MEDIUM",
-                workItem.candidateGroups,
+                workItem.priority() != null ? workItem.priority().name() : "MEDIUM",
+                workItem.candidateGroups(),
                 workerName != null ? workerName : "unknown",
                 caseType != null ? caseType : "unknown",
                 deviceClass, roomType,

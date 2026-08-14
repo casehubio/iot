@@ -13,7 +13,7 @@ import io.casehub.platform.api.path.Path;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkItemStatusEvent;
 import io.casehub.work.api.spi.WorkItemObserver;
-import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -39,7 +39,7 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final CbrCaseMemoryStore                       store;
-    private final Function<UUID, Optional<WorkItemEntity>> workItemLookup;
+    private final Function<UUID, Optional<WorkItem>> workItemLookup;
     private final CaseInstanceCache                        caseInstanceCache;
     private final WorkItemCbrConfig config;
 
@@ -52,7 +52,7 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
     }
 
     WorkItemOutcomeRecorder(CbrCaseMemoryStore store,
-                             Function<UUID, Optional<WorkItemEntity>> workItemLookup,
+                             Function<UUID, Optional<WorkItem>> workItemLookup,
                              CaseInstanceCache caseInstanceCache,
                              WorkItemCbrConfig config) {
         this.store = store;
@@ -75,18 +75,18 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
             var workItem = workItemOpt.get();
             var ctx = buildContext(workItem, event);
             var rawFeatures = WorkItemFeatureExtractor.extractForRetain(ctx);
-            String solution = coalesce(workItem.resolution, event.outcome(),
+            String solution = coalesce(workItem.resolution(), event.outcome(),
                     event.detail(), event.status().name());
 
             var cbrCase = new FeatureVectorCbrCase(
-                    workItem.title != null ? workItem.title : "work-item",
+                    workItem.title() != null ? workItem.title() : "work-item",
                     solution,
                     event.status().name(),
                     1.0,
                     FeatureValue.toFeatureMap(rawFeatures),
                     null, null);
 
-            String caseId = parseCaseId(workItem.payload);
+            String caseId = parseCaseId(workItem.payload());
             store.store(cbrCase, "iot-work-item", event.workItemId().toString(),
                     new MemoryDomain("iot"), event.tenancyId(),
                     caseId, Path.root());
@@ -95,8 +95,8 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
         }
     }
 
-    private WorkItemContext buildContext(WorkItemEntity workItem, WorkItemStatusEvent event) {
-        var payload = parsePayload(workItem.payload);
+    private WorkItemContext buildContext(WorkItem workItem, WorkItemStatusEvent event) {
+        var payload = parsePayload(workItem.payload());
         String deviceClass = (String) payload.get("deviceClass");
         String roomType = (String) payload.get("roomType");
         String caseType = (String) payload.get("caseType");
@@ -121,19 +121,19 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
         }
 
         return new WorkItemContext(
-                workItem.title, workItem.description,
-                workItem.types != null
-                        ? workItem.types.stream().map(t -> t.path).toList()
+                workItem.title(), workItem.description(),
+                workItem.types() != null
+                        ? List.copyOf(workItem.types())
                         : List.of(),
-                workItem.priority != null ? workItem.priority.name() : "MEDIUM",
-                workItem.candidateGroups,
+                workItem.priority() != null ? workItem.priority().name() : "MEDIUM",
+                workItem.candidateGroups(),
                 workerName != null ? workerName : "unknown",
                 caseType != null ? caseType : "unknown",
                 deviceClass, roomType,
                 eventTs != null ? Instant.parse(eventTs) : null,
                 event.status().name(),
-                workItem.assigneeId,
-                workItem.createdAt,
+                workItem.assigneeId(),
+                workItem.createdAt(),
                 Instant.now());
     }
 
