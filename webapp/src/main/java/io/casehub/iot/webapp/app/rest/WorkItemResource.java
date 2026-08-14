@@ -6,7 +6,7 @@ import io.casehub.iot.webapp.cbr.WorkItemFeatureExtractor;
 import io.casehub.iot.webapp.cbr.WorkItemPrediction;
 import io.casehub.iot.webapp.cbr.WorkItemPredictionService;
 import io.casehub.platform.api.identity.CurrentPrincipal;
-import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -123,7 +123,7 @@ public class WorkItemResource {
             throw new NotFoundException("WorkItem not found: " + workItemId);
         }
         var workItem = workItemOpt.get();
-        if (!principal.tenancyId().equals(workItem.tenancyId)) {
+        if (!principal.tenancyId().equals(workItem.tenancyId())) {
             throw new NotFoundException("WorkItem not found: " + workItemId);
         }
 
@@ -140,12 +140,12 @@ public class WorkItemResource {
     }
 
     @SuppressWarnings("unchecked")
-    private WorkItemContext buildPredictionContext(WorkItemEntity workItem) {
+    private WorkItemContext buildPredictionContext(WorkItem workItem) {
         Map<String, Object> payload = Map.of();
-        if (workItem.payload != null && !workItem.payload.isBlank()) {
+        if (workItem.payload() != null && !workItem.payload().isBlank()) {
             try {
                 payload = new com.fasterxml.jackson.databind.ObjectMapper()
-                                  .readValue(workItem.payload, Map.class);
+                                  .readValue(workItem.payload(), Map.class);
             } catch (Exception ignored) {}
         }
 
@@ -158,7 +158,7 @@ public class WorkItemResource {
         if (caseType == null) {
             var caseOpt = caseInstanceCache.getAll().stream()
                                            .filter(ci -> principal.tenancyId().equals(ci.tenancyId))
-                                           .filter(ci -> workItem.id.toString().equals(ci.getWaitingForWorkId()))
+                                           .filter(ci -> workItem.id().toString().equals(ci.getWaitingForWorkId()))
                                            .findFirst();
             if (caseOpt.isPresent()) {
                 var ci = caseOpt.get();
@@ -176,12 +176,12 @@ public class WorkItemResource {
         }
 
         return new WorkItemContext(
-                workItem.title, workItem.description,
-                workItem.types != null
-                ? workItem.types.stream().map(t -> t.path).toList()
+                workItem.title(), workItem.description(),
+                workItem.types() != null
+                ? java.util.List.copyOf(workItem.types())
                 : java.util.List.of(),
-                workItem.priority != null ? workItem.priority.name() : "MEDIUM",
-                workItem.candidateGroups,
+                workItem.priority() != null ? workItem.priority().name() : "MEDIUM",
+                workItem.candidateGroups(),
                 workerName != null ? workerName : "unknown",
                 caseType != null ? caseType : "unknown",
                 deviceClass, roomType,
