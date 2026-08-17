@@ -271,10 +271,25 @@ class OpenHabEntityMapperTest {
 
         var result = mapper.mapEquipment(eq, NOW);
 
-        assertThat(result).isInstanceOf(SensorDevice.class);
-        var sensor = (SensorDevice) result;
-        assertThat(sensor.deviceClass()).isEqualTo(DeviceClass.SENSOR);
-        assertThat(sensor.sensorType()).isEqualTo(SensorType.MOTION);
+        assertThat(result).isInstanceOf(PresenceSensor.class);
+        var sensor = (PresenceSensor) result;
+        assertThat(sensor.deviceClass()).isEqualTo(DeviceClass.PRESENCE_SENSOR);
+        assertThat(sensor.isPresent()).isTrue();
+    }
+
+    @Test
+    void presenceSensorTagMapsToPresenceSensor() {
+        var eq = equipment("PIRSensor", "PIR Sensor",
+                List.of("Equipment", "PresenceSensor"),
+                member("Switch", "PIRSensor_Presence", "OFF",
+                        List.of("Point", "Measurement", "Presence")));
+
+        var result = mapper.mapEquipment(eq, NOW);
+
+        assertThat(result).isInstanceOf(PresenceSensor.class);
+        var sensor = (PresenceSensor) result;
+        assertThat(sensor.deviceClass()).isEqualTo(DeviceClass.PRESENCE_SENSOR);
+        assertThat(sensor.isPresent()).isFalse();
     }
 
     // ---- 13. Battery → SENSOR with GENERIC and "%" ----

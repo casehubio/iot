@@ -260,9 +260,6 @@
                         <goals><goal>build</goal></goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <workspaceDiscovery>false</workspaceDiscovery>
-                </configuration>
             </plugin>
         </plugins>
     </build>

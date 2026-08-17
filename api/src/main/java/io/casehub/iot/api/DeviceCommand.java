@@ -2,6 +2,7 @@ package io.casehub.iot.api;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public record DeviceCommand(
     String targetDeviceId,
@@ -23,6 +24,11 @@ public record DeviceCommand(
     public static final String ACTION_UNLOCK = "unlock";
     public static final String ACTION_SET_POSITION = "set_position";
     public static final String ACTION_SET_VOLUME = "set_volume";
+
+    public static final Set<String> VALID_ACTIONS = Set.of(
+        ACTION_TURN_ON, ACTION_TURN_OFF, ACTION_SET_TEMPERATURE,
+        ACTION_LOCK, ACTION_UNLOCK, ACTION_SET_POSITION, ACTION_SET_VOLUME
+    );
 
     public static DeviceCommand turnOn(String targetDeviceId, Map<String, Object> parameters,
                                        String dispatchedBy, String correlationId) {

@@ -101,19 +101,14 @@ class SustainedTemperatureRiseGanglionTest {
         Instant base = Instant.parse("2026-07-01T10:00:00Z");
 
         // Rising: 20, 22.5, 25, 27.5, 30 (delta >= 2C each)
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("20.0"), base), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("22.5"), base.plusSeconds(60)), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("25.0"), base.plusSeconds(120)), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("27.5"), base.plusSeconds(180)), ctx)
-                ;
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("20.0"), base), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("22.5"), base.plusSeconds(60)), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("25.0"), base.plusSeconds(120)), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("27.5"), base.plusSeconds(180)), ctx);
 
         // Fifth reading triggers detection
         DetectionResult result = ganglion.detect(
-                sensorEvent("temp-1", new BigDecimal("30.0"), base.plusSeconds(240)), ctx)
-                ;
+                sensorEvent("temp-1", new BigDecimal("30.0"), base.plusSeconds(240)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.DETECTED);
         assertThat(result.confidence()).isGreaterThanOrEqualTo(0.8);
@@ -126,18 +121,13 @@ class SustainedTemperatureRiseGanglionTest {
         Instant base = Instant.parse("2026-07-01T10:00:00Z");
 
         // Not monotonic: 20, 22, 21, 23, 25 — third reading drops
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("20.0"), base), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("22.0"), base.plusSeconds(60)), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("21.0"), base.plusSeconds(120)), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("23.0"), base.plusSeconds(180)), ctx)
-                ;
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("20.0"), base), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("22.0"), base.plusSeconds(60)), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("21.0"), base.plusSeconds(120)), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("23.0"), base.plusSeconds(180)), ctx);
 
         DetectionResult result = ganglion.detect(
-                sensorEvent("temp-1", new BigDecimal("25.0"), base.plusSeconds(240)), ctx)
-                ;
+                sensorEvent("temp-1", new BigDecimal("25.0"), base.plusSeconds(240)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.NOISE);
     }
@@ -148,18 +138,13 @@ class SustainedTemperatureRiseGanglionTest {
         Instant base = Instant.parse("2026-07-01T10:00:00Z");
 
         // Rising but deltas < 2C: 20, 21.5, 23, 24.5, 26
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("20.0"), base), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("21.5"), base.plusSeconds(60)), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("23.0"), base.plusSeconds(120)), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("24.5"), base.plusSeconds(180)), ctx)
-                ;
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("20.0"), base), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("21.5"), base.plusSeconds(60)), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("23.0"), base.plusSeconds(120)), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("24.5"), base.plusSeconds(180)), ctx);
 
         DetectionResult result = ganglion.detect(
-                sensorEvent("temp-1", new BigDecimal("26.0"), base.plusSeconds(240)), ctx)
-                ;
+                sensorEvent("temp-1", new BigDecimal("26.0"), base.plusSeconds(240)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.NOISE);
     }
@@ -170,18 +155,13 @@ class SustainedTemperatureRiseGanglionTest {
         Instant base = Instant.parse("2026-07-01T10:00:00Z");
 
         // Mix sensor and thermostat events
-        ganglion.detect(thermostatEvent("therm-1", new BigDecimal("20.0"), base), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("22.5"), base.plusSeconds(60)), ctx)
-                ;
-        ganglion.detect(thermostatEvent("therm-1", new BigDecimal("25.0"), base.plusSeconds(120)), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("27.5"), base.plusSeconds(180)), ctx)
-                ;
+        ganglion.detect(thermostatEvent("therm-1", new BigDecimal("20.0"), base), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("22.5"), base.plusSeconds(60)), ctx);
+        ganglion.detect(thermostatEvent("therm-1", new BigDecimal("25.0"), base.plusSeconds(120)), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("27.5"), base.plusSeconds(180)), ctx);
 
         DetectionResult result = ganglion.detect(
-                thermostatEvent("therm-1", new BigDecimal("30.0"), base.plusSeconds(240)), ctx)
-                ;
+                thermostatEvent("therm-1", new BigDecimal("30.0"), base.plusSeconds(240)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.DETECTED);
     }
@@ -191,23 +171,18 @@ class SustainedTemperatureRiseGanglionTest {
         var ctx = testContext();
         Instant base = Instant.parse("2026-07-01T10:00:00Z");
 
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("20.0"), base), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("22.5"), base.plusSeconds(60)), ctx)
-                ;
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("20.0"), base), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("22.5"), base.plusSeconds(60)), ctx);
 
         // Session should exist in store
         assertThat(sessionStore.get("sustained-rise", "fire-risk", "key-1", "tenant-a"))
                 .isPresent();
 
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("25.0"), base.plusSeconds(120)), ctx)
-                ;
-        ganglion.detect(sensorEvent("temp-1", new BigDecimal("27.5"), base.plusSeconds(180)), ctx)
-                ;
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("25.0"), base.plusSeconds(120)), ctx);
+        ganglion.detect(sensorEvent("temp-1", new BigDecimal("27.5"), base.plusSeconds(180)), ctx);
 
         DetectionResult result = ganglion.detect(
-                sensorEvent("temp-1", new BigDecimal("30.0"), base.plusSeconds(240)), ctx)
-                ;
+                sensorEvent("temp-1", new BigDecimal("30.0"), base.plusSeconds(240)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.DETECTED);
     }

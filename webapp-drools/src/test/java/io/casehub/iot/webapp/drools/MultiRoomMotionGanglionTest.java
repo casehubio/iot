@@ -74,8 +74,7 @@ class MultiRoomMotionGanglionTest {
 
         ganglion.detect(motionEvent("motion-1", true, base), ctx);
         DetectionResult result = ganglion.detect(
-                motionEvent("motion-2", true, base.plusSeconds(30)), ctx)
-                ;
+                motionEvent("motion-2", true, base.plusSeconds(30)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.NOISE);
     }
@@ -86,12 +85,10 @@ class MultiRoomMotionGanglionTest {
         var ctx = testContext();
 
         ganglion.detect(motionEvent("motion-1", true, base), ctx);
-        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(30)), ctx)
-                ;
+        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(30)), ctx);
 
         DetectionResult result = ganglion.detect(
-                motionEvent("motion-3", true, base.plusSeconds(60)), ctx)
-                ;
+                motionEvent("motion-3", true, base.plusSeconds(60)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.DETECTED);
         assertThat(result.confidence()).isGreaterThanOrEqualTo(0.7);
@@ -105,15 +102,12 @@ class MultiRoomMotionGanglionTest {
         var ctx = testContext();
 
         ganglion.detect(motionEvent("motion-1", true, base), ctx);
-        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(30)), ctx)
-                ;
+        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(30)), ctx);
         // Same device (motion-1) again — doesn't add to distinct count
-        ganglion.detect(motionEvent("motion-1", true, base.plusSeconds(60)), ctx)
-                ;
+        ganglion.detect(motionEvent("motion-1", true, base.plusSeconds(60)), ctx);
 
         DetectionResult result = ganglion.detect(
-                motionEvent("motion-1", true, base.plusSeconds(90)), ctx)
-                ;
+                motionEvent("motion-1", true, base.plusSeconds(90)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.NOISE);
     }
@@ -125,14 +119,11 @@ class MultiRoomMotionGanglionTest {
 
         // Only motion=true events count
         ganglion.detect(motionEvent("motion-1", true, base), ctx);
-        ganglion.detect(motionEvent("motion-2", false, base.plusSeconds(30)), ctx)
-                ;
-        ganglion.detect(motionEvent("motion-3", true, base.plusSeconds(60)), ctx)
-                ;
+        ganglion.detect(motionEvent("motion-2", false, base.plusSeconds(30)), ctx);
+        ganglion.detect(motionEvent("motion-3", true, base.plusSeconds(60)), ctx);
 
         DetectionResult result = ganglion.detect(
-                motionEvent("motion-4", false, base.plusSeconds(90)), ctx)
-                ;
+                motionEvent("motion-4", false, base.plusSeconds(90)), ctx);
 
         // Only motion-1 and motion-3 counted (2 distinct)
         assertThat(result.signal()).isEqualTo(DetectionSignal.NOISE);
@@ -144,14 +135,11 @@ class MultiRoomMotionGanglionTest {
         var ctx = testContext();
 
         ganglion.detect(motionEvent("motion-1", true, base), ctx);
-        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(20)), ctx)
-                ;
-        ganglion.detect(motionEvent("motion-3", true, base.plusSeconds(40)), ctx)
-                ;
+        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(20)), ctx);
+        ganglion.detect(motionEvent("motion-3", true, base.plusSeconds(40)), ctx);
 
         DetectionResult result = ganglion.detect(
-                motionEvent("motion-4", true, base.plusSeconds(60)), ctx)
-                ;
+                motionEvent("motion-4", true, base.plusSeconds(60)), ctx);
 
         assertThat(result.signal()).isEqualTo(DetectionSignal.DETECTED);
         assertThat(result.evidence().get("distinctDevices")).isEqualTo(4);
@@ -164,13 +152,11 @@ class MultiRoomMotionGanglionTest {
 
         // First two events
         ganglion.detect(motionEvent("motion-1", true, base), ctx);
-        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(30)), ctx)
-                ;
+        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(30)), ctx);
 
         // Third event beyond 2-minute window from first
         DetectionResult result = ganglion.detect(
-                motionEvent("motion-3", true, base.plusSeconds(121)), ctx)
-                ;
+                motionEvent("motion-3", true, base.plusSeconds(121)), ctx);
 
         // First event expired, only motion-2 and motion-3 in window (2 distinct)
         assertThat(result.signal()).isEqualTo(DetectionSignal.NOISE);
@@ -187,8 +173,7 @@ class MultiRoomMotionGanglionTest {
         assertThat(sessionStore.get("multi-room-motion", "intrusion", "key-1", "tenant-a"))
                 .isPresent();
 
-        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(30)), ctx)
-                ;
+        ganglion.detect(motionEvent("motion-2", true, base.plusSeconds(30)), ctx);
 
         // Still present
         assertThat(sessionStore.get("multi-room-motion", "intrusion", "key-1", "tenant-a"))
@@ -198,8 +183,7 @@ class MultiRoomMotionGanglionTest {
     @Test
     void closeRemovesSession() {
         var ctx = testContext();
-        ganglion.detect(motionEvent("motion-1", true, Instant.parse("2026-07-01T10:00:00Z")), ctx)
-                ;
+        ganglion.detect(motionEvent("motion-1", true, Instant.parse("2026-07-01T10:00:00Z")), ctx);
 
         assertThat(sessionStore.get("multi-room-motion", "intrusion", "key-1", "tenant-a"))
                 .isPresent();

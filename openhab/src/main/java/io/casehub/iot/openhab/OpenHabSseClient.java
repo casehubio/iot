@@ -277,6 +277,16 @@ public class OpenHabSseClient {
                 return findMemberWithTags(members, Set.of("Control", "OpenState"));
             }
 
+            // ON/OFF: Color and Dimmer items also accept ON/OFF but lack a Switch tag
+            if (DeviceCommand.ACTION_TURN_ON.equals(command.action())
+                    || DeviceCommand.ACTION_TURN_OFF.equals(command.action())) {
+                String result = findMemberWithTags(members, Set.of("Control", "Switch"));
+                if (result != null) return result;
+                result = findMemberWithTags(members, Set.of("Control", "Color"));
+                if (result != null) return result;
+                return findMemberWithTags(members, Set.of("Control", "Light"));
+            }
+
             Set<String> requiredTags = resolveRequiredTags(command);
             if (requiredTags == null) {
                 return null;

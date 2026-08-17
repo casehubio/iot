@@ -125,6 +125,20 @@ class OpenHabSseClientTest {
         assertThat(targetItem).isEqualTo("SwitchLiving_Toggle");
     }
 
+    @Test
+    void resolveTargetItemFallsBackToColorForTurnOn() {
+        sseClient.populateCaches(List.of(
+            equipment("LIFXBulb", "LIFX Bulb",
+                List.of("Equipment", "Lightbulb"),
+                member("Color", "LIFXBulb_Color", "240,100,50",
+                    List.of("Point", "Control", "Color")))));
+
+        var command = DeviceCommand.turnOn("LIFXBulb", Map.of(), "test", "corr-color");
+        String targetItem = sseClient.resolveTargetItem(command);
+
+        assertThat(targetItem).isEqualTo("LIFXBulb_Color");
+    }
+
     // ---- 3. resolveTargetItem finds Setpoint+Temperature for set_temperature ----
 
     @Test

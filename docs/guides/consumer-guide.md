@@ -144,6 +144,8 @@ public record DeviceCommand(
 
 `ACTION_TURN_ON`, `ACTION_TURN_OFF`, `ACTION_SET_TEMPERATURE`, `ACTION_LOCK`, `ACTION_UNLOCK`, `ACTION_SET_POSITION`, `ACTION_SET_VOLUME`.
 
+`VALID_ACTIONS` -- immutable `Set<String>` of all action constants. Use for input validation at system boundaries.
+
 ### Static Factory Methods
 
 - `turnOn(targetDeviceId, parameters, dispatchedBy, correlationId)`

@@ -14,6 +14,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
@@ -145,6 +146,11 @@ public class DeviceResource {
 
         if (!filterByTenancy(device.tenancyId())) {
             throw new NotFoundException("Device not found: " + deviceId);
+        }
+
+        if (request.action() == null || !DeviceCommand.VALID_ACTIONS.contains(request.action())) {
+            throw new BadRequestException("Unknown action '" + request.action()
+                    + "'. Valid actions: " + String.join(", ", DeviceCommand.VALID_ACTIONS));
         }
 
         String correlationId = UUID.randomUUID().toString();
