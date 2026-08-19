@@ -102,6 +102,11 @@ All three datasources can point to the same physical database — separate Flywa
 - `POST /api/devices/{deviceId}/commands` — dispatch a command (`action` + `parameters`). Returns `CommandResult`.
 - `GET /api/devices/{deviceId}/history` — state change events for a device. Filters: `from`, `to`, `limit`. Backed by a new `StateChangeHistoryObserver` (`@ObservesAsync StateChangeEvent`) that persists state transitions to `iot_device_state_history` table (see Data Model). This is independent of the bridge audit trail — it captures all state changes regardless of deployment topology (local, bridge, or hybrid).
 
+### KPI Resources
+
+- `GET /api/devices/kpi` — aggregated device metrics (total, online, providers, active alerts) as `KpiMetric[]`. Tenancy-filtered.
+- `GET /api/health/kpi` — system health metrics (connected providers, bridge connections, active situations, open cases) as `KpiMetric[]`. Global scope (providers serve all tenants).
+
 ### Provider Resources
 
 - `GET /api/providers` — all registered providers with status (CONNECTED/CONNECTING/DISCONNECTED).

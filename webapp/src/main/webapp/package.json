@@ -22,7 +22,10 @@
     "@casehubio/pages-ui-components": "portal:./.casehub-packages/packages/pages-ui-components",
     "@casehubio/pages-ui-tokens": "portal:./.casehub-packages/packages/pages-ui-tokens",
     "@casehubio/pages-viz": "portal:./.casehub-packages/packages/pages-viz",
-    "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core"
+    "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core",
+    "@casehubio/blocks-ui-kpi-metric-row": "portal:./.casehub-packages/packages/kpi-metric-row",
+    "@casehubio/blocks-ui-work-item-detail": "portal:./.casehub-packages/packages/work-item-detail",
+    "@casehubio/blocks-ui-detail-pane": "portal:./.casehub-packages/packages/detail-pane"
   },
   "devDependencies": {
     "typescript": "^5.4",

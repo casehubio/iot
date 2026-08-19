@@ -1,4 +1,13 @@
 import { page, sidebar, dataset } from "@casehubio/pages-ui";
+import "@casehubio/blocks-ui-kpi-metric-row";
+import "@casehubio/blocks-ui-work-item-detail";
+import "@casehubio/blocks-ui-detail-pane";
+import "./components/device-state-tab";
+import "./components/device-history-tab";
+import "./components/device-actions-tab";
+import "./components/case-timeline-tab";
+import "./components/case-suggestions-tab";
+import "./components/case-actions-tab";
 import { loadSite } from "@casehubio/pages-runtime";
 import { healthPage } from "./pages/health";
 import { devicesPage } from "./pages/devices";

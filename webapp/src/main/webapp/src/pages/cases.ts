@@ -1,4 +1,4 @@
-import { page, rows, panel, table, title, html, lookup, sortBy } from "@casehubio/pages-ui";
+import { page, rows, panel, table, title, hostPanel, lookup, sortBy } from "@casehubio/pages-ui";
 import { dataSetId, columnId } from "@casehubio/pages-data/dist/dataset/types.js";
 
 export function casesPage() {
@@ -13,39 +13,19 @@ export function casesPage() {
         refresh: { interval: 30000 },
       })),
 
-      // Case detail sub-page
+      // Case detail sub-page — tabbed via blocks-detail-pane
       page("Case Detail",
         rows(
           title("Case Details"),
 
-          panel("Event Log", table({
-            title: "Case Timeline",
-            sortable: true,
-            pageSize: 10,
-            lookup: lookup("case-events", sortBy("timestamp", "DESCENDING")),
-          })),
-
-          panel("Worker Results", table({
-            title: "Worker Executions",
-            sortable: true,
-            pageSize: 5,
-            lookup: lookup("case-workers"),
-          })),
-
-          panel("Resolution Suggestions", table({
-            title: "Similar Past Resolutions",
-            sortable: true,
-            pageSize: 5,
-            lookup: lookup("case-suggestions"),
-            emptyMessage: "No similar past resolutions found.",
-          })),
-
-          panel("Actions", html(`
-            <div style="display: flex; gap: 8px; padding: 16px;">
-              <button onclick="approveAction()">Approve</button>
-              <button onclick="rejectAction()">Reject</button>
-            </div>
-          `)),
+          hostPanel("blocks-detail-pane", {
+            selectionTopic: "case",
+            tabs: [
+              { id: "timeline", label: "Timeline", tagName: "iot-case-timeline-tab", order: 0 },
+              { id: "suggestions", label: "Suggestions", tagName: "iot-case-suggestions-tab", order: 1 },
+              { id: "actions", label: "Actions", tagName: "iot-case-actions-tab", order: 2 },
+            ],
+          }),
         ),
         {
           dataScope: { dataset: dataSetId("cases"), idColumn: columnId("caseId") },
