@@ -5,13 +5,14 @@ situations:
       - io.casehub.iot.state_change.thermostat
     chainMode:
       type: and
-      requiredGanglia:
+      ganglia:
         - temperature-threshold
         - sustained-rise
     triggerMode:
       type: repeating
       cooldown: PT5M
-    triggerConfig:
+    triggerAction:
+      type: create-case
       caseNamespace: io.casehub.iot
       caseName: safety-alert
       caseVersion: "1.0"
@@ -29,7 +30,8 @@ situations:
     triggerMode:
       type: repeating
       cooldown: PT10M
-    triggerConfig:
+    triggerAction:
+      type: create-case
       caseNamespace: io.casehub.iot
       caseName: security-alert
       caseVersion: "1.0"
@@ -42,8 +44,9 @@ situations:
       ganglionId: sustained-rise
       requiredCount: 3
     triggerMode:
-      type: fireOnce
-    triggerConfig:
+      type: fire-once
+    triggerAction:
+      type: create-case
       caseNamespace: io.casehub.iot
       caseName: hvac-anomaly
       caseVersion: "1.0"

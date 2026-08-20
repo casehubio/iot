@@ -9,7 +9,8 @@ situations:
     triggerMode:
       type: repeating
       cooldown: PT30M
-    triggerConfig:
+    triggerAction:
+      type: create-case
       caseNamespace: io.casehub.iot
       caseName: security-alert
       caseVersion: "1.0"
@@ -33,8 +34,9 @@ situations:
       ganglia:
         - device-unavailable
     triggerMode:
-      type: fireOnce
-    triggerConfig:
+      type: fire-once
+    triggerAction:
+      type: create-case
       caseNamespace: io.casehub.iot
       caseName: generic-response
       caseVersion: "1.0"

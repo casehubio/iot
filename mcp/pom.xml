@@ -22,6 +22,10 @@ quarkus-mcp-server-http to any Quarkus app to let LLM agents interact with IoT d
             <artifactId>casehub-iot-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-platform-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.quarkiverse.mcp</groupId>
             <artifactId>quarkus-mcp-server-core</artifactId>
             <version>${quarkus-mcp-server.version}</version>

@@ -10,6 +10,7 @@ export function devicesPage() {
         endpoint: "/api/devices/kpi",
         columns: 4,
         density: "comfortable",
+        refreshInterval: 30000,
       }),
 
       // Device class filter

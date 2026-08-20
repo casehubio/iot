@@ -8,6 +8,7 @@ export function healthPage() {
         endpoint: "/api/health/kpi",
         columns: 4,
         density: "comfortable",
+        refreshInterval: 10000,
       }),
 
       // Provider status table
