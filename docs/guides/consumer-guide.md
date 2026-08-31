@@ -313,6 +313,26 @@ Requires a `DeviceStateHistoryProvider` implementation (available in webapp depl
 
 **Host-agnostic:** injects `DeviceRegistry` and `Instance<DeviceProvider>` -- sees whatever providers the host app configures.
 
+### MCP Resource Subscriptions
+
+IoT device state is exposed as subscribable MCP resources via platform's `McpResourceRegistry` SPI:
+- `iot://devices/{deviceId}/state` — per-device state with subscription support
+- `iot://devices/changes` — global change feed (bounded ring buffer)
+
+`IoTResourceRegistrar` registers resources at startup with template completion. `IoTStateChangeResourceObserver` fires MCP notifications on each `StateChangeEvent`.
+
+### KPI Endpoints
+
+REST endpoints for dashboard integration:
+- `GET /api/devices/kpi` — device statistics (online/offline counts, by class)
+- `GET /api/health/kpi` — system health metrics
+
+Used with `blocks-kpi-metric-row` web components via `hostPanel()`. KPI rows support auto-refresh via `refreshInterval` property.
+
+### Household Notifications
+
+Platform subscription engine integration for household event notifications. Device state changes produce `SubscribableEvent` instances into the notification DataSource, enabling user subscriptions to device events.
+
 ---
 
 ## Testing Infrastructure
