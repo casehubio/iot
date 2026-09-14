@@ -7,3 +7,8 @@ wksp
 package-lock.json
 proj
 .build/
+.mvn/maven.config
+.mvn/slot-settings.xml
+.worktrees
+.worktrees/
+.claude/
