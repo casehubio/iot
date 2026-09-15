@@ -4,8 +4,9 @@ import io.casehub.api.model.cbr.CbrConfig;
 import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
 import io.casehub.neocortex.memory.cbr.CbrQuery;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
-import io.casehub.neocortex.memory.cbr.PlanCbrCase;
-import io.casehub.neocortex.memory.cbr.PlanTrace;
+import io.casehub.iot.webapp.cbr.PlanCbrCase;
+import io.casehub.iot.webapp.cbr.PlanTrace;
+import io.casehub.neocortex.cognitive.Confidence;
 import io.casehub.neocortex.memory.cbr.ScoredCbrCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -132,12 +133,12 @@ class IoTCbrRetrievalServiceTest {
     @Test
     void retrieve_mapsScoredCasesToSuggestions() {
         var planTrace = new PlanTrace("bind-1", "device-control", "set-temp",
-                "SUCCESS", 1, Map.of(), null);
+                "SUCCESS", 1, Map.of());
         var cbrCase = new PlanCbrCase(
-                "Temperature spike", "Replaced filter", "RESOLVED", 0.95,
+                "Temperature spike", "Replaced filter", "RESOLVED", Confidence.unknown(0.95),
                 Map.of("deviceClass", FeatureValue.string("thermostat")),
-                List.of(planTrace), null, null);
-        var scored = new ScoredCbrCase<>(cbrCase, "past-case-1", 0.87, false,
+                List.of(planTrace));
+        var scored = new ScoredCbrCase<>(cbrCase, "past-case-1", "plan", 0.87, false,
                 Map.of("deviceClass", 1.0, "roomType", 0.8), null, null, null);
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
@@ -164,8 +165,8 @@ class IoTCbrRetrievalServiceTest {
                 "problem", "solution", "RESOLVED", null,
                 Map.of("deviceClass", FeatureValue.string("thermostat"),
                         "hourOfDay", FeatureValue.number(14.0)),
-                List.of(), null, null);
-        var scored = new ScoredCbrCase<>(cbrCase, "c1", 0.5);
+                List.of());
+        var scored = new ScoredCbrCase<>(cbrCase, "c1", "plan", 0.5);
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
                 .thenReturn(List.of(scored));
@@ -226,14 +227,14 @@ class IoTCbrRetrievalServiceTest {
     @Test
     void retrieve_multipleResults_preservesStoreOrder() {
         var case1 = new PlanCbrCase("p1", "s1", "R", null,
-                Map.of("d", FeatureValue.string("a")), List.of(), null, null);
+                Map.of("d", FeatureValue.string("a")), List.of());
         var case2 = new PlanCbrCase("p2", "s2", "R", null,
-                Map.of("d", FeatureValue.string("b")), List.of(), null, null);
+                Map.of("d", FeatureValue.string("b")), List.of());
 
         when(store.retrieveSimilar(any(), eq(PlanCbrCase.class)))
                 .thenReturn(List.of(
-                        new ScoredCbrCase<>(case1, "c1", 0.9),
-                        new ScoredCbrCase<>(case2, "c2", 0.7)));
+                        new ScoredCbrCase<>(case1, "c1", "plan", 0.9),
+                        new ScoredCbrCase<>(case2, "c2", "plan", 0.7)));
 
         var results = service.retrieve(hvacConfig(), Map.of("d", "x"), "t1");
         assertThat(results).hasSize(2);

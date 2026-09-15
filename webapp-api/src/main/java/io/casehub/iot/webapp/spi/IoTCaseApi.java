@@ -21,6 +21,7 @@ import java.util.UUID;
 public interface IoTCaseApi {
 
     @PlatformQuery("List cases with optional filtering")
+    @RestPath("/")
     default List<CaseSummaryView> listCases(String status, String situationId,
                                              Instant from, Instant to,
                                              @ContextParam("tenancyId") String tenancyId) {

@@ -1,7 +1,7 @@
 package io.casehub.iot.webapp.resolution;
 
 import io.casehub.iot.webapp.cbr.ResolutionSuggestion;
-import io.casehub.neocortex.memory.cbr.PlanTrace;
+import io.casehub.iot.webapp.cbr.PlanTrace;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -37,7 +37,7 @@ class AiResolutionPromptBuilderTest {
             Map.of("deviceClass", "thermostat"),
             Map.of("deviceClass", 1.0),
             List.of(new PlanTrace("check-filter", "device-control",
-                "set-temperature", "SUCCESS", 1, Map.of("target", 22), null))
+                "set-temperature", "SUCCESS", 1, Map.of("target", 22)))
         );
 
         String prompt = AiResolutionPromptBuilder.build(

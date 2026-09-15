@@ -2,6 +2,7 @@ package io.casehub.iot.webapp.app.cbr;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.engine.common.internal.model.CaseInstance;
+import io.casehub.neocortex.cognitive.Confidence;
 import io.casehub.engine.common.spi.cache.CaseInstanceCache;
 import io.casehub.iot.webapp.cbr.WorkItemContext;
 import io.casehub.iot.webapp.cbr.WorkItemFeatureExtractor;
@@ -82,7 +83,7 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
                     workItem.title() != null ? workItem.title() : "work-item",
                     solution,
                     event.status().name(),
-                    1.0,
+                    Confidence.unknown(1.0),
                     FeatureValue.toFeatureMap(rawFeatures),
                     null, null);
 

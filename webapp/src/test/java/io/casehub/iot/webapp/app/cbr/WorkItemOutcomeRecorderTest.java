@@ -41,7 +41,7 @@ class WorkItemOutcomeRecorderTest {
         recorder.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.ASSIGNED, UUID.randomUUID(), WorkItemStatus.ASSIGNED,
                 "actor", null, null, "tech-1", "group", null, "t1",
-                Instant.now()));
+                Instant.now(), null));
 
         assertThat(captured).isEmpty();
     }
@@ -97,7 +97,7 @@ class WorkItemOutcomeRecorderTest {
 
         recorder.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.CANCELLED, workItem.id(), WorkItemStatus.CANCELLED,
-                "system", null, null, null, null, null, "t1", Instant.now()));
+                "system", null, null, null, null, null, "t1", Instant.now(), null));
 
         assertThat(captured).hasSize(1);
         assertThat(captured.getFirst().solution()).isEqualTo("CANCELLED");
@@ -139,7 +139,7 @@ class WorkItemOutcomeRecorderTest {
         return new WorkItemStatusEvent(
                 WorkEventType.COMPLETED, workItemId, status,
                 "actor", null, null, assignee, "hvac-technicians",
-                status.name(), "t1", Instant.now());
+                status.name(), "t1", Instant.now(), null);
     }
 
 
@@ -169,8 +169,13 @@ class WorkItemOutcomeRecorderTest {
             @Override public Integer eraseByScope(Path scope, String tid) { return 0; }
             @Override public void recordOutcome(String cid, String tid, CbrOutcome o) {}
             @Override public Integer purge(CbrRetentionPolicy p) { return 0; }
-            @Override public void supersede(String cid, String tid, String scid, String r) {}
-            @Override public void reinstate(String cid, String tid) {}
+            @Override public boolean supersede(String cid, String tid, String scid, String r) { return false; }
+            @Override public boolean reinstate(String cid, String tid) { return false; }
+            @Override public List<String> findCaseIds(String ct, MemoryDomain d, String tid, java.util.Map<String, CbrFilter> f) { return List.of(); }
+            @Override public int supersedeMatching(String ct, MemoryDomain d, String tid, java.util.Map<String, CbrFilter> f, String r) { return 0; }
+            @Override public int supersedeAll(java.util.Collection<String> ids, String tid, String r) { return 0; }
+            @Override public int reinstateMatching(String ct, MemoryDomain d, String tid, java.util.Map<String, CbrFilter> f) { return 0; }
+            @Override public int reinstateAll(java.util.Collection<String> ids, String tid) { return 0; }
             @Override public java.util.List<io.casehub.neocortex.memory.cbr.SupersessionStatus> findSupersededCases(String cid, io.casehub.neocortex.memory.MemoryDomain d) { return java.util.List.of(); }
             @Override public io.casehub.neocortex.memory.cbr.SupersessionStatus getSupersessionStatus(String cid, String tid) { return null; }
         };

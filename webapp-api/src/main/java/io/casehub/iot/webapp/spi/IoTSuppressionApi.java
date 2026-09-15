@@ -17,6 +17,7 @@ import java.util.UUID;
 public interface IoTSuppressionApi {
 
     @PlatformQuery("List suppression history")
+    @RestPath("/")
     List<SuppressionHistoryResponse> listSuppressions(String situationId, Instant since,
                                                        Boolean includeOverridden,
                                                        @ContextParam("tenancyId") String tenancyId);

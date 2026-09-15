@@ -19,6 +19,7 @@ import java.util.List;
 public interface IoTDeviceApi {
 
     @PlatformQuery("List devices with optional filtering")
+    @RestPath("/")
     List<DeviceResponse> listDevices(String deviceClass, String providerId, Boolean available,
                                      @ContextParam("tenancyId") String tenancyId);
 

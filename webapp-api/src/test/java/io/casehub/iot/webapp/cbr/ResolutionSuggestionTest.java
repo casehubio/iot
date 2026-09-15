@@ -1,6 +1,6 @@
 package io.casehub.iot.webapp.cbr;
 
-import io.casehub.neocortex.memory.cbr.PlanTrace;
+import io.casehub.iot.webapp.cbr.PlanTrace;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -15,7 +15,7 @@ class ResolutionSuggestionTest {
     @Test
     void constructsWithAllFields() {
         var planStep = new PlanTrace("bind-1", "device-control", "set-temperature",
-                "SUCCESS", 1, Map.of("target", 22), null);
+                "SUCCESS", 1, Map.of("target", 22));
         var suggestion = new ResolutionSuggestion(
                 "case-123", 0.87, "Temperature rise", "Replaced filter",
                 "RESOLVED", 0.95,

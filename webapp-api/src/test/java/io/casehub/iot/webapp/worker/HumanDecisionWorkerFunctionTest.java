@@ -102,7 +102,7 @@ class HumanDecisionWorkerFunctionTest {
                 captured.add(req);
                 return new WorkItemRef(UUID.randomUUID(), WorkItemStatus.PENDING,
                                        req.callerRef, null, null, req.candidateGroups,
-                                       null, req.tenancyId, req.payload, null, null);
+                                       null, req.tenancyId, req.payload, null, null, null);
             }
 
             @Override
