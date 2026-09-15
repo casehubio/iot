@@ -41,7 +41,7 @@ public interface IoTCaseApi {
 
     @PlatformMutation("Accept a resolution suggestion for a case")
     @RestPath("/{caseId}/suggestions/{pastCaseId}/accept")
-    void acceptSuggestion(@PathParam UUID caseId, @PathParam UUID pastCaseId,
+    void acceptSuggestion(@PathParam UUID caseId, @PathParam String pastCaseId,
                           @ContextParam("tenancyId") String tenancyId);
 
     @PlatformQuery("List resolution queue entries")
