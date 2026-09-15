@@ -1,6 +1,6 @@
 package io.casehub.iot.webapp.cbr;
 
-import io.casehub.neocortex.memory.cbr.PlanTrace;
+// PlanTrace relocated from neocortex.memory.cbr to local package
 
 import java.util.List;
 import java.util.Map;

@@ -5,7 +5,7 @@ import io.casehub.neocortex.memory.MemoryDomain;
 import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
 import io.casehub.neocortex.memory.cbr.CbrQuery;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
-import io.casehub.neocortex.memory.cbr.PlanCbrCase;
+// PlanCbrCase relocated from neocortex.memory.cbr to local package
 import io.casehub.neocortex.memory.cbr.RetrievalMode;
 import io.casehub.neocortex.memory.cbr.ScoredCbrCase;
 
@@ -62,7 +62,7 @@ public class IoTCbrRetrievalService {
                 c.problem(),
                 c.solution(),
                 c.outcome(),
-                c.confidence(),
+                c.confidence() != null ? c.confidence().value() : null,
                 FeatureValue.toRawMap(c.features()),
                 scored.featureSimilarities(),
                 c.planTrace());

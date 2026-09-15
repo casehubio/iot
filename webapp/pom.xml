@@ -223,6 +223,28 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>io.casehub</groupId>
+                            <artifactId>casehub-platform-graphql-generator</artifactId>
+                            <version>0.2-SNAPSHOT</version>
+                        </path>
+                        <path>
+                            <groupId>io.casehub</groupId>
+                            <artifactId>casehub-iot-webapp-api</artifactId>
+                            <version>${project.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-AdomainFilter=iot/devices,iot/situations,iot/situations/suppressions,iot/cases,iot/ops</arg>
+                        <arg>-AgenerateGraphQL=false</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
                     <execution>

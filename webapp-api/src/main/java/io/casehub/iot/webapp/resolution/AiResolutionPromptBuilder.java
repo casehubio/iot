@@ -1,7 +1,7 @@
 package io.casehub.iot.webapp.resolution;
 
 import io.casehub.iot.webapp.cbr.ResolutionSuggestion;
-import io.casehub.neocortex.memory.cbr.PlanTrace;
+import io.casehub.iot.webapp.cbr.PlanTrace;
 
 import java.util.List;
 import java.util.Map;
