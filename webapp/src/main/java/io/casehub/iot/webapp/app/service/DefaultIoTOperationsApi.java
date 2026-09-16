@@ -7,11 +7,16 @@ import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.bridge.server.BridgeConnectionRegistry;
 import io.casehub.iot.webapp.rest.HealthOverviewResponse;
-import io.casehub.iot.webapp.spi.IoTOperationsApi;
 import io.casehub.iot.webapp.view.AuditTrailView;
 import io.casehub.iot.webapp.view.BridgeConnectionsView;
 import io.casehub.iot.webapp.view.ProviderStatusView;
 import io.casehub.iot.webapp.view.RefreshResultView;
+import io.casehub.platform.api.mcp.ContextParam;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformMutation;
+import io.casehub.platform.api.mcp.PlatformQuery;
+import io.casehub.platform.api.mcp.RestPath;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
@@ -20,16 +25,18 @@ import jakarta.ws.rs.NotFoundException;
 import java.time.Instant;
 import java.util.List;
 
+@McpDomain(value = "iot/ops", basePath = "/api")
 @ApplicationScoped
-public class DefaultIoTOperationsApi implements IoTOperationsApi {
+public class DefaultIoTOperationsApi {
 
     @Inject Instance<DeviceProvider> providers;
     @Inject DeviceRegistry deviceRegistry;
     @Inject BridgeConnectionRegistry connectionRegistry;
     @Inject BridgeAuditStore auditStore;
 
-    @Override
-    public List<ProviderStatusView> listProviders(String tenancyId) {
+    @PlatformQuery("List IoT providers with status")
+    @RestPath("/providers")
+    public List<ProviderStatusView> listProviders(@ContextParam("tenancyId") String tenancyId) {
         return providers.stream()
                 .map(p -> {
                     var deviceCount = (int) deviceRegistry.findAll().stream()
@@ -41,8 +48,10 @@ public class DefaultIoTOperationsApi implements IoTOperationsApi {
                 .toList();
     }
 
-    @Override
-    public ProviderStatusView getProvider(String providerId, String tenancyId) {
+    @PlatformQuery("Get provider by ID")
+    @RestPath("/providers/{providerId}")
+    public ProviderStatusView getProvider(@PathParam String providerId,
+                                           @ContextParam("tenancyId") String tenancyId) {
         var provider = providers.stream()
                 .filter(p -> p.providerId().equals(providerId))
                 .findFirst()
@@ -54,14 +63,17 @@ public class DefaultIoTOperationsApi implements IoTOperationsApi {
         return new ProviderStatusView(provider.providerId(), provider.status().name(), deviceCount);
     }
 
-    @Override
-    public RefreshResultView refreshAllProviders(String tenancyId) {
+    @PlatformMutation("Refresh all providers")
+    @RestPath("/providers/refresh")
+    public RefreshResultView refreshAllProviders(@ContextParam("tenancyId") String tenancyId) {
         deviceRegistry.refresh();
         return new RefreshResultView("Device discovery triggered for all providers");
     }
 
-    @Override
-    public RefreshResultView refreshProvider(String providerId, String tenancyId) {
+    @PlatformMutation("Refresh a specific provider")
+    @RestPath("/providers/{providerId}/refresh")
+    public RefreshResultView refreshProvider(@PathParam String providerId,
+                                              @ContextParam("tenancyId") String tenancyId) {
         try {
             deviceRegistry.refresh(providerId);
         } catch (IllegalArgumentException e) {
@@ -70,18 +82,20 @@ public class DefaultIoTOperationsApi implements IoTOperationsApi {
         return new RefreshResultView("Device discovery triggered for provider: " + providerId);
     }
 
-    @Override
-    public BridgeConnectionsView getBridgeConnections(String tenancyId) {
+    @PlatformQuery("List bridge connections")
+    @RestPath("/bridge/connections")
+    public BridgeConnectionsView getBridgeConnections(@ContextParam("tenancyId") String tenancyId) {
         var tenancies = connectionRegistry.connectedTenancies().stream()
                 .map(t -> new BridgeConnectionsView.TenancyConnection(t, null))
                 .toList();
         return new BridgeConnectionsView(connectionRegistry.hasAnyConnection(), tenancies);
     }
 
-    @Override
+    @PlatformQuery("Query bridge audit trail")
+    @RestPath("/bridge/audit")
     public AuditTrailView getBridgeAudit(String eventType, String deviceId, String correlationId,
                                           Instant from, Instant to, Integer offset, Integer limit,
-                                          String tenancyId) {
+                                          @ContextParam("tenancyId") String tenancyId) {
         var queryBuilder = BridgeAuditQuery.builder().tenancyId(tenancyId);
         if (eventType != null) {
             queryBuilder.eventType(BridgeAuditEventType.valueOf(eventType.toUpperCase()));
@@ -103,8 +117,9 @@ public class DefaultIoTOperationsApi implements IoTOperationsApi {
         return new AuditTrailView(records, events.size(), effectiveOffset, effectiveLimit);
     }
 
-    @Override
-    public HealthOverviewResponse getHealthOverview(String tenancyId) {
+    @PlatformQuery("Get system health overview")
+    @RestPath("/health/overview")
+    public HealthOverviewResponse getHealthOverview(@ContextParam("tenancyId") String tenancyId) {
         var providerStatuses = providers.stream()
                 .map(p -> {
                     var deviceCount = (int) deviceRegistry.findAll().stream()

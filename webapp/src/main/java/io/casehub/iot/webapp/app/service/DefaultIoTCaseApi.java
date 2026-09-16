@@ -17,9 +17,16 @@ import io.casehub.iot.webapp.resolution.AiEscalationContext;
 import io.casehub.iot.webapp.resolution.ExecutedActionResult;
 import io.casehub.iot.webapp.resolution.QueueEntryDetail;
 import io.casehub.iot.webapp.resolution.QueueEntrySummary;
-import io.casehub.iot.webapp.spi.IoTCaseApi;
+import io.casehub.iot.webapp.view.CaseDetailView;
+import io.casehub.iot.webapp.view.CaseSummaryView;
 import io.casehub.iot.webapp.view.SuggestionView;
 import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.platform.api.mcp.ContextParam;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformMutation;
+import io.casehub.platform.api.mcp.PlatformQuery;
+import io.casehub.platform.api.mcp.RestPath;
 import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.platform.api.view.SubjectViewStore;
 import jakarta.annotation.PostConstruct;
@@ -35,8 +42,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@McpDomain(value = "iot/cases", basePath = "/api/cases")
 @ApplicationScoped
-public class DefaultIoTCaseApi implements IoTCaseApi {
+public class DefaultIoTCaseApi {
 
     @Inject CurrentPrincipal principal;
     @Inject CaseInstanceCache caseInstanceCache;
@@ -64,8 +72,25 @@ public class DefaultIoTCaseApi implements IoTCaseApi {
         }
     }
 
-    @Override
-    public SuggestionView getCaseSuggestions(UUID caseId, String tenancyId) {
+    @PlatformQuery("List cases with optional filtering")
+    @RestPath("/")
+    public List<CaseSummaryView> listCases(String status, String situationId,
+                                            java.time.Instant from, java.time.Instant to,
+                                            @ContextParam("tenancyId") String tenancyId) {
+        throw new io.casehub.iot.webapp.NotImplementedException("listCases");
+    }
+
+    @PlatformQuery("Get case by ID")
+    @RestPath("/{caseId}")
+    public CaseDetailView getCase(@PathParam UUID caseId,
+                                   @ContextParam("tenancyId") String tenancyId) {
+        throw new io.casehub.iot.webapp.NotImplementedException("getCase");
+    }
+
+    @PlatformQuery("Get case resolution suggestions")
+    @RestPath("/{caseId}/suggestions")
+    public SuggestionView getCaseSuggestions(@PathParam UUID caseId,
+                                              @ContextParam("tenancyId") String tenancyId) {
         CaseInstance instance = caseInstanceCache.get(caseId);
         if (instance == null) {
             throw new NotFoundException("Case not found: " + caseId);
@@ -84,8 +109,10 @@ public class DefaultIoTCaseApi implements IoTCaseApi {
         return new SuggestionView(caseId, caseType, suggestions.size(), suggestions);
     }
 
-    @Override
-    public void acceptSuggestion(UUID caseId, String pastCaseId, String tenancyId) {
+    @PlatformMutation("Accept a resolution suggestion for a case")
+    @RestPath("/{caseId}/suggestions/{pastCaseId}/accept")
+    public void acceptSuggestion(@PathParam UUID caseId, @PathParam String pastCaseId,
+                                  @ContextParam("tenancyId") String tenancyId) {
         CaseInstance instance = caseInstanceCache.get(caseId);
         if (instance == null) {
             throw new NotFoundException("Case not found: " + caseId);
@@ -126,8 +153,10 @@ public class DefaultIoTCaseApi implements IoTCaseApi {
         context.set("acceptedSuggestions", newAccepted);
     }
 
-    @Override
-    public List<QueueEntrySummary> listResolutionQueue(String view, String status, String tenancyId) {
+    @PlatformQuery("List resolution queue entries")
+    @RestPath("/resolution/queue")
+    public List<QueueEntrySummary> listResolutionQueue(String view, String status,
+                                                        @ContextParam("tenancyId") String tenancyId) {
         List<UUID> viewIds = resolveViewIds(view);
         if (viewIds.isEmpty()) {
             return List.of();
@@ -153,8 +182,10 @@ public class DefaultIoTCaseApi implements IoTCaseApi {
         return entries.stream().map(this::toSummary).toList();
     }
 
-    @Override
-    public QueueEntryDetail getResolutionQueueEntry(UUID entryId, String tenancyId) {
+    @PlatformQuery("Get resolution queue entry detail")
+    @RestPath("/resolution/queue/{entryId}")
+    public QueueEntryDetail getResolutionQueueEntry(@PathParam UUID entryId,
+                                                      @ContextParam("tenancyId") String tenancyId) {
         CaseQueueEntry entry = entryStore.findById(entryId)
                 .filter(e -> tenancyId.equals(e.getTenancyId()))
                 .orElseThrow(() -> new NotFoundException("Queue entry not found: " + entryId));

@@ -6,8 +6,13 @@ import io.casehub.iot.webapp.cbr.SuppressionTier;
 import io.casehub.iot.webapp.rest.SuppressionHistoryResponse;
 import io.casehub.iot.webapp.rest.SuppressionStatsResponse;
 import io.casehub.iot.webapp.risk.IoTSafetyCaseTypes;
-import io.casehub.iot.webapp.spi.IoTSuppressionApi;
 import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.platform.api.mcp.ContextParam;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformMutation;
+import io.casehub.platform.api.mcp.PlatformQuery;
+import io.casehub.platform.api.mcp.RestPath;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -19,17 +24,19 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@McpDomain(value = "iot/situations/suppressions", basePath = "/api/situations/suppressions")
 @ApplicationScoped
-public class DefaultIoTSuppressionApi implements IoTSuppressionApi {
+public class DefaultIoTSuppressionApi {
 
     @Inject EntityManager em;
     @Inject DismissalRecorder dismissalRecorder;
     @Inject CurrentPrincipal principal;
 
-    @Override
+    @PlatformQuery("List suppression history")
+    @RestPath("/")
     public List<SuppressionHistoryResponse> listSuppressions(String situationId, Instant since,
                                                               Boolean includeOverridden,
-                                                              String tenancyId) {
+                                                              @ContextParam("tenancyId") String tenancyId) {
         Instant effectiveSince = since != null ? since : Instant.now().minus(Duration.ofHours(24));
         boolean includeOvr = includeOverridden != null && includeOverridden;
 
@@ -57,9 +64,11 @@ public class DefaultIoTSuppressionApi implements IoTSuppressionApi {
                 .toList();
     }
 
-    @Override
+    @PlatformMutation("Override a suppression")
+    @RestPath("/{id}/override")
     @Transactional
-    public void overrideSuppression(UUID id, String tenancyId) {
+    public void overrideSuppression(@PathParam UUID id,
+                                     @ContextParam("tenancyId") String tenancyId) {
         var entry = em.find(SuppressionLogEntry.class, id);
         if (entry == null) {
             throw new NotFoundException("Suppression not found: " + id);
@@ -73,8 +82,10 @@ public class DefaultIoTSuppressionApi implements IoTSuppressionApi {
                 null, "override-actioned");
     }
 
-    @Override
-    public SuppressionStatsResponse getSuppressionStats(String situationId, String tenancyId) {
+    @PlatformQuery("Get suppression statistics for a situation")
+    @RestPath("/{situationId}/stats")
+    public SuppressionStatsResponse getSuppressionStats(@PathParam String situationId,
+                                                          @ContextParam("tenancyId") String tenancyId) {
         var suppressedCount = em.createQuery(
                         "SELECT COUNT(s) FROM SuppressionLogEntry s WHERE s.tenancyId = :tid AND s.situationId = :sid AND s.tier = :tier",
                         Long.class)

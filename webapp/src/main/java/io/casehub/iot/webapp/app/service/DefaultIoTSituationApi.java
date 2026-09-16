@@ -9,9 +9,18 @@ import io.casehub.iot.webapp.cbr.IoTCbrRetrievalService;
 import io.casehub.iot.webapp.rest.DismissRequest;
 import io.casehub.iot.webapp.rest.SituationDefinitionRequest;
 import io.casehub.iot.webapp.rest.SituationSuggestionsResponse;
-import io.casehub.iot.webapp.spi.IoTSituationApi;
+import io.casehub.iot.webapp.view.ActiveSituationView;
 import io.casehub.iot.webapp.view.SituationDefinitionView;
 import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.platform.api.mcp.ContextParam;
+import io.casehub.platform.api.mcp.HttpMethod;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformMutation;
+import io.casehub.platform.api.mcp.PlatformQuery;
+import io.casehub.platform.api.mcp.RestMethod;
+import io.casehub.platform.api.mcp.RestPath;
+import io.casehub.platform.api.mcp.RestStatus;
 import io.casehub.ras.api.CaseTriggerConfig;
 import io.casehub.ras.api.ChainMode;
 import io.casehub.ras.api.SituationChangeEvent;
@@ -34,8 +43,9 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+@McpDomain(value = "iot/situations", basePath = "/api/situations")
 @ApplicationScoped
-public class DefaultIoTSituationApi implements IoTSituationApi {
+public class DefaultIoTSituationApi {
 
     private static final Logger LOG = Logger.getLogger(DefaultIoTSituationApi.class);
 
@@ -48,8 +58,9 @@ public class DefaultIoTSituationApi implements IoTSituationApi {
     @Inject SituationStore situationStore;
     @Inject Event<SituationChangeEvent> changeEvent;
 
-    @Override
-    public List<SituationDefinitionView> listDefinitions(String tenancyId) {
+    @PlatformQuery("List situation definitions")
+    @RestPath("/definitions")
+    public List<SituationDefinitionView> listDefinitions(@ContextParam("tenancyId") String tenancyId) {
         var runtimeDefs = em.createQuery(
                         "SELECT s FROM IoTSituationDefinitionEntity s WHERE s.tenancyId = :tenancyId",
                         IoTSituationDefinitionEntity.class)
@@ -62,9 +73,12 @@ public class DefaultIoTSituationApi implements IoTSituationApi {
                 .toList();
     }
 
-    @Override
+    @PlatformMutation("Create a situation definition")
+    @RestPath("/definitions")
+    @RestStatus(201)
     @Transactional
-    public SituationDefinitionView createDefinition(SituationDefinitionRequest request, String tenancyId) {
+    public SituationDefinitionView createDefinition(SituationDefinitionRequest request,
+                                                     @ContextParam("tenancyId") String tenancyId) {
         var existing = em.createQuery(
                         "SELECT COUNT(s) FROM IoTSituationDefinitionEntity s WHERE s.situationId = :situationId AND s.tenancyId = :tenancyId",
                         Long.class)
@@ -83,10 +97,13 @@ public class DefaultIoTSituationApi implements IoTSituationApi {
                 entity.getDefinition(), entity.getCreatedAt(), entity.getUpdatedAt(), "runtime");
     }
 
-    @Override
+    @PlatformMutation("Update a situation definition")
+    @RestMethod(HttpMethod.PUT)
+    @RestPath("/definitions/{situationId}")
     @Transactional
-    public SituationDefinitionView updateDefinition(String situationId, SituationDefinitionRequest request,
-                                                     String tenancyId) {
+    public SituationDefinitionView updateDefinition(@PathParam String situationId,
+                                                     SituationDefinitionRequest request,
+                                                     @ContextParam("tenancyId") String tenancyId) {
         var existingEntity = em.createQuery(
                         "SELECT s FROM IoTSituationDefinitionEntity s WHERE s.situationId = :situationId AND s.tenancyId = :tenancyId",
                         IoTSituationDefinitionEntity.class)
@@ -107,9 +124,12 @@ public class DefaultIoTSituationApi implements IoTSituationApi {
                 newEntity.getDefinition(), newEntity.getCreatedAt(), newEntity.getUpdatedAt(), "runtime");
     }
 
-    @Override
+    @PlatformMutation("Delete a situation definition")
+    @RestMethod(HttpMethod.DELETE)
+    @RestPath("/definitions/{situationId}")
     @Transactional
-    public void deleteDefinition(String situationId, String tenancyId) {
+    public void deleteDefinition(@PathParam String situationId,
+                                  @ContextParam("tenancyId") String tenancyId) {
         int deleted = em.createQuery(
                         "DELETE FROM IoTSituationDefinitionEntity s WHERE s.situationId = :situationId AND s.tenancyId = :tenancyId")
                 .setParameter("situationId", situationId)
@@ -120,8 +140,16 @@ public class DefaultIoTSituationApi implements IoTSituationApi {
         }
     }
 
-    @Override
-    public SituationSuggestionsResponse getSuggestions(String situationId, String tenancyId) {
+    @PlatformQuery("List active situations")
+    @RestPath("/active")
+    public List<ActiveSituationView> listActive(@ContextParam("tenancyId") String tenancyId) {
+        throw new io.casehub.iot.webapp.NotImplementedException("listActive");
+    }
+
+    @PlatformQuery("Get resolution suggestions for a situation")
+    @RestPath("/{situationId}/suggestions")
+    public SituationSuggestionsResponse getSuggestions(@PathParam String situationId,
+                                                        @ContextParam("tenancyId") String tenancyId) {
         var terminal = EnumSet.of(CaseStatus.COMPLETED, CaseStatus.FAULTED, CaseStatus.CANCELLED);
         var activeCases = caseInstanceCache.getAll().stream()
                 .filter(ci -> !terminal.contains(ci.getState()))
@@ -156,9 +184,12 @@ public class DefaultIoTSituationApi implements IoTSituationApi {
         return new SituationSuggestionsResponse(situationId, caseSuggestions);
     }
 
-    @Override
+    @PlatformMutation("Dismiss an active situation")
+    @RestPath("/active/{correlationKey}/dismiss")
     @Transactional
-    public void dismissSituation(String correlationKey, DismissRequest request, String tenancyId) {
+    public void dismissSituation(@PathParam String correlationKey,
+                                  DismissRequest request,
+                                  @ContextParam("tenancyId") String tenancyId) {
         if (request.situationId() == null || request.situationId().isBlank()) {
             throw new BadRequestException("situationId is required");
         }
