@@ -1,0 +1,80 @@
+temporal-profiles:
+  morning-routine:
+    qualified-name: io.casehub.iot.state_change
+    tenancy-id: default-tenant
+    loop: true
+    speed: 1.0
+    events:
+      - delay: 0
+        label: motion-hallway
+        payload:
+          deviceId: presence-front-1
+          present: true
+          deviceClass: PRESENCE_SENSOR
+      - delay: 5s
+        label: lights-on
+        payload:
+          deviceId: light-living-1
+          on: true
+          deviceClass: LIGHT
+      - delay: 2m
+        label: thermostat-adjust
+        payload:
+          deviceId: thermostat-living-1
+          targetTemperature: { value: 22, unit: CELSIUS }
+          mode: HEAT
+          deviceClass: THERMOSTAT
+
+  emergency:
+    qualified-name: io.casehub.iot.state_change
+    loop: false
+    events:
+      - delay: 0
+        label: smoke-detected
+        payload:
+          deviceId: sensor-smoke-1
+          sensorType: GENERIC
+          numericValue: 1
+          deviceClass: SENSOR
+      - delay: 3s
+        label: temperature-spike
+        payload:
+          deviceId: thermostat-living-1
+          currentTemperature: { value: 45, unit: CELSIUS }
+          mode: OFF
+          deviceClass: THERMOSTAT
+      - delay: 1s
+        label: motion-cascade
+        payload:
+          deviceId: presence-front-1
+          present: true
+          deviceClass: PRESENCE_SENSOR
+
+  quiet-night:
+    qualified-name: io.casehub.iot.state_change
+    tenancy-id: default-tenant
+    loop: true
+    speed: 1.0
+    events:
+      - delay: 5m
+        label: temperature-drift
+        payload:
+          deviceId: thermostat-living-1
+          currentTemperature: { value: 19.5, unit: CELSIUS }
+          deviceClass: THERMOSTAT
+      - delay: 10m
+        label: temperature-drift-2
+        payload:
+          deviceId: thermostat-living-1
+          currentTemperature: { value: 19.2, unit: CELSIUS }
+          deviceClass: THERMOSTAT
+
+  full-demo:
+    qualified-name: io.casehub.iot.state_change
+    loop: true
+    sequence:
+      - ref: morning-routine
+      - delay: 30s
+        ref: emergency
+      - delay: 1m
+        ref: quiet-night

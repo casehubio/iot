@@ -176,6 +176,16 @@
             <dependency>
                 <groupId>io.casehub</groupId>
                 <artifactId>casehub-platform-agent-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-platform-simulation-api</artifactId>
+                <version>${casehub.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.casehub</groupId>
+                <artifactId>casehub-platform-simulation-core</artifactId>
                 <version>${casehub.version}</version>
             </dependency>
             <dependency>
