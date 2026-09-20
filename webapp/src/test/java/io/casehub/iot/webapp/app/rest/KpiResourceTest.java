@@ -24,6 +24,7 @@ class KpiResourceTest {
         registry = new TestDeviceRegistry();
         resource = new KpiResource();
         resource.deviceRegistry = registry;
+        resource.situationStore = new TestSituationStore();
     }
 
     @Test
@@ -111,7 +112,7 @@ class KpiResourceTest {
 
     @Test
     void healthKpiReturnsFourMetrics() {
-        List<KpiMetric> metrics = resource.healthKpi(1L, 2L);
+        List<KpiMetric> metrics = resource.healthKpi(1L, 2L, 3L);
 
         assertThat(metrics).hasSize(4);
         assertThat(metrics).extracting(KpiMetric::key)
@@ -122,14 +123,26 @@ class KpiResourceTest {
 
         var bridges = metrics.stream().filter(m -> "bridge-connections".equals(m.key())).findFirst().orElseThrow();
         assertThat(bridges.value()).isEqualTo(2L);
+
+        var situations = metrics.stream().filter(m -> "active-situations".equals(m.key())).findFirst().orElseThrow();
+        assertThat(situations.value()).isEqualTo(3L);
+        assertThat(situations.status()).isEqualTo("warning");
     }
 
     @Test
     void healthKpiZeroConnectionsReturnsNormalStatus() {
-        List<KpiMetric> metrics = resource.healthKpi(0L, 0L);
+        List<KpiMetric> metrics = resource.healthKpi(0L, 0L, 0L);
 
         assertThat(metrics).hasSize(4);
         metrics.forEach(m -> assertThat(m.status()).isEqualTo("normal"));
+    }
+
+    static class TestSituationStore implements io.casehub.ras.api.SituationStore {
+        @Override public java.util.Optional<io.casehub.ras.api.SituationContext> find(String a, String b, String c) { return java.util.Optional.empty(); }
+        @Override public io.casehub.ras.api.SituationContext save(io.casehub.ras.api.SituationContext ctx) { return ctx; }
+        @Override public void remove(String a, String b, String c) {}
+        @Override public int removeExpired(java.time.Instant before) { return 0; }
+        @Override public void removeAllForSituation(String id) {}
     }
 
     static class TestDeviceRegistry implements DeviceRegistry {
