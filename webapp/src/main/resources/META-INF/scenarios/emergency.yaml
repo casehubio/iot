@@ -1,0 +1,108 @@
+scenario: emergency
+meta:
+  title: Emergency Response
+  description: Smoke detection triggers an alarm cascade — watch the operational console detect, classify, and escalate the situation in real time
+  area: iot
+  labels: [demo, simulation, emergency]
+  estimated: 1m
+
+sections:
+  - title: Start Simulation
+    content:
+      type: inline
+      markdown: |
+        Starting the emergency temporal profile. This non-looping sequence
+        simulates a smoke detection event, a temperature spike, and a motion
+        cascade — triggering the full alarm response chain.
+    steps:
+      - delivery: graphql
+        name: start-simulation
+        domain: iot/simulation
+        operation: start
+        params:
+          profile: emergency
+          speed: 5
+
+  - title: Smoke Detected
+    content:
+      type: inline
+      markdown: |
+        A smoke sensor triggers in the living room. The RAS engine immediately
+        classifies this as a high-priority situation. Watch the situation panel
+        for the new alert.
+    steps:
+      - delivery: aria
+        name: spotlight-device-panel
+        action: spotlight
+        target:
+          role: region
+          name: Device State
+      - delivery: aria
+        name: wait-smoke-detected
+        action: wait
+        target:
+          role: cell
+          name: sensor-smoke-1
+        state:
+          textContent: "1"
+        timeout: 10000
+
+  - title: Temperature Spike
+    content:
+      type: inline
+      markdown: |
+        The thermostat reports a dangerous temperature of 45°C. Combined
+        with the smoke detection, the system escalates the situation severity.
+    steps:
+      - delivery: aria
+        name: wait-temperature-spike
+        action: wait
+        target:
+          role: cell
+          name: thermostat-living-1
+        state:
+          textContent: "45"
+        timeout: 15000
+
+  - title: Alarm Cascade
+    content:
+      type: inline
+      markdown: |
+        Motion is detected at the front entrance — the system recognises
+        an evacuation pattern. A work item is created for emergency response,
+        and the case is escalated to the highest priority.
+    steps:
+      - delivery: aria
+        name: wait-motion-cascade
+        action: wait
+        target:
+          role: cell
+          name: presence-front-1
+        state:
+          textContent: Present
+        timeout: 10000
+      - delivery: aria
+        name: spotlight-situations
+        action: spotlight
+        target:
+          role: region
+          name: Situations
+      - delivery: aria
+        name: spotlight-kpi
+        action: spotlight
+        target:
+          role: region
+          name: KPI
+
+  - title: Review
+    content:
+      type: inline
+      markdown: |
+        The emergency simulation is complete. The full event chain —
+        smoke detection → temperature spike → evacuation pattern — has been
+        captured in the case history for CBR learning.
+    steps:
+      - delivery: graphql
+        name: stop-simulation
+        domain: iot/simulation
+        operation: stop

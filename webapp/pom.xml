@@ -148,6 +148,13 @@
             <artifactId>casehub-connectors-core</artifactId>
         </dependency>
 
+        <!-- Pages scenario runtime — server-side scenario orchestration -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-pages-scenario-runtime</artifactId>
+            <version>0.2-SNAPSHOT</version>
+        </dependency>
+
         <!-- Quarkus runtime -->
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -251,7 +258,7 @@
                         </path>
                     </annotationProcessorPaths>
                     <compilerArgs>
-                        <arg>-AdomainFilter=iot/devices,iot/situations,iot/situations/suppressions,iot/cases,iot/ops</arg>
+                        <arg>-AdomainFilter=iot/devices,iot/situations,iot/situations/suppressions,iot/cases,iot/ops,iot/simulation</arg>
                         <arg>-AgenerateGraphQL=false</arg>
                     </compilerArgs>
                 </configuration>

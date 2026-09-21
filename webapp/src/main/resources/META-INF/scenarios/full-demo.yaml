@@ -1,0 +1,118 @@
+scenario: full-demo
+meta:
+  title: Full IoT Demo
+  description: Complete walkthrough — morning routine, emergency response, and quiet-night monitoring in a single guided session
+  area: iot
+  labels: [demo, simulation, comprehensive]
+  estimated: 5m
+
+sections:
+  - title: Welcome
+    content:
+      type: inline
+      markdown: |
+        This is the full IoT operational console demo. It chains three
+        temporal profiles — morning routine, emergency, and quiet night —
+        using the composite `full-demo` profile. Each phase demonstrates
+        different aspects of situation awareness and case orchestration.
+
+        The simulation runs at 10× speed for a guided experience.
+    steps:
+      - delivery: graphql
+        name: start-simulation
+        domain: iot/simulation
+        operation: start
+        params:
+          profile: full-demo
+          speed: 10
+
+  - title: Morning Routine
+    content:
+      type: inline
+      markdown: |
+        **Phase 1 — Morning routine.** Motion detection in the hallway
+        triggers the morning pattern. Lights activate, the thermostat
+        adjusts, and the system learns the household rhythm.
+    steps:
+      - delivery: aria
+        name: spotlight-device-panel
+        action: spotlight
+        target:
+          role: region
+          name: Device State
+      - delivery: aria
+        name: wait-motion-morning
+        action: wait
+        target:
+          role: cell
+          name: presence-front-1
+        state:
+          textContent: Present
+        timeout: 15000
+      - delivery: aria
+        name: wait-light-morning
+        action: wait
+        target:
+          role: cell
+          name: light-living-1
+        state:
+          textContent: "On"
+        timeout: 30000
+
+  - title: Emergency Response
+    content:
+      type: inline
+      markdown: |
+        **Phase 2 — Emergency.** A smoke sensor triggers, temperatures
+        spike, and the system detects an evacuation pattern. Watch the
+        RAS engine classify and escalate the situation.
+    steps:
+      - delivery: aria
+        name: wait-smoke
+        action: wait
+        target:
+          role: cell
+          name: sensor-smoke-1
+        state:
+          textContent: "1"
+        timeout: 60000
+      - delivery: aria
+        name: spotlight-situations-emergency
+        action: spotlight
+        target:
+          role: region
+          name: Situations
+
+  - title: Quiet Night
+    content:
+      type: inline
+      markdown: |
+        **Phase 3 — Quiet night.** The system monitors gradual temperature
+        drift. Slow changes are tracked but don't trigger immediate alerts —
+        demonstrating the temporal pattern engine's sustained-change
+        detection.
+    steps:
+      - delivery: aria
+        name: spotlight-kpi-night
+        action: spotlight
+        target:
+          role: region
+          name: KPI
+
+  - title: Summary
+    content:
+      type: inline
+      markdown: |
+        The full demo is complete. Three distinct operational scenarios
+        have been demonstrated:
+
+        1. **Morning routine** — pattern recognition and automated response
+        2. **Emergency** — alarm cascade and escalation
+        3. **Quiet night** — sustained-change temporal monitoring
+
+        All events have been persisted for CBR case-based reasoning analysis.
+    steps:
+      - delivery: graphql
+        name: stop-simulation
+        domain: iot/simulation
+        operation: stop

@@ -1,0 +1,108 @@
+scenario: morning-routine
+meta:
+  title: Smart Home Morning Routine
+  description: Watch the operational console respond to a morning device sequence — motion detection, situation awareness, and automated case creation
+  area: iot
+  labels: [demo, simulation]
+  estimated: 2m
+
+sections:
+  - title: Start Simulation
+    content:
+      type: inline
+      markdown: |
+        Starting the morning-routine temporal profile. The simulation engine
+        will replay a realistic sequence of device state changes — motion
+        sensors, lights, and thermostat adjustments — at accelerated speed.
+    steps:
+      - delivery: graphql
+        name: start-simulation
+        domain: iot/simulation
+        operation: start
+        params:
+          profile: morning-routine
+          speed: 10
+
+  - title: Wake Up
+    content:
+      type: inline
+      markdown: |
+        Motion is detected in the hallway. The system recognises the morning
+        pattern and begins adjusting devices automatically. Watch the device
+        state panel update in real time.
+    steps:
+      - delivery: aria
+        name: spotlight-device-panel
+        action: spotlight
+        target:
+          role: region
+          name: Device State
+      - delivery: aria
+        name: wait-motion-detected
+        action: wait
+        target:
+          role: cell
+          name: presence-front-1
+        state:
+          textContent: Present
+        timeout: 15000
+
+  - title: Lights and Climate
+    content:
+      type: inline
+      markdown: |
+        The living room light turns on and the thermostat adjusts to the
+        morning comfort temperature. The situation engine evaluates whether
+        this pattern constitutes a notable event.
+    steps:
+      - delivery: aria
+        name: wait-light-on
+        action: wait
+        target:
+          role: cell
+          name: light-living-1
+        state:
+          textContent: "On"
+        timeout: 30000
+      - delivery: aria
+        name: wait-thermostat-adjust
+        action: wait
+        target:
+          role: cell
+          name: thermostat-living-1
+        state:
+          textContent: "22"
+        timeout: 150000
+
+  - title: Situation Awareness
+    content:
+      type: inline
+      markdown: |
+        The RAS engine has detected a pattern across the device state changes.
+        Check the situations panel for any newly raised situations and the
+        KPI cards for updated metrics.
+    steps:
+      - delivery: aria
+        name: spotlight-situations
+        action: spotlight
+        target:
+          role: region
+          name: Situations
+      - delivery: aria
+        name: spotlight-kpi
+        action: spotlight
+        target:
+          role: region
+          name: KPI
+
+  - title: Stop Simulation
+    content:
+      type: inline
+      markdown: |
+        The morning routine simulation is complete. The device state history
+        has been persisted and is available for CBR analysis.
+    steps:
+      - delivery: graphql
+        name: stop-simulation
+        domain: iot/simulation
+        operation: stop
