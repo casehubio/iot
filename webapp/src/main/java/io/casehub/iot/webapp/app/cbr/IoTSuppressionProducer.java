@@ -5,7 +5,7 @@ import io.casehub.iot.webapp.cbr.DismissalRecorder;
 import io.casehub.iot.webapp.cbr.IoTSuppressionTriggerPolicy;
 import io.casehub.iot.webapp.cbr.SuppressionConfig;
 import io.casehub.iot.webapp.cbr.SuppressionEvaluator;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.ras.api.RasTriggerPolicy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
@@ -15,7 +15,7 @@ import jakarta.inject.Inject;
 public class IoTSuppressionProducer {
 
     @Inject
-    CbrCaseMemoryStore cbrStore;
+    CbrRecordStore cbrStore;
 
     @Inject
     DeviceRegistry deviceRegistry;

@@ -1,7 +1,7 @@
 package io.casehub.iot.webapp.app.cbr;
 
 import io.casehub.iot.webapp.cbr.WorkItemPredictionService;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
@@ -10,7 +10,7 @@ import jakarta.inject.Inject;
 public class WorkItemPredictionServiceProducer {
 
     @Inject
-    CbrCaseMemoryStore cbrStore;
+    CbrRecordStore cbrStore;
 
     @Inject
     WorkItemCbrConfig config;

@@ -1,7 +1,7 @@
 package io.casehub.iot.webapp.app.cbr;
 
 import io.casehub.neocortex.memory.MemoryDomain;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.neocortex.memory.cbr.CbrRetentionPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,14 +19,14 @@ import static org.mockito.Mockito.when;
 
 class CbrRetentionJobTest {
 
-    private CbrCaseMemoryStore store;
+    private CbrRecordStore store;
     private CbrRetentionConfig config;
 
     private static final String TENANT_ID = "test-tenant";
 
     @BeforeEach
     void setUp() {
-        store = mock(CbrCaseMemoryStore.class);
+        store = mock(CbrRecordStore.class);
         config = mock(CbrRetentionConfig.class);
         when(config.maxAgeDays()).thenReturn(Optional.empty());
         when(config.maxCasesPerType()).thenReturn(Optional.empty());

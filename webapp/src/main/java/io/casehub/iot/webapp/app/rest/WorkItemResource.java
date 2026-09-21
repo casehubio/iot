@@ -46,6 +46,7 @@ import java.util.UUID;
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@io.casehub.platform.api.mcp.HandWrittenEndpoint("migrating to @McpDomain — pending redesign")
 public class WorkItemResource {
 
     @Inject

@@ -1,6 +1,6 @@
 package io.casehub.iot.webapp.cbr;
 
-import io.casehub.neocortex.memory.cbr.CbrFeatureSchema;
+import io.casehub.neocortex.memory.cbr.CbrRecordSchema;
 import io.casehub.neocortex.memory.cbr.FeatureField;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,7 +15,7 @@ class IoTCbrFeatureSchemasTest {
     private static final String[] COMMON_FEATURES =
             {"deviceClass", "roomType", "hourOfDay", "dayType", "season"};
 
-    static Stream<CbrFeatureSchema> allSchemas() {
+    static Stream<CbrRecordSchema> allSchemas() {
         return Stream.of(
                 IoTCbrFeatureSchemas.hvacAnomaly(),
                 IoTCbrFeatureSchemas.safetyAlert(),
@@ -26,7 +26,7 @@ class IoTCbrFeatureSchemasTest {
 
     @ParameterizedTest
     @MethodSource("allSchemas")
-    void allSchemas_haveCommonFeatures(CbrFeatureSchema schema) {
+    void allSchemas_haveCommonFeatures(CbrRecordSchema schema) {
         assertThat(schema.fields())
                 .extracting(FeatureField::name)
                 .contains(COMMON_FEATURES);
@@ -34,7 +34,7 @@ class IoTCbrFeatureSchemasTest {
 
     @ParameterizedTest
     @MethodSource("allSchemas")
-    void allSchemas_caseTypeNotBlank(CbrFeatureSchema schema) {
+    void allSchemas_caseTypeNotBlank(CbrRecordSchema schema) {
         assertThat(schema.caseType()).isNotBlank();
     }
 

@@ -1,6 +1,6 @@
 package io.casehub.iot.webapp.cbr;
 
-import io.casehub.neocortex.memory.cbr.CbrFeatureSchema;
+import io.casehub.neocortex.memory.cbr.CbrRecordSchema;
 import io.casehub.neocortex.memory.cbr.FeatureField;
 import io.casehub.neocortex.memory.cbr.SimilaritySpec;
 
@@ -11,44 +11,44 @@ public final class IoTCbrFeatureSchemas {
 
     private IoTCbrFeatureSchemas() {}
 
-    public static CbrFeatureSchema hvacAnomaly() {
+    public static CbrRecordSchema hvacAnomaly() {
         var fields = new ArrayList<>(commonFields());
         fields.add(FeatureField.numeric("temperatureDelta", -20, 20,
                 new SimilaritySpec.GaussianDecay(2.0)));
         fields.add(FeatureField.categorical("outdoorTemperatureRange"));
-        return new CbrFeatureSchema("hvac-anomaly", fields);
+        return new CbrRecordSchema("hvac-anomaly", fields);
     }
 
-    public static CbrFeatureSchema safetyAlert() {
+    public static CbrRecordSchema safetyAlert() {
         var fields = new ArrayList<>(commonFields());
         fields.add(FeatureField.categorical("alertType"));
-        return new CbrFeatureSchema("safety-alert", fields);
+        return new CbrRecordSchema("safety-alert", fields);
     }
 
-    public static CbrFeatureSchema securityAlert() {
+    public static CbrRecordSchema securityAlert() {
         var fields = new ArrayList<>(commonFields());
         fields.add(FeatureField.categorical("entryPoint"));
-        return new CbrFeatureSchema("security-alert", fields);
+        return new CbrRecordSchema("security-alert", fields);
     }
 
-    public static CbrFeatureSchema genericResponse() {
-        return new CbrFeatureSchema("generic-response", commonFields());
+    public static CbrRecordSchema genericResponse() {
+        return new CbrRecordSchema("generic-response", commonFields());
     }
 
-    public static CbrFeatureSchema workItemOutcome() {
+    public static CbrRecordSchema workItemOutcome() {
         var fields = new ArrayList<>(commonFields());
         fields.add(FeatureField.categorical("caseType"));
         fields.add(FeatureField.categorical("workerName"));
         fields.add(FeatureField.categorical("priority"));
         fields.add(FeatureField.categorical("candidateGroups"));
-        return new CbrFeatureSchema("iot-work-item", fields);
+        return new CbrRecordSchema("iot-work-item", fields);
     }
 
-    public static CbrFeatureSchema situationDismissal() {
+    public static CbrRecordSchema situationDismissal() {
         var fields = new ArrayList<>(commonFields());
         fields.add(FeatureField.numeric("detectionConfidence", 0.0, 1.0,
                                         new SimilaritySpec.GaussianDecay(0.2)));
-        return new CbrFeatureSchema("iot-dismissal", fields);
+        return new CbrRecordSchema("iot-dismissal", fields);
     }
 
 

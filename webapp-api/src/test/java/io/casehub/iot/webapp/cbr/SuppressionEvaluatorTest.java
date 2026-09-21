@@ -1,10 +1,10 @@
 package io.casehub.iot.webapp.cbr;
 
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.neocortex.memory.cbr.CbrQuery;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
-import io.casehub.neocortex.memory.cbr.FeatureVectorCbrCase;
-import io.casehub.neocortex.memory.cbr.ScoredCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrFeatureRecord;
+import io.casehub.neocortex.memory.cbr.CbrMatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,12 +24,12 @@ import static org.mockito.Mockito.when;
 
 class SuppressionEvaluatorTest {
 
-    private CbrCaseMemoryStore store;
+    private CbrRecordStore store;
     private SuppressionEvaluator evaluator;
 
     @BeforeEach
     void setUp() {
-        store = mock(CbrCaseMemoryStore.class);
+        store = mock(CbrRecordStore.class);
         evaluator = new SuppressionEvaluator(store, SuppressionConfig.defaults());
     }
 
@@ -38,23 +38,23 @@ class SuppressionEvaluatorTest {
                 "hourOfDay", 14.0, "dayType", "weekday", "season", "summer");
     }
 
-    private List<ScoredCbrCase<FeatureVectorCbrCase>> mixedCases(
+    private List<CbrMatch<CbrFeatureRecord>> mixedCases(
             int total, int dismissed, double avgScore) {
-        var results = new ArrayList<ScoredCbrCase<FeatureVectorCbrCase>>();
+        var results = new ArrayList<CbrMatch<CbrFeatureRecord>>();
         for (int i = 0; i < total; i++) {
             String outcome = i < dismissed ? "dismissed" : "actioned";
-            var cbrCase = new FeatureVectorCbrCase(
+            var cbrCase = new CbrFeatureRecord(
                     "situation-dismissal", "n/a", outcome, null,
                     Map.of("deviceClass", FeatureValue.string("thermostat")),
                     null, null);
-            results.add(new ScoredCbrCase<>(cbrCase, "case-" + i, avgScore));
+            results.add(new CbrMatch<>(cbrCase, "case-" + i, avgScore));
         }
         return results;
     }
 
     @Test
     void assess_noSimilarCases_returnsNone() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(List.of());
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -66,7 +66,7 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_belowMinCases_returnsNone() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(mixedCases(3, 3, 1.0));
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -76,7 +76,7 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_highDismissalRate_returnsSuppressTier() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(mixedCases(10, 9, 0.8));
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -89,7 +89,7 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_moderateDismissalRate_returnsDemoteTier() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(mixedCases(10, 8, 0.7));
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -100,7 +100,7 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_lowDismissalRate_returnsAnnotateTier() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(mixedCases(10, 3, 0.6));
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -111,7 +111,7 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_zeroDismissals_returnsNone() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(mixedCases(10, 0, 0.7));
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -121,7 +121,7 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_exactlyAtFullThreshold_returnsSuppressTier() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(mixedCases(10, 9, 0.8));
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -131,7 +131,7 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_exactlyAtDemotionThreshold_returnsDemoteTier() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(mixedCases(10, 7, 0.7));
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -141,13 +141,13 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_queriesWithCorrectCaseType() {
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(List.of());
 
         evaluator.assess("motion-at-night", features(), "t1");
 
         var captor = ArgumentCaptor.forClass(CbrQuery.class);
-        verify(store).retrieveSimilar(captor.capture(), eq(FeatureVectorCbrCase.class));
+        verify(store).retrieveSimilar(captor.capture(), eq(CbrFeatureRecord.class));
         assertThat(captor.getValue().caseType()).isEqualTo("iot-dismissal:motion-at-night");
         assertThat(captor.getValue().topK()).isEqualTo(20);
         assertThat(captor.getValue().minSimilarity()).isEqualTo(0.5);
@@ -155,15 +155,15 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_averageSimilarity_computed() {
-        var cases = new ArrayList<ScoredCbrCase<FeatureVectorCbrCase>>();
+        var cases = new ArrayList<CbrMatch<CbrFeatureRecord>>();
         for (int i = 0; i < 5; i++) {
-            var cbrCase = new FeatureVectorCbrCase(
+            var cbrCase = new CbrFeatureRecord(
                     "situation-dismissal", "n/a", "dismissed", null,
                     Map.of("deviceClass", FeatureValue.string("thermostat")),
                     null, null);
-            cases.add(new ScoredCbrCase<>(cbrCase, "case-" + i, 0.6 + i * 0.05));
+            cases.add(new CbrMatch<>(cbrCase, "case-" + i, 0.6 + i * 0.05));
         }
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(cases);
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -173,22 +173,22 @@ class SuppressionEvaluatorTest {
 
     @Test
     void assess_overrideActionedCountsAsActioned() {
-        var cases = new ArrayList<ScoredCbrCase<FeatureVectorCbrCase>>();
+        var cases = new ArrayList<CbrMatch<CbrFeatureRecord>>();
         for (int i = 0; i < 5; i++) {
-            var cbrCase = new FeatureVectorCbrCase(
+            var cbrCase = new CbrFeatureRecord(
                     "situation-dismissal", "n/a", "dismissed", null,
                     Map.of("deviceClass", FeatureValue.string("thermostat")),
                     null, null);
-            cases.add(new ScoredCbrCase<>(cbrCase, "case-" + i, 0.8));
+            cases.add(new CbrMatch<>(cbrCase, "case-" + i, 0.8));
         }
         for (int i = 5; i < 10; i++) {
-            var cbrCase = new FeatureVectorCbrCase(
+            var cbrCase = new CbrFeatureRecord(
                     "situation-dismissal", "n/a", "override-actioned", null,
                     Map.of("deviceClass", FeatureValue.string("thermostat")),
                     null, null);
-            cases.add(new ScoredCbrCase<>(cbrCase, "case-" + i, 0.8));
+            cases.add(new CbrMatch<>(cbrCase, "case-" + i, 0.8));
         }
-        when(store.retrieveSimilar(any(), eq(FeatureVectorCbrCase.class)))
+        when(store.retrieveSimilar(any(), eq(CbrFeatureRecord.class)))
                 .thenReturn(cases);
 
         var result = evaluator.assess("temp-threshold", features(), "t1");
@@ -207,7 +207,7 @@ class SuppressionEvaluatorTest {
     @Test
     void constructor_nullConfigThrows() {
         assertThatNullPointerException()
-                .isThrownBy(() -> new SuppressionEvaluator(mock(CbrCaseMemoryStore.class), null));
+                .isThrownBy(() -> new SuppressionEvaluator(mock(CbrRecordStore.class), null));
     }
 
     @Test

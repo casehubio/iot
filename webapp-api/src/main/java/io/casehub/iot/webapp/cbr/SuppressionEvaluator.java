@@ -1,12 +1,12 @@
 package io.casehub.iot.webapp.cbr;
 
 import io.casehub.neocortex.memory.MemoryDomain;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.neocortex.memory.cbr.CbrQuery;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
-import io.casehub.neocortex.memory.cbr.FeatureVectorCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrFeatureRecord;
 import io.casehub.neocortex.memory.cbr.RetrievalMode;
-import io.casehub.neocortex.memory.cbr.ScoredCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrMatch;
 import io.casehub.platform.api.path.Path;
 
 import java.util.List;
@@ -15,10 +15,10 @@ import java.util.Objects;
 
 public class SuppressionEvaluator {
 
-    private final CbrCaseMemoryStore store;
+    private final CbrRecordStore store;
     private final SuppressionConfig config;
 
-    public SuppressionEvaluator(CbrCaseMemoryStore store, SuppressionConfig config) {
+    public SuppressionEvaluator(CbrRecordStore store, SuppressionConfig config) {
         this.store = Objects.requireNonNull(store, "store");
         this.config = Objects.requireNonNull(config, "config");
     }
@@ -36,8 +36,8 @@ public class SuppressionEvaluator {
                 .withMinSimilarity(config.minSimilarity())
                 .withRetrievalMode(RetrievalMode.FEATURE_ONLY);
 
-        List<ScoredCbrCase<FeatureVectorCbrCase>> results =
-                store.retrieveSimilar(query, FeatureVectorCbrCase.class);
+        List<CbrMatch<CbrFeatureRecord>> results =
+                store.retrieveSimilar(query, CbrFeatureRecord.class);
 
         if (results.isEmpty() || results.size() < config.minCases()) {
             return new SuppressionAssessment(SuppressionTier.NONE, 0.0,
@@ -47,7 +47,7 @@ public class SuppressionEvaluator {
         int dismissed = 0;
         double scoreSum = 0.0;
         for (var scored : results) {
-            if ("dismissed".equals(scored.cbrCase().outcome())) {
+            if ("dismissed".equals(scored.cbrRecord().outcome())) {
                 dismissed++;
             }
             scoreSum += scored.score();

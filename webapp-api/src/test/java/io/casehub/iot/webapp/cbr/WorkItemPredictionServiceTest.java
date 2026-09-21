@@ -3,16 +3,16 @@ package io.casehub.iot.webapp.cbr;
 import io.casehub.neocortex.memory.EraseRequest;
 import io.casehub.neocortex.memory.MemoryDomain;
 import io.casehub.neocortex.cognitive.Confidence;
-import io.casehub.neocortex.memory.cbr.CbrCase;
+import io.casehub.neocortex.memory.cbr.CbrRecord;
 import io.casehub.neocortex.memory.cbr.CbrFilter;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
-import io.casehub.neocortex.memory.cbr.CbrFeatureSchema;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordSchema;
 import io.casehub.neocortex.memory.cbr.CbrOutcome;
 import io.casehub.neocortex.memory.cbr.CbrQuery;
 import io.casehub.neocortex.memory.cbr.CbrRetentionPolicy;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
-import io.casehub.neocortex.memory.cbr.FeatureVectorCbrCase;
-import io.casehub.neocortex.memory.cbr.ScoredCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrFeatureRecord;
+import io.casehub.neocortex.memory.cbr.CbrMatch;
 import io.casehub.platform.api.path.Path;
 import org.junit.jupiter.api.Test;
 
@@ -129,7 +129,7 @@ class WorkItemPredictionServiceTest {
     @Test
     void confidence_scalesWithSampleSize() {
         var single = service(List.of(scoredCase(0.9, "COMPLETED", 120.0, "t")));
-        var many = new ArrayList<ScoredCbrCase<FeatureVectorCbrCase>>();
+        var many = new ArrayList<CbrMatch<CbrFeatureRecord>>();
         for (int i = 0; i < 16; i++) many.add(scoredCase(0.9, "COMPLETED", 120.0, "t"));
         var large = service(many);
 
@@ -142,35 +142,35 @@ class WorkItemPredictionServiceTest {
     // --- helpers ---
 
     private static WorkItemPredictionService service(
-            List<ScoredCbrCase<FeatureVectorCbrCase>> results) {
+            List<CbrMatch<CbrFeatureRecord>> results) {
         return new WorkItemPredictionService(new StubCbrStore(results), 20, 0.3);
     }
 
-    private static ScoredCbrCase<FeatureVectorCbrCase> scoredCase(
+    private static CbrMatch<CbrFeatureRecord> scoredCase(
             double score, String status, double durationMinutes, String assignee) {
         var featureMap = new LinkedHashMap<String, FeatureValue>();
         featureMap.put("terminalStatus", string(status));
         featureMap.put("resolutionDurationMinutes", number(durationMinutes));
         if (assignee != null) featureMap.put("resolvedBy", string(assignee));
-        var cbrCase = new FeatureVectorCbrCase(
+        var cbrCase = new CbrFeatureRecord(
                 "work item title", "resolution", status, Confidence.unknown(1.0), featureMap,
                 null, null);
-        return new ScoredCbrCase<>(cbrCase, "feature-vector", score);
+        return new CbrMatch<>(cbrCase, "feature-vector", score);
     }
 
     private record StubCbrStore(
-            List<ScoredCbrCase<FeatureVectorCbrCase>> results
-    ) implements CbrCaseMemoryStore {
+            List<CbrMatch<CbrFeatureRecord>> results
+    ) implements CbrRecordStore {
 
         @Override
         @SuppressWarnings("unchecked")
-        public <C extends CbrCase> List<ScoredCbrCase<C>> retrieveSimilar(
+        public <C extends CbrRecord> List<CbrMatch<C>> retrieveSimilar(
                 CbrQuery query, Class<C> caseType) {
-            return (List<ScoredCbrCase<C>>) (List<?>) results;
+            return (List<CbrMatch<C>>) (List<?>) results;
         }
 
-        @Override public void registerSchema(CbrFeatureSchema schema) {}
-        @Override public String store(CbrCase c, String ct, String eid,
+        @Override public void registerSchema(CbrRecordSchema schema) {}
+        @Override public String store(CbrRecord c, String ct, String eid,
                 MemoryDomain d, String tid, String cid, Path scope) { return "id"; }
         @Override public Integer erase(EraseRequest r) { return 0; }
         @Override public Integer eraseEntity(String eid, String tid) { return 0; }

@@ -1,12 +1,12 @@
 package io.casehub.iot.webapp.cbr;
 
 import io.casehub.neocortex.memory.MemoryDomain;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.neocortex.memory.cbr.CbrQuery;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
-import io.casehub.neocortex.memory.cbr.FeatureVectorCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrFeatureRecord;
 import io.casehub.neocortex.memory.cbr.RetrievalMode;
-import io.casehub.neocortex.memory.cbr.ScoredCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrMatch;
 import io.casehub.platform.api.path.Path;
 
 import java.time.Duration;
@@ -20,11 +20,11 @@ import java.util.Set;
 
 public class WorkItemPredictionService {
 
-    private final CbrCaseMemoryStore store;
+    private final CbrRecordStore store;
     private final int                topK;
     private final double             minSimilarity;
 
-    public WorkItemPredictionService(CbrCaseMemoryStore store, int topK, double minSimilarity) {
+    public WorkItemPredictionService(CbrRecordStore store, int topK, double minSimilarity) {
         this.store         = Objects.requireNonNull(store);
         this.topK          = topK;
         this.minSimilarity = minSimilarity;
@@ -39,13 +39,13 @@ public class WorkItemPredictionService {
         return sorted.get(lower) + fraction * (sorted.get(upper) - sorted.get(lower));
     }
 
-    private static String featureString(ScoredCbrCase<FeatureVectorCbrCase> scored, String key) {
-        FeatureValue fv = scored.cbrCase().features().get(key);
+    private static String featureString(CbrMatch<CbrFeatureRecord> scored, String key) {
+        FeatureValue fv = scored.cbrRecord().features().get(key);
         return fv instanceof FeatureValue.StringVal sv ? sv.value() : null;
     }
 
-    private static Double featureNumber(ScoredCbrCase<FeatureVectorCbrCase> scored, String key) {
-        FeatureValue fv = scored.cbrCase().features().get(key);
+    private static Double featureNumber(CbrMatch<CbrFeatureRecord> scored, String key) {
+        FeatureValue fv = scored.cbrRecord().features().get(key);
         return fv instanceof FeatureValue.NumberVal nv ? nv.value() : null;
     }
 
@@ -60,8 +60,8 @@ public class WorkItemPredictionService {
                                     ).withMinSimilarity(minSimilarity)
                                  .withRetrievalMode(RetrievalMode.FEATURE_ONLY);
 
-        List<ScoredCbrCase<FeatureVectorCbrCase>> results =
-                store.retrieveSimilar(query, FeatureVectorCbrCase.class);
+        List<CbrMatch<CbrFeatureRecord>> results =
+                store.retrieveSimilar(query, CbrFeatureRecord.class);
 
         if (results.isEmpty()) {
             return WorkItemPrediction.empty();
@@ -70,7 +70,7 @@ public class WorkItemPredictionService {
         return aggregate(results);
     }
 
-    private WorkItemPrediction aggregate(List<ScoredCbrCase<FeatureVectorCbrCase>> results) {
+    private WorkItemPrediction aggregate(List<CbrMatch<CbrFeatureRecord>> results) {
         int    sampleSize          = results.size();
         var    outcomeDistribution = computeOutcomeDistribution(results);
         var    resolutionTimes     = computeResolutionTimes(results);
@@ -87,7 +87,7 @@ public class WorkItemPredictionService {
     }
 
     private Map<String, Double> computeOutcomeDistribution(
-            List<ScoredCbrCase<FeatureVectorCbrCase>> results) {
+            List<CbrMatch<CbrFeatureRecord>> results) {
         Map<String, Double> weighted    = new LinkedHashMap<>();
         double              totalWeight = 0;
         for (var scored : results) {
@@ -104,7 +104,7 @@ public class WorkItemPredictionService {
     }
 
     private ResolutionTimes computeResolutionTimes(
-            List<ScoredCbrCase<FeatureVectorCbrCase>> results) {
+            List<CbrMatch<CbrFeatureRecord>> results) {
         List<Double> durations = results.stream()
                                         .filter(s -> "COMPLETED".equals(featureString(s, "terminalStatus")))
                                         .map(s -> featureNumber(s, "resolutionDurationMinutes"))
@@ -120,7 +120,7 @@ public class WorkItemPredictionService {
     }
 
     private List<WorkItemPrediction.AssigneeSuggestion> computeAssigneeRankings(
-            List<ScoredCbrCase<FeatureVectorCbrCase>> results) {
+            List<CbrMatch<CbrFeatureRecord>> results) {
 
         record AssigneeStats(int completed, int controllable, int total,
                              List<Double> completedDurations) {}
@@ -171,9 +171,9 @@ public class WorkItemPredictionService {
                          .toList();
     }
 
-    private double computeConfidence(List<ScoredCbrCase<FeatureVectorCbrCase>> results) {
+    private double computeConfidence(List<CbrMatch<CbrFeatureRecord>> results) {
         double meanScore = results.stream()
-                                  .mapToDouble(ScoredCbrCase::score).average().orElse(0);
+                                  .mapToDouble(CbrMatch::score).average().orElse(0);
         double sampleFactor = Math.min(1.0,
                                        Math.log(results.size() + 1) / Math.log(2) / 4.0);
         return meanScore * sampleFactor;

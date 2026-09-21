@@ -2,9 +2,9 @@ package io.casehub.iot.webapp.cbr;
 
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.neocortex.memory.MemoryDomain;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
-import io.casehub.neocortex.memory.cbr.FeatureVectorCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrFeatureRecord;
 import io.casehub.platform.api.path.Path;
 import io.casehub.ras.api.DetectionSignal;
 import io.casehub.ras.api.SituationContext;
@@ -19,10 +19,10 @@ public class DismissalRecorder {
 
     private static final MemoryDomain IOT_DOMAIN = new MemoryDomain("iot");
 
-    private final CbrCaseMemoryStore store;
+    private final CbrRecordStore store;
     private final DeviceRegistry deviceRegistry;
 
-    public DismissalRecorder(CbrCaseMemoryStore store, DeviceRegistry deviceRegistry) {
+    public DismissalRecorder(CbrRecordStore store, DeviceRegistry deviceRegistry) {
         this.store = Objects.requireNonNull(store, "store");
         this.deviceRegistry = Objects.requireNonNull(deviceRegistry, "deviceRegistry");
     }
@@ -71,7 +71,7 @@ public class DismissalRecorder {
     private void storeCase(String situationId, String correlationKey, String tenancyId,
                             Map<String, Object> rawFeatures, String problem, String outcome) {
         Map<String, FeatureValue> featureMap = FeatureValue.toFeatureMap(rawFeatures);
-        var cbrCase = new FeatureVectorCbrCase(problem, "operator-feedback", outcome, null, featureMap, null, null);
+        var cbrCase = new CbrFeatureRecord(problem, "operator-feedback", outcome, null, featureMap, null, null);
         String caseType = "iot-dismissal:" + situationId;
         store.store(cbrCase, caseType, correlationKey, IOT_DOMAIN, tenancyId,
                 UUID.randomUUID().toString(), Path.root());

@@ -22,6 +22,7 @@ import java.util.List;
 @Path("/api")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
+@io.casehub.platform.api.mcp.HandWrittenEndpoint("migrating to @McpDomain — pending #111 branch")
 public class KpiResource {
 
     @Inject DeviceRegistry deviceRegistry;

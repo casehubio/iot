@@ -17,8 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WorkItemOutcomeRecorderTest {
 
     @Test
-    void terminalStatus_storesCbrCase() {
-        var captured = new ArrayList<CbrCase>();
+    void terminalStatus_storesCbrRecord() {
+        var captured = new ArrayList<CbrRecord>();
         var store = captureStore(captured);
         var workItem = testWorkItem(WorkItemStatus.COMPLETED, "tech-1",
                 """
@@ -35,7 +35,7 @@ class WorkItemOutcomeRecorderTest {
 
     @Test
     void nonTerminalStatus_noOp() {
-        var captured = new ArrayList<CbrCase>();
+        var captured = new ArrayList<CbrRecord>();
         var recorder = recorder(captureStore(captured), null, enabledConfig());
 
         recorder.onStatusChange(new WorkItemStatusEvent(
@@ -48,7 +48,7 @@ class WorkItemOutcomeRecorderTest {
 
     @Test
     void disabledConfig_noOp() {
-        var captured = new ArrayList<CbrCase>();
+        var captured = new ArrayList<CbrRecord>();
         var workItem = testWorkItem(WorkItemStatus.COMPLETED, "tech-1", "{}");
         var recorder = recorder(captureStore(captured), workItem, disabledConfig());
 
@@ -59,7 +59,7 @@ class WorkItemOutcomeRecorderTest {
 
     @Test
     void payloadWithIoTContext_extractsDeviceClass() {
-        var captured = new ArrayList<CbrCase>();
+        var captured = new ArrayList<CbrRecord>();
         var workItem = testWorkItem(WorkItemStatus.COMPLETED, "tech-1",
                 """
                 {"caseId":"c1","caseType":"safety-alert","workerName":"human-review",
@@ -77,7 +77,7 @@ class WorkItemOutcomeRecorderTest {
 
     @Test
     void missingPayload_storesWithWorkItemOnlyFeatures() {
-        var captured = new ArrayList<CbrCase>();
+        var captured = new ArrayList<CbrRecord>();
         var workItem = testWorkItem(WorkItemStatus.COMPLETED, "tech-1", null);
         var recorder = recorder(captureStore(captured), workItem, enabledConfig());
 
@@ -91,7 +91,7 @@ class WorkItemOutcomeRecorderTest {
 
     @Test
     void solutionFallback_usesStatusNameWhenNoResolution() {
-        var captured = new ArrayList<CbrCase>();
+        var captured = new ArrayList<CbrRecord>();
         var workItem = testWorkItem(WorkItemStatus.CANCELLED, null, "{}", null);
         var recorder = recorder(captureStore(captured), workItem, enabledConfig());
 
@@ -105,7 +105,7 @@ class WorkItemOutcomeRecorderTest {
 
     // --- helpers ---
 
-    private static WorkItemOutcomeRecorder recorder(CbrCaseMemoryStore store,
+    private static WorkItemOutcomeRecorder recorder(CbrRecordStore store,
                                                      WorkItem workItem,
                                                      WorkItemCbrConfig config) {
         return new WorkItemOutcomeRecorder(store, id ->
@@ -153,16 +153,16 @@ class WorkItemOutcomeRecorderTest {
         };
     }
 
-    private static CbrCaseMemoryStore captureStore(List<CbrCase> captured) {
-        return new CbrCaseMemoryStore() {
+    private static CbrRecordStore captureStore(List<CbrRecord> captured) {
+        return new CbrRecordStore() {
             @Override
-            public String store(CbrCase c, String ct, String eid,
+            public String store(CbrRecord c, String ct, String eid,
                                 MemoryDomain d, String tid, String cid, Path scope) {
                 captured.add(c);
                 return "id";
             }
-            @Override public void registerSchema(CbrFeatureSchema schema) {}
-            @Override public <C extends CbrCase> List<ScoredCbrCase<C>> retrieveSimilar(
+            @Override public void registerSchema(CbrRecordSchema schema) {}
+            @Override public <C extends CbrRecord> List<CbrMatch<C>> retrieveSimilar(
                     CbrQuery query, Class<C> caseType) { return List.of(); }
             @Override public Integer erase(EraseRequest r) { return 0; }
             @Override public Integer eraseEntity(String eid, String tid) { return 0; }

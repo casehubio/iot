@@ -2,12 +2,12 @@ package io.casehub.iot.webapp.cbr;
 
 import io.casehub.api.model.cbr.CbrConfig;
 import io.casehub.neocortex.memory.MemoryDomain;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.neocortex.memory.cbr.CbrQuery;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
 // PlanCbrCase relocated from neocortex.memory.cbr to local package
 import io.casehub.neocortex.memory.cbr.RetrievalMode;
-import io.casehub.neocortex.memory.cbr.ScoredCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrMatch;
 
 import java.util.List;
 import java.util.Map;
@@ -15,9 +15,9 @@ import java.util.Objects;
 
 public class IoTCbrRetrievalService {
 
-    private final CbrCaseMemoryStore store;
+    private final CbrRecordStore store;
 
-    public IoTCbrRetrievalService(CbrCaseMemoryStore store) {
+    public IoTCbrRetrievalService(CbrRecordStore store) {
         this.store = Objects.requireNonNull(store, "store must not be null");
     }
 
@@ -50,12 +50,12 @@ public class IoTCbrRetrievalService {
                             java.time.Duration.ofDays(config.temporalDecayHalfLifeDays())));
         }
 
-        List<ScoredCbrCase<PlanCbrCase>> scored = store.retrieveSimilar(query, PlanCbrCase.class);
+        List<CbrMatch<PlanCbrCase>> scored = store.retrieveSimilar(query, PlanCbrCase.class);
         return scored.stream().map(this::toSuggestion).toList();
     }
 
-    private ResolutionSuggestion toSuggestion(ScoredCbrCase<PlanCbrCase> scored) {
-        PlanCbrCase c = scored.cbrCase();
+    private ResolutionSuggestion toSuggestion(CbrMatch<PlanCbrCase> scored) {
+        PlanCbrCase c = scored.cbrRecord();
         return new ResolutionSuggestion(
                 scored.caseId(),
                 scored.score(),

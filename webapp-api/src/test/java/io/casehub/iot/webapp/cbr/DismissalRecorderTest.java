@@ -3,9 +3,9 @@ package io.casehub.iot.webapp.cbr;
 import io.casehub.iot.api.DeviceClass;
 import io.casehub.iot.api.SwitchDevice;
 import io.casehub.iot.api.spi.DeviceRegistry;
-import io.casehub.neocortex.memory.cbr.CbrCase;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
-import io.casehub.neocortex.memory.cbr.FeatureVectorCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrRecord;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
+import io.casehub.neocortex.memory.cbr.CbrFeatureRecord;
 import io.casehub.ras.api.DetectionResult;
 import io.casehub.ras.api.DetectionSignal;
 import io.casehub.ras.api.SituationContext;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 
 class DismissalRecorderTest {
 
-    private CbrCaseMemoryStore store;
+    private CbrRecordStore store;
     private DeviceRegistry deviceRegistry;
     private DismissalRecorder recorder;
 
@@ -35,7 +35,7 @@ class DismissalRecorderTest {
 
     @BeforeEach
     void setUp() {
-        store = mock(CbrCaseMemoryStore.class);
+        store = mock(CbrRecordStore.class);
         deviceRegistry = mock(DeviceRegistry.class);
         recorder = new DismissalRecorder(store, deviceRegistry);
         when(store.store(any(), any(), any(), any(), any(), any(), any())).thenReturn("case-1");
@@ -66,11 +66,11 @@ class DismissalRecorderTest {
 
         recorder.recordDismissal("sit-1", "device/thermostat-1", "t1", context, "not actionable");
 
-        var caseCaptor = ArgumentCaptor.forClass(CbrCase.class);
+        var caseCaptor = ArgumentCaptor.forClass(CbrRecord.class);
         verify(store).store(caseCaptor.capture(), eq("iot-dismissal:sit-1"),
                 eq("device/thermostat-1"), any(), eq("t1"), any(), any());
 
-        var cbrCase = (FeatureVectorCbrCase) caseCaptor.getValue();
+        var cbrCase = (CbrFeatureRecord) caseCaptor.getValue();
         assertThat(cbrCase.outcome()).isEqualTo("dismissed");
         assertThat(cbrCase.problem()).contains("sit-1");
     }
@@ -82,10 +82,10 @@ class DismissalRecorderTest {
 
         recorder.recordDismissal("sit-1", "device/thermostat-1", "t1", context, null);
 
-        var caseCaptor = ArgumentCaptor.forClass(CbrCase.class);
+        var caseCaptor = ArgumentCaptor.forClass(CbrRecord.class);
         verify(store).store(caseCaptor.capture(), any(), any(), any(), any(), any(), any());
 
-        var cbrCase = (FeatureVectorCbrCase) caseCaptor.getValue();
+        var cbrCase = (CbrFeatureRecord) caseCaptor.getValue();
         assertThat(cbrCase.features()).containsKey("deviceClass");
         assertThat(cbrCase.features()).containsKey("roomType");
         assertThat(cbrCase.features()).containsKey("hourOfDay");
@@ -99,10 +99,10 @@ class DismissalRecorderTest {
 
         recorder.recordDismissal("sit-1", "device/thermostat-1", "t1", context, null);
 
-        var caseCaptor = ArgumentCaptor.forClass(CbrCase.class);
+        var caseCaptor = ArgumentCaptor.forClass(CbrRecord.class);
         verify(store).store(caseCaptor.capture(), any(), any(), any(), any(), any(), any());
 
-        var cbrCase = (FeatureVectorCbrCase) caseCaptor.getValue();
+        var cbrCase = (CbrFeatureRecord) caseCaptor.getValue();
         var rawFeatures = io.casehub.neocortex.memory.cbr.FeatureValue.toRawMap(cbrCase.features());
         assertThat((double) rawFeatures.get("detectionConfidence")).isEqualTo(0.8);
     }
@@ -113,11 +113,11 @@ class DismissalRecorderTest {
 
         recorder.recordDismissal("sit-1", "device/thermostat-1", "t1", null, "false alarm");
 
-        var caseCaptor = ArgumentCaptor.forClass(CbrCase.class);
+        var caseCaptor = ArgumentCaptor.forClass(CbrRecord.class);
         verify(store).store(caseCaptor.capture(), eq("iot-dismissal:sit-1"),
                 any(), any(), eq("t1"), any(), any());
 
-        var cbrCase = (FeatureVectorCbrCase) caseCaptor.getValue();
+        var cbrCase = (CbrFeatureRecord) caseCaptor.getValue();
         assertThat(cbrCase.outcome()).isEqualTo("dismissed");
         assertThat(cbrCase.features()).containsKey("deviceClass");
         assertThat(cbrCase.features()).containsKey("hourOfDay");
@@ -132,10 +132,10 @@ class DismissalRecorderTest {
 
         recorder.recordDismissal("sit-1", "device/thermostat-1", "t1", context, null);
 
-        var caseCaptor = ArgumentCaptor.forClass(CbrCase.class);
+        var caseCaptor = ArgumentCaptor.forClass(CbrRecord.class);
         verify(store).store(caseCaptor.capture(), any(), any(), any(), any(), any(), any());
 
-        var cbrCase = (FeatureVectorCbrCase) caseCaptor.getValue();
+        var cbrCase = (CbrFeatureRecord) caseCaptor.getValue();
         assertThat(cbrCase.features()).doesNotContainKey("deviceClass");
         assertThat(cbrCase.features()).doesNotContainKey("roomType");
         assertThat(cbrCase.features()).containsKey("hourOfDay");
@@ -148,11 +148,11 @@ class DismissalRecorderTest {
 
         recorder.recordCaseOutcome("sit-1", "device/thermostat-1", "t1", context, "actioned");
 
-        var caseCaptor = ArgumentCaptor.forClass(CbrCase.class);
+        var caseCaptor = ArgumentCaptor.forClass(CbrRecord.class);
         verify(store).store(caseCaptor.capture(), eq("iot-dismissal:sit-1"),
                 any(), any(), eq("t1"), any(), any());
 
-        var cbrCase = (FeatureVectorCbrCase) caseCaptor.getValue();
+        var cbrCase = (CbrFeatureRecord) caseCaptor.getValue();
         assertThat(cbrCase.outcome()).isEqualTo("actioned");
     }
 
@@ -163,10 +163,10 @@ class DismissalRecorderTest {
 
         recorder.recordCaseOutcome("sit-1", "device/thermostat-1", "t1", context, "override-actioned");
 
-        var caseCaptor = ArgumentCaptor.forClass(CbrCase.class);
+        var caseCaptor = ArgumentCaptor.forClass(CbrRecord.class);
         verify(store).store(caseCaptor.capture(), any(), any(), any(), any(), any(), any());
 
-        var cbrCase = (FeatureVectorCbrCase) caseCaptor.getValue();
+        var cbrCase = (CbrFeatureRecord) caseCaptor.getValue();
         assertThat(cbrCase.outcome()).isEqualTo("override-actioned");
     }
 

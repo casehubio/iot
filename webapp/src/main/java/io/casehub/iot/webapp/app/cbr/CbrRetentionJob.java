@@ -1,7 +1,7 @@
 package io.casehub.iot.webapp.app.cbr;
 
 import io.casehub.neocortex.memory.MemoryDomain;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.neocortex.memory.cbr.CbrRetentionPolicy;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -16,12 +16,12 @@ public class CbrRetentionJob {
     private static final MemoryDomain IOT_DOMAIN = new MemoryDomain("iot");
     private static final int LARGE_DELETE_THRESHOLD = 10_000;
 
-    private final CbrCaseMemoryStore store;
+    private final CbrRecordStore store;
     private final CbrRetentionConfig config;
     private final String tenantId;
 
     @Inject
-    public CbrRetentionJob(final CbrCaseMemoryStore store,
+    public CbrRetentionJob(final CbrRecordStore store,
                            final CbrRetentionConfig config,
                            @ConfigProperty(name = "casehub.iot.tenancy-id") final String tenantId) {
         this.store = store;

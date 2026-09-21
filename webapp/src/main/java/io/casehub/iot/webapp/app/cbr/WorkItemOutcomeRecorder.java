@@ -7,9 +7,9 @@ import io.casehub.engine.common.spi.cache.CaseInstanceCache;
 import io.casehub.iot.webapp.cbr.WorkItemContext;
 import io.casehub.iot.webapp.cbr.WorkItemFeatureExtractor;
 import io.casehub.neocortex.memory.MemoryDomain;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.casehub.neocortex.memory.cbr.FeatureValue;
-import io.casehub.neocortex.memory.cbr.FeatureVectorCbrCase;
+import io.casehub.neocortex.memory.cbr.CbrFeatureRecord;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkItemStatusEvent;
@@ -39,20 +39,20 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
             WorkItemStatus.OBSOLETE);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final CbrCaseMemoryStore                       store;
+    private final CbrRecordStore                       store;
     private final Function<UUID, Optional<WorkItem>> workItemLookup;
     private final CaseInstanceCache                        caseInstanceCache;
     private final WorkItemCbrConfig config;
 
     @Inject
-    public WorkItemOutcomeRecorder(CbrCaseMemoryStore store,
+    public WorkItemOutcomeRecorder(CbrRecordStore store,
                                     WorkItemService workItemService,
                                     CaseInstanceCache caseInstanceCache,
                                     WorkItemCbrConfig config) {
         this(store, workItemService::findById, caseInstanceCache, config);
     }
 
-    WorkItemOutcomeRecorder(CbrCaseMemoryStore store,
+    WorkItemOutcomeRecorder(CbrRecordStore store,
                              Function<UUID, Optional<WorkItem>> workItemLookup,
                              CaseInstanceCache caseInstanceCache,
                              WorkItemCbrConfig config) {
@@ -79,7 +79,7 @@ public class WorkItemOutcomeRecorder implements WorkItemObserver {
             String solution = coalesce(workItem.resolution(), event.outcome(),
                     event.detail(), event.status().name());
 
-            var cbrCase = new FeatureVectorCbrCase(
+            var cbrCase = new CbrFeatureRecord(
                     workItem.title() != null ? workItem.title() : "work-item",
                     solution,
                     event.status().name(),

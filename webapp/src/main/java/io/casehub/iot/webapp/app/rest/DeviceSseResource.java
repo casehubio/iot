@@ -25,6 +25,7 @@ import java.util.Map;
 
 @Path("/api/devices/stream")
 @ApplicationScoped
+@io.casehub.platform.api.mcp.HandWrittenEndpoint("SSE streaming — not representable via @McpDomain")
 public class DeviceSseResource {
 
     @Inject

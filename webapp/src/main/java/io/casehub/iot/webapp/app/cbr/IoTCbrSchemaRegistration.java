@@ -1,7 +1,7 @@
 package io.casehub.iot.webapp.app.cbr;
 
 import io.casehub.iot.webapp.cbr.IoTCbrFeatureSchemas;
-import io.casehub.neocortex.memory.cbr.CbrCaseMemoryStore;
+import io.casehub.neocortex.memory.cbr.CbrRecordStore;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -11,7 +11,7 @@ import jakarta.inject.Inject;
 public class IoTCbrSchemaRegistration {
 
     @Inject
-    CbrCaseMemoryStore cbrStore;
+    CbrRecordStore cbrStore;
 
     void onStartup(@Observes StartupEvent event) {
         cbrStore.registerSchema(IoTCbrFeatureSchemas.hvacAnomaly());
