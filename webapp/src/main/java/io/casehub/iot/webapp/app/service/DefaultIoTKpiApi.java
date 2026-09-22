@@ -1,4 +1,4 @@
-package io.casehub.iot.webapp.app.rest;
+package io.casehub.iot.webapp.app.service;
 
 import io.casehub.iot.api.IoTRoles;
 import io.casehub.iot.api.ProviderStatus;
@@ -7,26 +7,19 @@ import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.bridge.server.BridgeConnectionRegistry;
 import io.casehub.iot.webapp.rest.KpiMetric;
 import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PlatformQuery;
 import io.casehub.ras.api.SituationStore;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-
-import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 
 import java.util.List;
 
-@HandWrittenEndpoint("gap: no @McpDomain SPI — see platform#381")
-@Path("/api")
+@McpDomain(value = "iot/kpis", basePath = "/api")
 @ApplicationScoped
-@Produces(MediaType.APPLICATION_JSON)
-@io.casehub.platform.api.mcp.HandWrittenEndpoint("migrating to @McpDomain — pending #111 branch")
-public class KpiResource {
+public class DefaultIoTKpiApi {
 
     @Inject DeviceRegistry deviceRegistry;
     @Inject Instance<DeviceProvider> providers;
@@ -34,14 +27,10 @@ public class KpiResource {
     @Inject BridgeConnectionRegistry connectionRegistry;
     @Inject SituationStore situationStore;
 
-    @GET
-    @Path("/devices/kpi")
+    @PlatformQuery("Get device KPI metrics")
     @RolesAllowed(IoTRoles.VIEWER)
     public List<KpiMetric> deviceKpi() {
-        return deviceKpi(principal.tenancyId());
-    }
-
-    List<KpiMetric> deviceKpi(String tenancyId) {
+        var tenancyId = principal.tenancyId();
         var devices = deviceRegistry.findAll().stream()
                 .filter(d -> d.tenancyId().equals(tenancyId))
                 .toList();
@@ -55,34 +44,29 @@ public class KpiResource {
         String alertStatus = activeAlerts > 0 ? "warning" : "normal";
 
         return List.of(
-            new KpiMetric("total-devices", total, "Total Devices", null, "normal"),
-            new KpiMetric("online", online, "Online", null, onlineStatus),
-            new KpiMetric("providers", providerCount, "Providers", null, "normal"),
-            new KpiMetric("active-alerts", activeAlerts, "Active Alerts", null, alertStatus)
+                new KpiMetric("total-devices", total, "Total Devices", null, "normal"),
+                new KpiMetric("online", online, "Online", null, onlineStatus),
+                new KpiMetric("providers", providerCount, "Providers", null, "normal"),
+                new KpiMetric("active-alerts", activeAlerts, "Active Alerts", null, alertStatus)
         );
     }
 
-    @GET
-    @Path("/health/kpi")
+    @PlatformQuery("Get system health KPI metrics")
     @RolesAllowed(IoTRoles.VIEWER)
     public List<KpiMetric> healthKpi() {
-        // Provider and bridge status are global (not per-tenant) — a provider serves all tenants
         long connectedProviders = providers.stream()
                 .filter(p -> p.status() == ProviderStatus.CONNECTED)
                 .count();
         long bridgeConnections = connectionRegistry.connectedTenancies().size();
         long activeSituations = situationStore.findActive(principal.tenancyId()).size();
-        return healthKpi(connectedProviders, bridgeConnections, activeSituations);
-    }
 
-    List<KpiMetric> healthKpi(long connectedProviders, long bridgeConnections, long activeSituations) {
         String situationStatus = activeSituations > 0 ? "warning" : "normal";
 
         return List.of(
-            new KpiMetric("connected-providers", connectedProviders, "Connected Providers", null, "normal"),
-            new KpiMetric("bridge-connections", bridgeConnections, "Bridge Connections", null, "normal"),
-            new KpiMetric("active-situations", activeSituations, "Active Situations", null, situationStatus),
-            new KpiMetric("open-cases", 0L, "Open Cases", null, "normal")
+                new KpiMetric("connected-providers", connectedProviders, "Connected Providers", null, "normal"),
+                new KpiMetric("bridge-connections", bridgeConnections, "Bridge Connections", null, "normal"),
+                new KpiMetric("active-situations", activeSituations, "Active Situations", null, situationStatus),
+                new KpiMetric("open-cases", 0L, "Open Cases", null, "normal")
         );
     }
 }
