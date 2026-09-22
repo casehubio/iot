@@ -227,6 +227,30 @@ Response records are in `webapp-api` (`io.casehub.iot.webapp.resolution`).
 
 ---
 
+## Simulation API (webapp)
+
+`DefaultIoTSimulationApi` (`@McpDomain("iot/simulation")`) provides temporal simulation control — start, stop, speed adjustment, and status for temporal device event profiles. Operations are available via REST (`/api/simulation`), GraphQL, and MCP.
+
+| Operation | Type | Description |
+|-----------|------|-------------|
+| `start(profile, speed)` | Mutation | Start a named temporal profile at optional speed multiplier |
+| `stop()` | Mutation | Stop the active simulation |
+| `setSpeed(speed)` | Mutation | Change simulation speed |
+| `status()` | Query | Current simulation state, emitted/failure counts |
+| `profiles()` | Query | List available temporal profile names |
+
+Temporal profiles are defined in `simulation/temporal-profiles.yaml` and resolved by the platform `TemporalProfileRegistry`. The `SimulationPayloadConverter` translates map payloads to `StateChangeEvent` for PRESENCE_SENSOR, LIGHT, THERMOSTAT, and SENSOR device classes.
+
+## Scenario Runtime (webapp)
+
+The webapp includes Pages scenario infrastructure for guided demos. Bundled scenarios in `META-INF/scenarios/` are auto-discovered by the scenario library. Three scenarios are included: `morning-routine`, `emergency`, and `full-demo` (composite).
+
+Scenarios use `delivery: 'graphql'` steps to control the simulation API and `delivery: 'aria'` steps for browser-side UI verification (spotlighting panels, waiting for device state changes).
+
+The WebSocket `/push` endpoint provides real-time event push to the scenario controller.
+
+---
+
 ## Metrics and Health (webapp)
 
 The webapp module exposes Micrometer metrics via Prometheus and MicroProfile Health readiness checks.

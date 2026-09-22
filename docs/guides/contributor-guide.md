@@ -355,6 +355,25 @@ Constants: `DEFAULT_TENANT = "default-tenant"`, `EPOCH = Instant.parse("2026-01-
 
 `@ApplicationScoped` CDI bean. `publish(DeviceEntity before, DeviceEntity after, String providerId)` auto-derives `changedCapabilities` and fires via `Event.fireAsync()`. Returns `CompletionStage<StateChangeEvent>` for test synchronization.
 
+### IoTCorpusSeed (Simulation Corpus)
+
+`IoTCorpusSeed` seeds the platform `SimulationCorpus` for the `@SimulationEligible DeviceProvider` SPI, replacing hand-rolled `MockDeviceProvider` in integration tests.
+
+```java
+var config = MapSimulationConfig.builder()
+        .strategy("device-provider.discover", "sequential")
+        .strategy("device-provider.dispatch", "key-lookup")
+        .build();
+var runtime = new SimulationRuntime(config, new InMemorySimulationCorpus<>());
+IoTCorpusSeed.apply(runtime);
+```
+
+Two qualified names are seeded:
+- `device-provider.discover` — sequential strategy, returns `standard-home.yaml` fixture devices
+- `device-provider.dispatch` — key-lookup by `DeviceCommand.action()`, known actions return `SENT`, unknown returns `FAILED`
+
+The `keyExtractor()` method exposes `DeviceCommand::action` for reuse by custom test configurations.
+
 ---
 
 ## Configuration Reference
