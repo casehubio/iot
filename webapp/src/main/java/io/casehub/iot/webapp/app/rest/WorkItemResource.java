@@ -22,6 +22,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +44,7 @@ import java.util.UUID;
  * <p>TODO: Integrate with casehub-work's {@code WorkItemService} or equivalent API.
  * Current implementation is a placeholder until work APIs are available.
  */
+@HandWrittenEndpoint("gap: no @McpDomain SPI — see platform#381")
 @Path("/api/workitems")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)

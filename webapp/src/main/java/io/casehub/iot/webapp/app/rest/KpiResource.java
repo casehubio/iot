@@ -17,8 +17,11 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
+
 import java.util.List;
 
+@HandWrittenEndpoint("gap: no @McpDomain SPI — see platform#381")
 @Path("/api")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
