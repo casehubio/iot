@@ -3,6 +3,7 @@ package io.casehub.iot.webapp.app.rest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.iot.api.spi.DeviceRegistry;
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.casehub.iot.api.StateChangeEvent;
 import io.casehub.iot.webapp.rest.DeviceResponse;
 import io.casehub.platform.api.identity.CurrentPrincipal;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@HandWrittenEndpoint("SSE streaming endpoint")
 @Path("/api/devices/stream")
 @ApplicationScoped
 @io.casehub.platform.api.mcp.HandWrittenEndpoint("SSE streaming — not representable via @McpDomain")
