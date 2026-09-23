@@ -1462,8 +1462,8 @@ Not closed here: Drools integration for hybrid local automations (deployment top
 **Before:** Device abstraction, situation detection, and case descriptors exist as libraries; no operational interface.
 **After:** Standalone Quarkus application providing REST API, SSE streaming, and TypeScript dashboard pages.
 
-- **REST resources** — `DeviceResource` (list/detail), `DeviceSseResource` (SSE stream with per-client tenancy filtering), `ProviderResource` (status + per-provider refresh), `SituationResource`, `CaseResource`, `WorkItemResource`, `HealthResource`
-- **SSE streaming** — `BroadcastProcessor<DeviceResponse>` with per-client tenancy filtering captured at connection time (not at broadcast time — request scope is active in `stream()`, not in `@ObservesAsync`)
+- **REST resources** — `DeviceResource` (list/detail), `DefaultIoTDeviceApi.streamDevices()` (`@PlatformStream` SSE with per-client tenancy filtering), `ProviderResource` (status + per-provider refresh), `SituationResource`, `CaseResource`, `WorkItemResource`, `HealthResource`
+- **SSE streaming** — `BroadcastProcessor<DeviceResponse>` with per-client tenancy filtering captured at connection time via `@ContextParam("tenancyId")` (not at broadcast time — `@ObservesAsync` has no request scope)
 - **JPA persistence** — `IoTDeviceStateHistoryEntity` (device state change history), `IoTSituationDefinitionEntity` (tenant-scoped situation definition overrides with JSONB `SituationDefinition`)
 - **StateChangeHistoryObserver** — `@ObservesAsync StateChangeEvent` persists state change history for audit and replay
 - **JpaRuntimeSituationDefinitionProvider** — loads situation definitions from classpath YAML + database overrides per tenant; database definitions override classpath definitions by `situationId`

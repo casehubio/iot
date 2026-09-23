@@ -2,6 +2,7 @@ package io.casehub.iot.webapp.app.service;
 
 import io.casehub.iot.api.DeviceCommand;
 import io.casehub.iot.api.DeviceEntity;
+import io.casehub.iot.api.StateChangeEvent;
 import io.casehub.iot.api.spi.DeviceProvider;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.api.spi.DeviceStateHistoryProvider;
@@ -15,9 +16,15 @@ import io.casehub.platform.api.mcp.McpDomain;
 import io.casehub.platform.api.mcp.PathParam;
 import io.casehub.platform.api.mcp.PlatformMutation;
 import io.casehub.platform.api.mcp.PlatformQuery;
+import io.casehub.platform.api.mcp.PlatformStream;
 import io.casehub.platform.api.mcp.RestPath;
 import io.casehub.platform.api.mcp.RestStatus;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.ObservesAsync;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
@@ -35,6 +42,13 @@ public class DefaultIoTDeviceApi {
     @Inject Instance<DeviceProvider> providers;
     @Inject CurrentPrincipal principal;
     @Inject DeviceStateHistoryProvider historyProvider;
+    BroadcastProcessor<DeviceResponse> broadcaster;
+
+    @PostConstruct
+    void init() {
+        broadcaster = BroadcastProcessor.create();
+    }
+
 
     @PlatformQuery("List devices with optional filtering")
     @RestPath("/")
@@ -108,4 +122,31 @@ public class DefaultIoTDeviceApi {
                 d.deviceClass().name(), d.label(), d.location(),
                 d.available(), d.capabilities(), d.lastUpdated());
     }
+
+    @PlatformStream("Stream device state changes")
+    @RestPath("/stream")
+    @RolesAllowed("iot-viewer")
+    public Multi<DeviceStreamEvent> streamDevices(@ContextParam("tenancyId") String tenancyId) {
+        Multi<DeviceStreamEvent> snapshot = Multi.createFrom().item(() -> {
+            var devices = deviceRegistry.findAll().stream()
+                                        .filter(d -> d.tenancyId().equals(tenancyId))
+                                        .map(this::toDeviceResponse)
+                                        .toList();
+            return new DeviceStreamEvent("snapshot", devices);
+        });
+
+        Multi<DeviceStreamEvent> updates = broadcaster
+                                                   .filter(d -> d.tenancyId().equals(tenancyId))
+                                                   .map(d -> new DeviceStreamEvent("replace", List.of(d)));
+
+        return Multi.createBy().merging().streams(snapshot, updates);
+    }
+
+    void onStateChange(@ObservesAsync StateChangeEvent event) {
+        var device = event.after();
+        broadcaster.onNext(toDeviceResponse(device));
+    }
+
+
+    public record DeviceStreamEvent(String operation, List<DeviceResponse> data) {}
 }

@@ -199,7 +199,7 @@ Implemented by `JpaDeviceStateHistoryProvider` in the webapp module. Not availab
 
 ## SSE Device Status Streaming
 
-`DeviceSseResource` in the webapp module (`GET /api/devices/stream`) produces `SERVER_SENT_EVENTS`. Sends an initial "snapshot" operation with all devices, then streams "replace" operations on state changes. Filters by tenancy ID via `CurrentPrincipal`.
+`DefaultIoTDeviceApi.streamDevices()` (`@PlatformStream`, `GET /api/devices/stream`) produces `SERVER_SENT_EVENTS`. Sends an initial "snapshot" `DeviceStreamEvent` with all devices, then streams "replace" events on state changes. Filters by tenancy ID via `@ContextParam`.
 
 ---
 
