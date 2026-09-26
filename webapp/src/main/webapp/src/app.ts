@@ -1,4 +1,6 @@
 import { page, sidebar, dataset } from "@casehubio/pages-ui";
+import { registerPanel } from "@casehubio/pages-runtime";
+import '@casehubio/pages-ui-components/event-trail';
 import "@casehubio/blocks-ui-kpi-metric-row";
 import "@casehubio/blocks-ui-work-item-detail";
 import "@casehubio/blocks-ui-detail-pane";
@@ -32,6 +34,8 @@ dataset("workitems", "/api/workitems");
 dataset("health", "/api/health/overview");
 dataset("audit", "/api/bridge/audit");
 dataset("bridge-connections", "/api/bridge/connections");
+
+registerPanel("event-trail", "pages-event-trail");
 
 // Build the application shell
 const app = page("IoT Console",
