@@ -47,6 +47,9 @@ mvn --batch-mode install
 
 # Publish to GitHub Packages (CI only — requires GITHUB_TOKEN)
 mvn --batch-mode deploy -DskipTests
+
+# Run frontend tests (webapp TypeScript)
+cd webapp/src/main/webapp && yarn test
 ```
 
 ## Module Structure

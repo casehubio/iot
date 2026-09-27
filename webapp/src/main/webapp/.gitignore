@@ -4,3 +4,5 @@ dist
 *.log
 package-lock.json
 .casehub-packages/
+.yarn/install-state.gz
+.yarn/unplugged/

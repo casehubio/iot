@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build"
+    "build": "tsc && vite build",
+    "test": "vitest run"
   },
   "dependencies": {
     "@casehubio/pages-component": "*",
@@ -25,10 +26,42 @@
     "@casehubio/blocks-ui-core": "portal:./.casehub-packages/packages/blocks-ui-core",
     "@casehubio/blocks-ui-kpi-metric-row": "portal:./.casehub-packages/packages/kpi-metric-row",
     "@casehubio/blocks-ui-work-item-detail": "portal:./.casehub-packages/packages/work-item-detail",
-    "@casehubio/blocks-ui-detail-pane": "portal:./.casehub-packages/packages/detail-pane"
+    "@casehubio/blocks-ui-detail-pane": "portal:./.casehub-packages/packages/detail-pane",
+    "@casehubio/pages-schema": "portal:./.casehub-packages/packages/pages-schema",
+    "@casehubio/yaml-core": "portal:./.casehub-packages/packages/yaml-core",
+    "@casehubio/pages-property-palette": "portal:./.casehub-packages/packages/pages-property-palette",
+    "@casehubio/pages-filter-bar": "portal:./.casehub-packages/packages/pages-filter-bar",
+    "@casehubio/pages-code-editor": "portal:./.casehub-packages/packages/pages-code-editor",
+    "@casehubio/pages-document": "portal:./.casehub-packages/packages/pages-document",
+    "@casehubio/pages-diagram-core": "portal:./.casehub-packages/packages/pages-diagram-core",
+    "@casehubio/pages-diagram-palette": "portal:./.casehub-packages/packages/pages-diagram-palette",
+    "@casehubio/pages-iframe-api": "portal:./.casehub-packages/packages/pages-iframe-api",
+    "@casehubio/pages-lsp": "portal:./.casehub-packages/packages/pages-lsp",
+    "@casehubio/graph-core": "portal:./.casehub-packages/packages/graph-core",
+    "@casehubio/graph-renderer": "portal:./.casehub-packages/packages/graph-renderer",
+    "@casehubio/graph-stencil-case": "portal:./.casehub-packages/packages/graph-stencil-case",
+    "@casehubio/graph-stencil-htn": "portal:./.casehub-packages/packages/graph-stencil-htn",
+    "@casehubio/graph-stencil-swf": "portal:./.casehub-packages/packages/graph-stencil-swf",
+    "@casehubio/graph-work-registry": "portal:./.casehub-packages/packages/graph-work-registry",
+    "@casehubio/blocks-ui-blocks-timeline": "portal:./.casehub-packages/packages/blocks-timeline",
+    "@casehubio/blocks-ui-casehub-diagram": "portal:./.casehub-packages/packages/casehub-diagram",
+    "@casehubio/blocks-ui-commitment-viz": "portal:./.casehub-packages/packages/commitment-viz",
+    "@casehubio/blocks-ui-execution-monitor": "portal:./.casehub-packages/packages/execution-monitor",
+    "@casehubio/blocks-ui-list-pane": "portal:./.casehub-packages/packages/list-pane",
+    "@casehubio/blocks-ui-routing-rationale": "portal:./.casehub-packages/packages/routing-rationale",
+    "@casehubio/blocks-ui-session-detail": "portal:./.casehub-packages/packages/session-detail",
+    "@casehubio/blocks-ui-session-list": "portal:./.casehub-packages/packages/session-list",
+    "@casehubio/blocks-ui-sla-indicator": "portal:./.casehub-packages/packages/sla-indicator",
+    "@casehubio/blocks-ui-swf-diagram": "portal:./.casehub-packages/packages/swf-diagram",
+    "@casehubio/blocks-ui-trust-feedback-display": "portal:./.casehub-packages/packages/trust-feedback-display",
+    "@casehubio/blocks-ui-trust-score-panel": "portal:./.casehub-packages/packages/trust-score-panel",
+    "@casehubio/blocks-ui-work-item-inbox": "portal:./.casehub-packages/packages/work-item-inbox"
   },
   "devDependencies": {
+    "jsdom": "^26.1",
+    "lit": "^3.3",
     "typescript": "^5.4",
-    "vite": "^5.0"
+    "vite": "^5.0",
+    "vitest": "^3.1"
   }
 }
