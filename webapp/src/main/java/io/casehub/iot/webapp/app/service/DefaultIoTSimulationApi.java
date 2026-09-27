@@ -48,7 +48,7 @@ public class DefaultIoTSimulationApi {
         lock.lock();
         try {
             if (activeDriver != null) {
-                var state = activeDriver.state();
+                var state = activeDriver.lifecycle().currentState();
                 if (state == TemporalSimulationDriver.State.RUNNING
                     || state == TemporalSimulationDriver.State.PAUSED) {
                     throw new IllegalStateException(
@@ -139,7 +139,7 @@ public class DefaultIoTSimulationApi {
         var result = activeDriver.lastResult();
         return new SimulationStatus(
                 activeProfileName,
-                activeDriver.state().name(),
+                activeDriver.lifecycle().currentState().name(),
                 activeDriver.speed(),
                 result != null ? result.emittedCount() : 0,
                 result != null ? result.failureCount() : 0);

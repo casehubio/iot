@@ -37,7 +37,7 @@ class IoTSimulationBeansTest {
 
         assertThat(received).hasSize(1);
         assertThat(received.get(0).after().deviceId()).isEqualTo("sw1");
-        assertThat(driver.state()).isEqualTo(TemporalSimulationDriver.State.COMPLETED);
+        assertThat(driver.lifecycle().currentState()).isEqualTo(TemporalSimulationDriver.State.COMPLETED);
     }
 
     @Test
