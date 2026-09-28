@@ -1,27 +1,29 @@
 import { page, rows, tabs, panel, table, columns, selector, datePicker, lookup, groupBy, col, sortBy, hostPanel } from "@casehubio/pages-ui";
 import { renderAuditDetail, auditRowKey } from "../renderers/audit-detail.js";
+import "../filters/audit-filter-sync.js";
 
 export function auditPage() {
   return page("Audit",
     rows(
+      columns([2, 2, 2, 6],
+        [selector({
+          title: "Event Type",
+          filter: { enabled: true, group: "audit" },
+          lookup: lookup("audit", groupBy("eventType", col("eventType"))),
+          subtype: "dropdown",
+        })],
+        [selector({
+          title: "Device",
+          filter: { enabled: true, group: "audit" },
+          lookup: lookup("audit", groupBy("deviceId", col("deviceId"))),
+          subtype: "dropdown",
+        })],
+        [datePicker({ field: "dateFrom", label: "From Date" })],
+        [datePicker({ field: "dateTo", label: "To Date" })],
+      ),
+
       tabs(
         ["Table",
-          columns([2, 2, 2, 6],
-            [selector({
-              title: "Event Type",
-              filter: { enabled: true, group: "audit" },
-              lookup: lookup("audit", groupBy("eventType", col("eventType"))),
-              subtype: "dropdown",
-            })],
-            [selector({
-              title: "Device",
-              filter: { enabled: true, group: "audit" },
-              lookup: lookup("audit", groupBy("deviceId", col("deviceId"))),
-              subtype: "dropdown",
-            })],
-            [datePicker({ field: "dateFrom", label: "From Date" })],
-            [datePicker({ field: "dateTo", label: "To Date" })],
-          ),
           panel("Audit Trail", table({
             title: "Event History",
             sortable: true,
