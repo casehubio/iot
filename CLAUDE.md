@@ -60,6 +60,7 @@ cd webapp/src/main/webapp && yarn test
 | `homeassistant` | `casehub-iot-homeassistant` | Home Assistant provider (REST + WebSocket) and HA supplement types |
 | `openhab` | `casehub-iot-openhab` | OpenHAB provider (REST + SSE, semantic model) and OpenHAB supplement types |
 | `testing` | `casehub-iot-testing` | MockDeviceProvider, fixture devices (Java `Fixtures` + YAML `DeviceFixtureLoader`), `DeviceTypeHandler` SPI, StateChangeEventPublisher, `IoTCorpusSeed` (platform simulation corpus seeder for `@SimulationEligible DeviceProvider`) — test scope only |
+| `desiredstate` | `casehub-iot-desiredstate` | Bridges `casehub-desiredstate` runtime to IoT device operations. Implements `NodeProvisioner`, `GoalCompiler<IoTGoals>`, `ActualStateAdapter`, `FaultPolicy`, and `EventSource`. YAML goal format for declaring desired device state. Library — add as dependency to any Quarkus app using IoT desired state convergence. |
 | `bridge-persistence-jpa` | `casehub-iot-bridge-persistence-jpa` | JPA-backed `BridgeAuditStore` — PostgreSQL with JSONB message storage, Flyway migrations, optional `@Scheduled` retention purge |
 | `bridge-persistence-memory` | `casehub-iot-bridge-persistence-memory` | In-memory bounded ring buffer `BridgeAuditStore` — `@Alternative @Priority(100)`, for Pi and test isolation |
 | `bridge` | `casehub-iot-bridge` | Local bridge agent (standalone Quarkus app) — event relay with CDI-discovered filter chain, WebSocket cloud client, command dispatch |

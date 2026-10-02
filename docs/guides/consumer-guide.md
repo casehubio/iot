@@ -26,6 +26,7 @@ Consumer-relevant modules -- what to depend on and why:
 | `api` | `casehub-iot-api` | Always. Core SPIs, device class hierarchy, `StateChangeEvent`, `DeviceCommand`, `CommandResult`, `IoTCloudEventAdapter`, `IoTCommandAuditEvent`, `IoTSituationEvent` (subscription engine integration), enums. |
 | `bridge-server` | `casehub-iot-bridge-server` | Cloud apps consuming remote (bridged) devices. `BridgeDeviceProvider implements DeviceProvider` -- remote devices look local. |
 | `mcp` | `casehub-iot-mcp` | LLM agent device access. Add with `quarkus-mcp-server-http` for `iot_get_devices`, `iot_get_state`, `iot_send_command`, `iot_get_history` tools. |
+| `desiredstate` | `casehub-iot-desiredstate` | Desired state convergence for IoT devices. Compile YAML goals to a `DesiredStateGraph`, compare actual vs desired, dispatch commands to converge. Add when your app manages IoT device configurations declaratively. |
 | `testing` | `casehub-iot-testing` | Test scope only. `MockDeviceProvider`, `MockDeviceRegistry`, fixture devices (Java + YAML), `StateChangeEventPublisher`. |
 
 ---
