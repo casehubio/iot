@@ -18,6 +18,9 @@ import { casesPage } from "./pages/cases";
 import { workItemsPage } from "./pages/workitems";
 import { auditPage } from "./pages/audit";
 import { providersPage } from "./pages/providers";
+import { topologyPage } from "./pages/topology";
+import "./components/topology-tree";
+import "./components/topology-graph";
 
 // Define all datasets
 dataset("devices", "/api/devices");
@@ -34,6 +37,8 @@ dataset("workitems", "/api/workitems");
 dataset("health", "/api/health/overview");
 dataset("audit", "/api/bridge/audit");
 dataset("bridge-connections", "/api/bridge/connections");
+dataset("topology", "/api/topology");
+dataset("topology-events", "sse://api/topology/stream");
 
 registerPanel("event-trail", "pages-event-trail");
 
@@ -42,6 +47,7 @@ const app = page("IoT Console",
   sidebar(
     ["Health", healthPage()],
     ["Devices", devicesPage()],
+    ["Topology", topologyPage()],
     ["Situations", situationsPage()],
     ["Cases", casesPage()],
     ["Work Items", workItemsPage()],

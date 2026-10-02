@@ -47,6 +47,13 @@
             <artifactId>casehub-iot-bridge-persistence-jpa</artifactId>
         </dependency>
 
+        <!-- Desired state (optional — topology assembler references drift types) -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-desiredstate-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- RAS -->
         <dependency>
             <groupId>io.casehub</groupId>

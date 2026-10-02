@@ -204,6 +204,38 @@ Implemented by `JpaDeviceStateHistoryProvider` in the webapp module. Not availab
 
 ---
 
+## Topology API (webapp)
+
+`DefaultIoTTopologyApi` (`@McpDomain("iot/topology")`) provides a device topology view combining spatial hierarchy, desired state drift status, and dependency edges from `DesiredStateGraph`.
+
+### GET /api/topology
+
+Returns `TopologyResponse` with:
+- `nodes` -- `List<TopologyNode>` -- devices with `deviceId`, `label`, `deviceClass`, `locationPath` (parsed from `DeviceEntity.location()` by splitting on `/`), `available`, `lastUpdated`, `driftStatus`, `driftDetail`
+- `edges` -- `List<TopologyEdge>` -- directed dependency edges derived from `DesiredStateGraph` ordering dependencies (`sourceDeviceId` -> `targetDeviceId`)
+- `locationAggregates` -- `Map<String, TopologyAggregate>` -- per-location-subtree counts by drift status
+
+### DriftStatus values
+
+| Value | Meaning |
+|-------|---------|
+| `CONVERGED` | Actual matches desired (NodeStatus.PRESENT) |
+| `PERMITTED_DRIFT` | Drifted but policy allows it (DriftDecision.Exempt) |
+| `UNEXPECTED_DRIFT` | Drifted and policy requires reconciliation |
+| `ABSENT` | Expected device missing (NodeStatus.ABSENT) |
+| `UNKNOWN` | State unknown or suspended |
+| `UNMONITORED` | No desired state declared for this device |
+
+### SSE Stream: GET /api/topology/stream
+
+Server-sent events for live topology updates. Sends an initial `snapshot` event with all nodes, then `update` events when device state changes. Requires `iot-viewer` role.
+
+The `desiredstate` module is optional -- when absent, all devices appear as `UNMONITORED` with no edges.
+
+View model records are in `webapp-api` (`io.casehub.iot.webapp.rest`).
+
+---
+
 ## AI Resolution Queue Endpoints
 
 `ResolutionQueueResource` in the webapp module exposes the AI resolution pipeline. Both endpoints require `iot-viewer` role and filter by tenancy.
