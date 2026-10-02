@@ -26,6 +26,7 @@ Consumer-relevant modules -- what to depend on and why:
 | `api` | `casehub-iot-api` | Always. Core SPIs, device class hierarchy, `StateChangeEvent`, `DeviceCommand`, `CommandResult`, `IoTCloudEventAdapter`, `IoTCommandAuditEvent`, `IoTSituationEvent` (subscription engine integration), enums. |
 | `bridge-server` | `casehub-iot-bridge-server` | Cloud apps consuming remote (bridged) devices. `BridgeDeviceProvider implements DeviceProvider` -- remote devices look local. |
 | `mcp` | `casehub-iot-mcp` | LLM agent device access. Add with `quarkus-mcp-server-http` for `iot_get_devices`, `iot_get_state`, `iot_send_command`, `iot_get_history` tools. |
+| `scenario` | `casehub-iot-scenario` | Scenario orchestration plugins for IoT devices. `iot.command` dispatches device commands, `iot.state` reads device state, `IoTDeviceVariableSource` exposes `${device.*}` in YAML conditions. Add when your app uses the platform YAML scenario engine for device orchestration. |
 | `desiredstate` | `casehub-iot-desiredstate` | Desired state convergence for IoT devices. Compile YAML goals to a `DesiredStateGraph`, compare actual vs desired, dispatch commands to converge. Add when your app manages IoT device configurations declaratively. |
 | `testing` | `casehub-iot-testing` | Test scope only. `MockDeviceProvider`, `MockDeviceRegistry`, fixture devices (Java + YAML), `StateChangeEventPublisher`. |
 
@@ -454,6 +455,68 @@ Both providers use `@LookupIfProperty(name = "casehub.iot.<provider>.enabled", s
 ## Dependencies
 
 `casehub-iot-api` depends on `casehub-platform-api` (shared vocabulary + CloudEvents SDK). Jackson annotations for `DeviceTypeIdResolver` polymorphic serialization (iot#5) -- `api` includes `quarkus-jackson` as a compile dependency. Provider modules depend on Quarkus REST Client, Jackson, and WebSocket/SSE extensions.
+
+---
+
+## Scenario Orchestration
+
+The `casehub-iot-scenario` module provides plugins for the platform YAML scenario engine, enabling device orchestration using the full set of concurrency primitives: parallel fan-out, barriers, quorums, conditional routing, compensation, and state machines.
+
+### Dependency
+
+```xml
+<dependency>
+    <groupId>io.casehub</groupId>
+    <artifactId>casehub-iot-scenario</artifactId>
+</dependency>
+```
+
+### iot.command — dispatch device commands
+
+```yaml
+- iot.command:
+    device: lock-front
+    action: lock
+    params:
+      force: true
+    correlation-id: my-custom-id   # optional
+```
+
+Returns `result: SENT` on success with `device`, `action`, and `correlationId` in the step output. Fails with a message on FAILED or TIMEOUT.
+
+### iot.state — read device state
+
+```yaml
+- step: check-lock
+  iot.state:
+    device: lock-front
+```
+
+Result accessible as `${result.check-lock.capabilities.isLocked}`.
+
+### Device state in conditions
+
+`IoTDeviceVariableSource` exposes live device state via the `device` prefix:
+
+```yaml
+- if: ${device.lock-front.capabilities.isLocked}
+  then:
+  - iot.command: { device: alarm-1, action: arm }
+```
+
+Available paths: `${device.<id>}`, `${device.<id>.capabilities}`, `${device.<id>.capabilities.<key>}`, `${device.<id>.deviceClass}`, `${device.<id>.providerId}`.
+
+### Bundled scenarios
+
+Five orchestration scenarios ship in `META-INF/scenarios/`:
+
+| Scenario | Primitives |
+|----------|-----------|
+| `arm-security` | parallel, quorum, try/catch compensation |
+| `emergency-response` | if/else, parallel fan-out |
+| `nighttime-mode` | match (pattern routing) |
+| `hvac-cascade` | select (channel/signal race) |
+| `occupancy-driven` | state machine transitions |
 
 ---
 

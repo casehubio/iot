@@ -1,0 +1,29 @@
+scenario: nighttime-mode
+meta:
+  title: Nighttime Mode
+  description: Adjust devices based on occupancy pattern.
+  area: iot
+  labels: [orchestration, comfort]
+
+sections:
+  - title: Set Nighttime Mode
+    steps:
+      - step: check-occupancy
+        iot.state: { device: presence-front-1 }
+      - match: ${device.presence-front-1.capabilities.occupancyMode}
+        cases:
+        - pattern: "home"
+          steps:
+          - parallel:
+            - iot.command: { device: light-living-1, action: turn_off }
+            - iot.command: { device: light-bedroom-1, action: set_brightness, params: { brightness: 30 } }
+            - iot.command: { device: thermostat-1, action: set_temperature, params: { temperature: 18, unit: CELSIUS } }
+        - pattern: "away"
+          steps:
+          - parallel:
+            - iot.command: { device: light-living-1, action: turn_off }
+            - iot.command: { device: light-bedroom-1, action: turn_off }
+            - iot.command: { device: thermostat-1, action: set_temperature, params: { temperature: 15, unit: CELSIUS } }
+          - iot.command: { device: alarm-1, action: arm }
+        - default:
+          - iot.command: { device: light-living-1, action: turn_off }

@@ -1,0 +1,37 @@
+scenario: arm-security
+meta:
+  title: Arm Security System
+  description: Lock all doors (quorum 2-of-3), then arm alarm. Compensate on failure.
+  area: iot
+  labels: [orchestration, security]
+
+sections:
+  - title: Lock & Arm
+    steps:
+      - try:
+        - parallel:
+          - step: lock-front
+            iot.command: { device: lock-front, action: lock }
+          - step: lock-back
+            iot.command: { device: lock-back, action: lock }
+          - step: lock-garage
+            iot.command: { device: lock-garage, action: lock }
+        - quorum:
+            required: 2
+            of: [lock-front, lock-back, lock-garage]
+            timeout: 30s
+        - step: arm-alarm
+          iot.command: { device: alarm-1, action: arm }
+        catch:
+        - iot.command:
+            device: lock-front
+            action: unlock
+          if: ${result.lock-front.result == 'SENT'}
+        - iot.command:
+            device: lock-back
+            action: unlock
+          if: ${result.lock-back.result == 'SENT'}
+        - iot.command:
+            device: lock-garage
+            action: unlock
+          if: ${result.lock-garage.result == 'SENT'}

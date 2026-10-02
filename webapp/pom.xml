@@ -47,6 +47,12 @@
             <artifactId>casehub-iot-bridge-persistence-jpa</artifactId>
         </dependency>
 
+        <!-- Scenario orchestration -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-scenario</artifactId>
+        </dependency>
+
         <!-- Desired state (optional — topology assembler references drift types) -->
         <dependency>
             <groupId>io.casehub</groupId>

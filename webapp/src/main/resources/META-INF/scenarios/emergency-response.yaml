@@ -1,0 +1,23 @@
+scenario: emergency-response
+meta:
+  title: Emergency Response
+  description: Conditional device orchestration based on sensor state.
+  area: iot
+  labels: [orchestration, emergency]
+
+sections:
+  - title: Assess & Respond
+    steps:
+      - step: assess
+        iot.state: { device: sensor-smoke-1 }
+      - if: ${device.sensor-smoke-1.capabilities.smokeDetected}
+        then:
+        - parallel:
+          - iot.command: { device: lock-front, action: unlock }
+          - iot.command: { device: lock-back, action: unlock }
+          - iot.command: { device: light-hallway-1, action: turn_on }
+          - iot.command: { device: alarm-1, action: sound_alarm }
+        else:
+        - if: ${device.presence-front-1.capabilities.presenceDetected}
+          then:
+          - iot.command: { device: light-front-1, action: turn_on }

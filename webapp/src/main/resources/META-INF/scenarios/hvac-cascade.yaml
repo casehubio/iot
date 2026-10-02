@@ -1,0 +1,40 @@
+scenario: hvac-cascade
+meta:
+  title: HVAC Cascade Response
+  description: React to temperature threshold events via channel select.
+  area: iot
+  labels: [orchestration, hvac]
+
+orchestration:
+  channels:
+    temp-alerts: { capacity: 10 }
+  signals: [emergency-temp]
+
+sections:
+  - title: Monitor & Respond
+    steps:
+      - select:
+        - subscribe:
+            channel: temp-alerts
+          steps:
+          - match: ${channel.severity}
+            cases:
+            - pattern: "warning"
+              steps:
+              - iot.command:
+                  device: thermostat-1
+                  action: set_temperature
+                  params: { temperature: 20, unit: CELSIUS }
+            - pattern: "critical"
+              steps:
+              - parallel:
+                - iot.command: { device: thermostat-1, action: set_temperature, params: { temperature: 18, unit: CELSIUS } }
+                - iot.command: { device: fan-1, action: turn_on, params: { speed: high } }
+            - default:
+              steps: []
+        - wait: emergency-temp
+          steps:
+          - parallel:
+            - iot.command: { device: thermostat-1, action: turn_off }
+            - iot.command: { device: fan-1, action: turn_on, params: { speed: max } }
+            - iot.command: { device: alarm-1, action: sound_alarm }

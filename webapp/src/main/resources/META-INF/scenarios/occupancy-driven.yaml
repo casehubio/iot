@@ -1,0 +1,40 @@
+scenario: occupancy-driven
+meta:
+  title: Occupancy-Driven Automation
+  description: State machine-driven device orchestration based on occupancy transitions.
+  area: iot
+  labels: [orchestration, occupancy]
+
+orchestration:
+  machines:
+    occupancy:
+      initial: home
+      states: [home, away, vacation]
+
+sections:
+  - title: Transition to Away
+    steps:
+      - step: depart
+        iot.state: { device: presence-front-1 }
+        transition:
+          machine: occupancy
+          to: away
+        if: ${not device.presence-front-1.capabilities.presenceDetected}
+      - parallel:
+        - iot.command: { device: light-living-1, action: turn_off }
+        - iot.command: { device: light-kitchen-1, action: turn_off }
+        - iot.command: { device: thermostat-1, action: set_temperature, params: { temperature: 16, unit: CELSIUS } }
+      - iot.command: { device: alarm-1, action: arm }
+
+  - title: Transition to Home
+    steps:
+      - step: arrive
+        iot.state: { device: presence-front-1 }
+        transition:
+          machine: occupancy
+          to: home
+        if: ${device.presence-front-1.capabilities.presenceDetected}
+      - iot.command: { device: alarm-1, action: disarm }
+      - parallel:
+        - iot.command: { device: light-hallway-1, action: turn_on }
+        - iot.command: { device: thermostat-1, action: set_temperature, params: { temperature: 22, unit: CELSIUS } }
