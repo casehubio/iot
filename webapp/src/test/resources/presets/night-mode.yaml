@@ -1,0 +1,8 @@
+tenancyId: test-tenant
+devices:
+  - deviceId: light-living
+    deviceClass: LIGHT
+    label: Living Room Light
+    config:
+      isOn: true
+      brightness: 30

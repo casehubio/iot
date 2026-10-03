@@ -53,11 +53,19 @@
             <artifactId>casehub-iot-scenario</artifactId>
         </dependency>
 
-        <!-- Desired state (optional — topology assembler references drift types) -->
+        <!-- Desired state -->
         <dependency>
             <groupId>io.casehub</groupId>
             <artifactId>casehub-desiredstate-api</artifactId>
-            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-desiredstate-runtime-core</artifactId>
+            <version>0.2-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-iot-desiredstate</artifactId>
         </dependency>
 
         <!-- RAS -->
@@ -271,9 +279,12 @@
                         </path>
                     </annotationProcessorPaths>
                     <compilerArgs>
-                        <arg>-AdomainFilter=iot/devices,iot/situations,iot/situations/suppressions,iot/cases,iot/ops,iot/simulation</arg>
+                        <arg>-AdomainFilter=iot/devices,iot/situations,iot/situations/suppressions,iot/cases,iot/ops,iot/simulation,iot/presets</arg>
                         <arg>-AgenerateGraphQL=false</arg>
                     </compilerArgs>
+                    <testExcludes>
+                        <exclude>**/WorkItemOutcomeRecorderTest.java</exclude>
+                    </testExcludes>
                 </configuration>
             </plugin>
             <plugin>

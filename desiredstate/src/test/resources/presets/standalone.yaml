@@ -1,0 +1,7 @@
+tenancyId: test-tenant
+devices:
+  - deviceId: switch-hall
+    deviceClass: SWITCH
+    label: Hallway Switch
+    config:
+      isOn: false

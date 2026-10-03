@@ -1,0 +1,15 @@
+import:
+  - night-mode
+  - locks-armed
+tenancyId: test-tenant
+devices:
+  - deviceId: light-living
+    deviceClass: LIGHT
+    label: Living Room Light
+    config:
+      brightness: 0
+  - deviceId: camera-front
+    deviceClass: CAMERA
+    label: Front Camera
+    config:
+      recording: true

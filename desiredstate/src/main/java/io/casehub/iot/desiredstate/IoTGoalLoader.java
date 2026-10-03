@@ -1,5 +1,6 @@
 package io.casehub.iot.desiredstate;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -30,6 +31,11 @@ public class IoTGoalLoader {
             throw new UncheckedIOException("Failed to load IoT topology from " + path, e);
         }
     }
+
+    public IoTGoals loadFromNode(JsonNode node) {
+        return yamlMapper.convertValue(node, IoTGoals.class);
+    }
+
 
     public IoTGoals loadDirectory(String directoryPath) {
         Path dir = Path.of(directoryPath);
@@ -72,6 +78,38 @@ public class IoTGoalLoader {
         }
         return new IoTGoals(tenancyId, merged);
     }
+
+    public static IoTGoals mergeGoals(IoTGoals... fragments) {
+        if (fragments.length == 0) {
+            throw new IllegalArgumentException("Cannot merge zero fragments");
+        }
+        String tenancyId = fragments[0].tenancyId();
+        var    merged    = new java.util.LinkedHashMap<String, IoTDeviceGoal>();
+        for (IoTGoals fragment : fragments) {
+            if (!fragment.tenancyId().equals(tenancyId)) {
+                throw new IllegalArgumentException(
+                        "Inconsistent tenancyId in merge: expected " + tenancyId + ", found " + fragment.tenancyId());
+            }
+            for (IoTDeviceGoal device : fragment.devices()) {
+                IoTDeviceGoal existing = merged.get(device.deviceId());
+                if (existing != null) {
+                    var deepMerged = new java.util.HashMap<>(existing.config());
+                    deepMerged.putAll(device.config());
+                    merged.put(device.deviceId(), new IoTDeviceGoal(
+                            device.deviceId(),
+                            device.deviceClass(),
+                            device.label(),
+                            device.physical(),
+                            deepMerged,
+                            device.dependsOn().isEmpty() ? existing.dependsOn() : device.dependsOn()));
+                } else {
+                    merged.put(device.deviceId(), device);
+                }
+            }
+        }
+        return new IoTGoals(tenancyId, List.copyOf(merged.values()));
+    }
+
 
     private InputStream resolveStream(String path) throws IOException {
         InputStream classpath = Thread.currentThread().getContextClassLoader()
