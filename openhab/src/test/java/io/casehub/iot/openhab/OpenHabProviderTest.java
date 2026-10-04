@@ -88,4 +88,5 @@ class OpenHabProviderTest {
         assertThat(status).isIn(ProviderStatus.CONNECTED, ProviderStatus.CONNECTING,
                 ProviderStatus.DISCONNECTED);
     }
+
 }

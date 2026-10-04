@@ -34,6 +34,8 @@ public class OpenHabMockServerResource implements QuarkusTestResourceLifecycleMa
 
     /** JSON body to return for Equipment discovery requests. Defaults to empty list. */
     static final AtomicReference<String> equipmentBody = new AtomicReference<>("[]");
+    static final AtomicReference<String> locationBody  = new AtomicReference<>("[]");
+
 
     /** Queue for item command (POST) responses. */
     static final LinkedBlockingDeque<MockResponse> commandResponses = new LinkedBlockingDeque<>();
@@ -50,6 +52,11 @@ public class OpenHabMockServerResource implements QuarkusTestResourceLifecycleMa
         equipmentBody.set(body);
     }
 
+    static void setLocationBody(String body) {
+        locationBody.set(body);
+    }
+
+
     /**
      * Enqueue a response for an item command POST request.
      */
@@ -62,6 +69,7 @@ public class OpenHabMockServerResource implements QuarkusTestResourceLifecycleMa
      */
     static void reset() {
         equipmentBody.set("[]");
+        locationBody.set("[]");
         commandResponses.clear();
         lastAuthHeader.set(null);
     }
@@ -81,6 +89,14 @@ public class OpenHabMockServerResource implements QuarkusTestResourceLifecycleMa
                         .setResponseCode(200)
                         .setHeader("Content-Type", "text/event-stream")
                         .setBody("");
+                }
+
+                // Location discovery — serve from configured body
+                if (path != null && path.contains("/rest/items") && path.contains("tags=Location")) {
+                    return new MockResponse()
+                        .setResponseCode(200)
+                        .setHeader("Content-Type", "application/json")
+                        .setBody(locationBody.get());
                 }
 
                 // Equipment discovery — serve from the configured body string

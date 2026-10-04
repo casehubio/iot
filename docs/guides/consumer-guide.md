@@ -47,7 +47,7 @@ Every `DeviceEntity` carries these base fields:
 | `lastUpdated` | `Instant` | Last state change timestamp |
 | `tenancyId` | `String` | Multi-tenant isolation key |
 | `providerId` | `String` | Source provider (e.g. "homeassistant", "openhab") |
-| `location` | `String` | Nullable -- populated by OpenHAB (from thing.location), null for HA |
+| `location` | `String` | Nullable `/`-delimited path. HA: built from area/floor registries + `casehub.iot.homeassistant.location-prefix`. OpenHAB: from semantic model Location groups or thing.location |
 
 The `capabilities()` method returns a `Map<String, Object>` used by `StateChangeEvent.deriveChangedCapabilities()` to compute change sets.
 

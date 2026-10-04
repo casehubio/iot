@@ -1,6 +1,10 @@
 package io.casehub.iot.openhab;
 
-import io.casehub.iot.api.*;
+import io.casehub.iot.api.DeviceClass;
+import io.casehub.iot.api.DeviceEntity;
+import io.casehub.iot.api.SensorType;
+import io.casehub.iot.api.Temperature;
+import io.casehub.iot.api.ThermostatMode;
 import io.casehub.iot.openhab.internal.OpenHabItemDto;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -9,7 +13,10 @@ import org.jboss.logging.Logger;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Maps OpenHAB Equipment Groups (semantic model) to CaseHub {@link DeviceEntity} hierarchy.
@@ -38,6 +45,8 @@ public class OpenHabEntityMapper {
     @Inject
     @ConfigProperty(name = "casehub.iot.tenancy-id")
     String tenancyId;
+    private volatile Map<String, String> locationMap = Map.of();
+
 
     @Inject
     public OpenHabEntityMapper() {
@@ -47,6 +56,11 @@ public class OpenHabEntityMapper {
     OpenHabEntityMapper(String tenancyId) {
         this.tenancyId = tenancyId;
     }
+
+    public void setLocationMap(final Map<String, String> locationMap) {
+        this.locationMap = locationMap != null ? locationMap : Map.of();
+    }
+
 
     /**
      * Maps an OpenHAB Equipment Group to a CaseHub DeviceEntity.
@@ -83,11 +97,11 @@ public class OpenHabEntityMapper {
      * @return resolved fields, or null if the Equipment tag is unrecognised
      */
     ResolvedDeviceFields resolveFromEquipment(OpenHabItemDto equipment, Instant now) {
-        List<String> tags = equipment.tags() != null ? equipment.tags() : List.of();
+        List<String>         tags    = equipment.tags() != null ? equipment.tags() : List.of();
         List<OpenHabItemDto> members = equipment.members() != null ? equipment.members() : List.of();
 
-        String deviceId = equipment.name();
-        String label = equipment.label() != null ? equipment.label() : equipment.name();
+        String  deviceId  = equipment.name();
+        String  label     = equipment.label() != null ? equipment.label() : equipment.name();
         boolean available = isAvailable(members);
 
         DeviceClass deviceClass = resolveDeviceClass(tags);
@@ -96,12 +110,13 @@ public class OpenHabEntityMapper {
         }
 
         ResolvedDeviceFields.Builder b = ResolvedDeviceFields.builder()
-                .deviceId(deviceId)
-                .label(label)
-                .available(available)
-                .now(now)
-                .tenancyId(tenancyId)
-                .deviceClass(deviceClass);
+                                                             .deviceId(deviceId)
+                                                             .label(label)
+                                                             .available(available)
+                                                             .now(now)
+                                                             .tenancyId(tenancyId)
+                                                             .location(locationMap.get(deviceId))
+                                                             .deviceClass(deviceClass);
 
         switch (deviceClass) {
             case THERMOSTAT -> resolveThermostat(b, members, tags);
@@ -113,7 +128,7 @@ public class OpenHabEntityMapper {
             case FAN -> resolveFan(b, members);
             case SENSOR -> resolveSensor(b, members, tags);
             case PRESENCE_SENSOR -> resolvePresenceSensor(b, members);
-            case CAMERA -> {} // no standard OH channels map to streaming state
+            case CAMERA -> {}
             default -> {
                 LOG.warnf("Unhandled device class %s for equipment %s", deviceClass, deviceId);
                 return null;

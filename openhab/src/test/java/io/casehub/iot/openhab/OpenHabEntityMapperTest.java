@@ -1,6 +1,19 @@
 package io.casehub.iot.openhab;
 
-import io.casehub.iot.api.*;
+import io.casehub.iot.api.CameraDevice;
+import io.casehub.iot.api.CoverDevice;
+import io.casehub.iot.api.DeviceClass;
+import io.casehub.iot.api.FanDevice;
+import io.casehub.iot.api.LightDevice;
+import io.casehub.iot.api.LockDevice;
+import io.casehub.iot.api.MediaPlayerDevice;
+import io.casehub.iot.api.PresenceSensor;
+import io.casehub.iot.api.SensorDevice;
+import io.casehub.iot.api.SensorType;
+import io.casehub.iot.api.SwitchDevice;
+import io.casehub.iot.api.Temperature;
+import io.casehub.iot.api.ThermostatDevice;
+import io.casehub.iot.api.ThermostatMode;
 import io.casehub.iot.openhab.internal.OpenHabItemDto;
 import io.casehub.iot.openhab.internal.OpenHabStateDescriptionDto;
 import org.junit.jupiter.api.Test;
@@ -8,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -568,5 +582,37 @@ class OpenHabEntityMapperTest {
         assertThat(result.deviceClass()).isEqualTo(DeviceClass.CAMERA);
         CameraDevice camera = (CameraDevice) result;
         assertThat(camera.isStreaming()).isFalse();
+    }
+
+    @Test
+    void equipmentWithLocationMap_populatesLocation() {
+        var eq = equipment("ThermostatLiving", "Living Room Thermostat",
+                           List.of("Equipment", "HVAC"),
+                           member("Number", "ThermostatLiving_CurrentTemp", "21.5",
+                                  List.of("Point", "Measurement", "Temperature")),
+                           member("Number", "ThermostatLiving_TargetTemp", "22.0",
+                                  List.of("Point", "Setpoint", "Temperature")),
+                           member("String", "ThermostatLiving_Mode", "heat",
+                                  List.of()));
+
+        mapper.setLocationMap(Map.of("ThermostatLiving", "Home/Ground Floor/Living Room"));
+        var result = mapper.mapEquipment(eq, NOW);
+
+        assertThat(result).isNotNull();
+        assertThat(result.location()).isEqualTo("Home/Ground Floor/Living Room");
+    }
+
+    @Test
+    void equipmentWithoutLocationInMap_locationIsNull() {
+        var eq = equipment("SwitchGarage", "Garage Switch",
+                           List.of("Equipment", "PowerOutlet"),
+                           member("Switch", "SwitchGarage_Switch", "ON",
+                                  List.of("Point", "Control", "Switch")));
+
+        mapper.setLocationMap(Map.of("ThermostatLiving", "Home/Living Room"));
+        var result = mapper.mapEquipment(eq, NOW);
+
+        assertThat(result).isNotNull();
+        assertThat(result.location()).isNull();
     }
 }

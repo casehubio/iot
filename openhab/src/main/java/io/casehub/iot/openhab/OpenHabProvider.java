@@ -17,7 +17,10 @@ import org.jboss.logging.Logger;
 
 import java.net.URI;
 import java.time.Instant;
+import io.casehub.iot.openhab.internal.OpenHabItemDto;
+
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -102,6 +105,9 @@ public class OpenHabProvider implements DeviceProvider {
     @Override
     public List<DeviceEntity> discover() {
         ensureSseConnected();
+        List<OpenHabItemDto> locationItems = getRestClient().getItems("Location", true);
+        Map<String, String>  locationMap   = OpenHabLocationResolver.resolve(locationItems);
+        mapper.setLocationMap(locationMap);
         return getRestClient().getItems("Equipment", true).stream()
                               .map(i -> mapper.mapEquipment(i, Instant.now()))
                               .filter(Objects::nonNull)

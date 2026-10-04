@@ -15,4 +15,6 @@ public interface HomeAssistantConfig {
     @WithDefault("30")  int pingIntervalSeconds();
     @WithDefault("10")  int pongTimeoutSeconds();
     @WithDefault("5")   int discoveryTimeoutSeconds();
+
+    Optional<String> locationPrefix();
 }

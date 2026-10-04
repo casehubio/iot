@@ -83,7 +83,7 @@ cd webapp/src/main/webapp && yarn test
 - REST clients are created programmatically via `RestClientBuilder` (not `@RegisterRestClient`) — base URLs are resolved at runtime to support auto-discovery.
 - Single tenancy property: `casehub.iot.tenancy-id` — never per-module `tenancyId()` in `@ConfigMapping`.
 - Device metadata (deviceClass, roomType, eventTimestamp) flows into the case working layer via `IoTCaseInputContributor` — a CDI implementation of the `CaseInputContributor` SPI (`casehub-ras-api`). It resolves the device from `DeviceRegistry` using the CloudEvent correlationKey (`device/<deviceId>`). No CaseHub overrides needed.
-- `DeviceEntity.location()` is nullable — populated by OpenHAB (from `thing.location()`), null for HA (area registry integration pending).
+- `DeviceEntity.location()` is a nullable `/`-delimited hierarchical path. **HA:** built from area/floor registries + optional `casehub.iot.homeassistant.location-prefix` config. **OpenHAB:** from semantic model Location group hierarchy or `thing.location()`.
 - Docker image: `ghcr.io/casehubio/iot-bridge` (JVM, multi-arch ARM64+x86_64). Deployment guide: `bridge/DEPLOYMENT.md`.
 
 ## Cross-Repo Conventions

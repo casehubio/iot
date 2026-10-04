@@ -424,7 +424,7 @@ Single root property: `casehub.iot.tenancy-id` (env var `CASEHUB_IOT_TENANCY_ID`
 ## Current State
 
 - All SPIs are blocking (virtual-thread-aligned per ADR-0005)
-- `DeviceEntity.location()` is nullable -- populated by OpenHAB (from `thing.location()`), null for HA (area registry integration pending)
+- `DeviceEntity.location()` is a nullable `/`-delimited path. **HA:** resolved from area/floor/entity/device registries via REST (2024.6+); configurable prefix via `casehub.iot.homeassistant.location-prefix` (e.g. `home/ground-floor`); area names are slugified (lowercase, spaces→dashes). **OpenHAB:** resolved from semantic model Location group hierarchy (Equipment→Room→Floor→Building); fallback from `thing.location()` in Thing-based resolution
 - Device class vocabulary aligned with Matter Device Type Library -- 11 device types
 - Jackson annotations on `api` for `DeviceTypeIdResolver` polymorphic serialization -- compound type IDs (e.g. `LIGHT:HomeAssistantLight`)
 - Device metadata flows into case working layer via `IoTCaseInputContributor` -- CDI implementation of `CaseInputContributor` SPI (`casehub-ras-api`)

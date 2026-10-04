@@ -1,6 +1,17 @@
 package io.casehub.iot.homeassistant;
 
-import io.casehub.iot.api.*;
+import io.casehub.iot.api.CameraDevice;
+import io.casehub.iot.api.CoverDevice;
+import io.casehub.iot.api.DeviceClass;
+import io.casehub.iot.api.FanDevice;
+import io.casehub.iot.api.MediaPlayerDevice;
+import io.casehub.iot.api.PowerSensor;
+import io.casehub.iot.api.PresenceSensor;
+import io.casehub.iot.api.SensorDevice;
+import io.casehub.iot.api.SensorType;
+import io.casehub.iot.api.SwitchDevice;
+import io.casehub.iot.api.Temperature;
+import io.casehub.iot.api.ThermostatMode;
 import io.casehub.iot.homeassistant.internal.HaStateDto;
 import org.junit.jupiter.api.Test;
 
@@ -8,7 +19,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -453,5 +463,23 @@ class HomeAssistantEntityMapperTest {
         assertThat(results).hasSize(2);
         assertThat(results.get(0)).isInstanceOf(SwitchDevice.class);
         assertThat(results.get(1)).isInstanceOf(HomeAssistantLight.class);
+    }
+
+    @Test
+    void deviceWithLocationMap_populatesLocation() {
+        mapper.setLocationMap(Map.of("switch.hallway", "home/ground-floor/hallway"));
+        var result = mapper.mapOne(dto("switch.hallway", "on", Map.of()));
+
+        assertThat(result).isNotNull();
+        assertThat(result.location()).isEqualTo("home/ground-floor/hallway");
+    }
+
+    @Test
+    void deviceNotInLocationMap_locationIsNull() {
+        mapper.setLocationMap(Map.of("switch.other", "somewhere"));
+        var result = mapper.mapOne(dto("switch.hallway", "on", Map.of()));
+
+        assertThat(result).isNotNull();
+        assertThat(result.location()).isNull();
     }
 }

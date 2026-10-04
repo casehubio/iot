@@ -1,0 +1,10 @@
+package io.casehub.iot.homeassistant.internal;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record HaFloorDto(
+    @JsonProperty("floor_id") String floorId,
+    String name
+) {}

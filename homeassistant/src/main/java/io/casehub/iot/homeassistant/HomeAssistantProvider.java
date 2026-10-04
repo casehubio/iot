@@ -97,8 +97,26 @@ public class HomeAssistantProvider implements DeviceProvider {
     @Override
     public List<DeviceEntity> discover() {
         ensureWebSocketConnected();
+        enrichLocationMap();
         return mapper.mapAll(getRestClient().getStates());
     }
+
+    private void enrichLocationMap() {
+        try {
+            HomeAssistantRestClient client = getRestClient();
+            Map<String, String> locationMap = HomeAssistantLocationResolver.resolve(
+                    client.getAreas(),
+                    client.getFloors(),
+                    client.getEntityRegistry(),
+                    client.getDeviceRegistry(),
+                    config.locationPrefix().orElse(null));
+            mapper.setLocationMap(locationMap);
+        } catch (Exception e) {
+            LOG.warnf("HA area/floor registry unavailable — devices will have no location: %s", e.getMessage());
+            mapper.setLocationMap(Map.of());
+        }
+    }
+
 
     @Override
     public CommandResult dispatch(DeviceCommand command) {

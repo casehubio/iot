@@ -1,6 +1,18 @@
 package io.casehub.iot.homeassistant;
 
-import io.casehub.iot.api.*;
+import io.casehub.iot.api.CameraDevice;
+import io.casehub.iot.api.CoverDevice;
+import io.casehub.iot.api.DeviceClass;
+import io.casehub.iot.api.DeviceEntity;
+import io.casehub.iot.api.FanDevice;
+import io.casehub.iot.api.MediaPlayerDevice;
+import io.casehub.iot.api.PowerSensor;
+import io.casehub.iot.api.PresenceSensor;
+import io.casehub.iot.api.SensorDevice;
+import io.casehub.iot.api.SensorType;
+import io.casehub.iot.api.SwitchDevice;
+import io.casehub.iot.api.Temperature;
+import io.casehub.iot.api.ThermostatMode;
 import io.casehub.iot.homeassistant.internal.HaStateDto;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -10,7 +22,11 @@ import org.jboss.logging.Logger;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 @ApplicationScoped
 public class HomeAssistantEntityMapper {
@@ -22,6 +38,8 @@ public class HomeAssistantEntityMapper {
     @Inject
     @ConfigProperty(name = "casehub.iot.tenancy-id")
     String tenancyId;
+    private volatile Map<String, String> locationMap = Map.of();
+
 
     @Inject
     public HomeAssistantEntityMapper() {
@@ -31,6 +49,11 @@ public class HomeAssistantEntityMapper {
     public HomeAssistantEntityMapper(String tenancyId) {
         this.tenancyId = tenancyId;
     }
+
+    public void setLocationMap(final Map<String, String> locationMap) {
+        this.locationMap = locationMap != null ? locationMap : Map.of();
+    }
+
 
     public List<DeviceEntity> mapAll(List<HaStateDto> states) {
         return states.stream()
@@ -93,7 +116,7 @@ public class HomeAssistantEntityMapper {
                                    boolean available, Instant lastUpdated) {
         return SwitchDevice.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.SWITCH).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .on("on".equals(state.state()))
                 .build();
     }
@@ -103,7 +126,7 @@ public class HomeAssistantEntityMapper {
                                         boolean available, Instant lastUpdated) {
         var builder = HomeAssistantLight.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.LIGHT).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .on("on".equals(state.state()))
                 .brightness(intOrNull(attrs, "brightness"))
                 .colorTemp(intOrNull(attrs, "color_temp"));
@@ -146,7 +169,7 @@ public class HomeAssistantEntityMapper {
 
         var builder = HomeAssistantThermostat.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.THERMOSTAT).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .currentTemperature(currentTemp)
                 .targetTemperature(targetTemp)
                 .mode(mapHvacMode(attrs));
@@ -169,7 +192,7 @@ public class HomeAssistantEntityMapper {
                                       boolean available, Instant lastUpdated) {
         var builder = HomeAssistantLock.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.LOCK).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .locked("locked".equals(state.state()));
 
         if (attrs.containsKey("changed_by")) {
@@ -187,7 +210,7 @@ public class HomeAssistantEntityMapper {
                                   boolean available, Instant lastUpdated) {
         return new CoverDevice.Builder()
                 .deviceId(entityId).deviceClass(DeviceClass.COVER).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .position(intOrNull(attrs, "current_position"))
                 .moving("opening".equals(state.state()) || "closing".equals(state.state()))
                 .build();
@@ -203,7 +226,7 @@ public class HomeAssistantEntityMapper {
 
         return MediaPlayerDevice.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.MEDIA_PLAYER).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .playing("playing".equals(state.state()))
                 .volume(volume)
                 .build();
@@ -219,7 +242,7 @@ public class HomeAssistantEntityMapper {
 
         return FanDevice.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.FAN).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .on("on".equals(state.state()))
                 .speed(speed)
                 .build();
@@ -232,7 +255,7 @@ public class HomeAssistantEntityMapper {
 
         return CameraDevice.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.CAMERA).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .streaming(streaming)
                 .build();
     }
@@ -266,7 +289,7 @@ public class HomeAssistantEntityMapper {
         BigDecimal value = available ? parseOrNull(state.state()) : null;
         var builder = PowerSensor.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.POWER_SENSOR).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant");
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId));
 
         if ("power".equals(deviceClass)) {
             builder.power(value);
@@ -285,7 +308,7 @@ public class HomeAssistantEntityMapper {
         }
         return PresenceSensor.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.PRESENCE_SENSOR).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .present("on".equals(state.state()))
                 .lastSeen(lastSeen)
                 .build();
@@ -299,7 +322,7 @@ public class HomeAssistantEntityMapper {
 
         var builder = SensorDevice.builder()
                 .deviceId(entityId).deviceClass(DeviceClass.SENSOR).label(label)
-                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant")
+                .available(available).lastUpdated(lastUpdated).tenancyId(tenancyId).providerId("homeassistant").location(locationMap.get(entityId))
                 .sensorType(sensorType);
 
         if (binary) {
