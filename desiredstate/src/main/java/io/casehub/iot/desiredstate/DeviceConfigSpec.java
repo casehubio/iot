@@ -21,5 +21,5 @@ public record DeviceConfigSpec(
         desiredCapabilities = Map.copyOf(desiredCapabilities);
     }
 
-    public NodeType nodeType() { return NodeType.of("device-config"); }
+    public NodeType nodeType() {return IoTNodeTypes.configType(deviceClass);}
 }

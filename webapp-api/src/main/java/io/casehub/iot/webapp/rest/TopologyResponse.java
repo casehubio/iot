@@ -6,5 +6,6 @@ import java.util.Map;
 public record TopologyResponse(
         List<TopologyNode> nodes,
         List<TopologyEdge> edges,
+        List<TopologyOrderingConstraint> orderingConstraints,
         Map<String, TopologyAggregate> locationAggregates
 ) {}

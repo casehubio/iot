@@ -12,7 +12,7 @@ class IoTNodeSpecTest {
     @Test
     void deviceConfigSpec_nodeType() {
         var spec = new DeviceConfigSpec("d1", DeviceClass.SWITCH, Map.of("isOn", true));
-        assertThat(spec.nodeType()).isEqualTo(NodeType.of("device-config"));
+        assertThat(spec.nodeType()).isEqualTo(IoTNodeTypes.configType(DeviceClass.SWITCH));
         assertThat(spec.deviceId()).isEqualTo("d1");
         assertThat(spec.deviceClass()).isEqualTo(DeviceClass.SWITCH);
     }
@@ -20,7 +20,7 @@ class IoTNodeSpecTest {
     @Test
     void physicalDeviceSpec_nodeType() {
         var spec = new PhysicalDeviceSpec("d1", DeviceClass.THERMOSTAT, "Label");
-        assertThat(spec.nodeType()).isEqualTo(NodeType.of("physical-device"));
+        assertThat(spec.nodeType()).isEqualTo(IoTNodeTypes.physicalType(DeviceClass.THERMOSTAT));
         assertThat(spec.deviceId()).isEqualTo("d1");
         assertThat(spec.deviceClass()).isEqualTo(DeviceClass.THERMOSTAT);
     }

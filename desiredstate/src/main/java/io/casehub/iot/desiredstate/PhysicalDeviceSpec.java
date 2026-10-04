@@ -15,5 +15,5 @@ public record PhysicalDeviceSpec(
         Objects.requireNonNull(label, "label required");
     }
 
-    public NodeType nodeType() { return NodeType.of("physical-device"); }
+    public NodeType nodeType() {return IoTNodeTypes.physicalType(deviceClass);}
 }

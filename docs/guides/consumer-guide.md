@@ -27,7 +27,7 @@ Consumer-relevant modules -- what to depend on and why:
 | `bridge-server` | `casehub-iot-bridge-server` | Cloud apps consuming remote (bridged) devices. `BridgeDeviceProvider implements DeviceProvider` -- remote devices look local. |
 | `mcp` | `casehub-iot-mcp` | LLM agent device access. Add with `quarkus-mcp-server-http` for `iot_get_devices`, `iot_get_state`, `iot_send_command`, `iot_get_history` tools. |
 | `scenario` | `casehub-iot-scenario` | Scenario orchestration plugins for IoT devices. `iot.command` dispatches device commands, `iot.state` reads device state, `IoTDeviceVariableSource` exposes `${device.*}` in YAML conditions. Add when your app uses the platform YAML scenario engine for device orchestration. |
-| `desiredstate` | `casehub-iot-desiredstate` | Desired state convergence for IoT devices. Compile YAML goals to a `DesiredStateGraph`, compare actual vs desired, dispatch commands to converge. Add when your app manages IoT device configurations declaratively. |
+| `desiredstate` | `casehub-iot-desiredstate` | Desired state convergence for IoT devices. Compile YAML goals to a `DesiredStateGraph`, compare actual vs desired, dispatch commands to converge. Supports DeviceClass-level ordering constraints (`ordering:` YAML section) — declared once, enforced across all presets. Global constraints via `casehub.iot.ordering.path`. Add when your app manages IoT device configurations declaratively. |
 | `testing` | `casehub-iot-testing` | Test scope only. `MockDeviceProvider`, `MockDeviceRegistry`, fixture devices (Java + YAML), `StateChangeEventPublisher`. |
 
 ---
@@ -214,6 +214,7 @@ Implemented by `JpaDeviceStateHistoryProvider` in the webapp module. Not availab
 Returns `TopologyResponse` with:
 - `nodes` -- `List<TopologyNode>` -- devices with `deviceId`, `label`, `deviceClass`, `locationPath` (parsed from `DeviceEntity.location()` by splitting on `/`), `available`, `lastUpdated`, `driftStatus`, `driftDetail`
 - `edges` -- `List<TopologyEdge>` -- directed dependency edges derived from `DesiredStateGraph` ordering dependencies (`sourceDeviceId` -> `targetDeviceId`)
+- `orderingConstraints` -- `List<TopologyOrderingConstraint>` -- DeviceClass-level ordering constraints (`beforeClass` -> `afterClass`), deduplicated from the desired-state graph
 - `locationAggregates` -- `Map<String, TopologyAggregate>` -- per-location-subtree counts by drift status
 
 ### DriftStatus values

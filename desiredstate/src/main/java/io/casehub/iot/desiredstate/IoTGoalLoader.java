@@ -62,6 +62,7 @@ public class IoTGoalLoader {
         }
         var seen = new HashSet<String>();
         var merged = new ArrayList<IoTDeviceGoal>();
+        var allOrdering = new java.util.LinkedHashSet<IoTOrderingEntry>();
         String tenancyId = fragments[0].tenancyId();
         for (IoTGoals fragment : fragments) {
             if (!fragment.tenancyId().equals(tenancyId)) {
@@ -75,8 +76,9 @@ public class IoTGoalLoader {
                 }
                 merged.add(device);
             }
+            allOrdering.addAll(fragment.ordering());
         }
-        return new IoTGoals(tenancyId, merged);
+        return new IoTGoals(tenancyId, merged, List.copyOf(allOrdering));
     }
 
     public static IoTGoals mergeGoals(IoTGoals... fragments) {
@@ -85,6 +87,7 @@ public class IoTGoalLoader {
         }
         String tenancyId = fragments[0].tenancyId();
         var    merged    = new java.util.LinkedHashMap<String, IoTDeviceGoal>();
+        var    allOrdering = new java.util.LinkedHashSet<IoTOrderingEntry>();
         for (IoTGoals fragment : fragments) {
             if (!fragment.tenancyId().equals(tenancyId)) {
                 throw new IllegalArgumentException(
@@ -106,8 +109,9 @@ public class IoTGoalLoader {
                     merged.put(device.deviceId(), device);
                 }
             }
+            allOrdering.addAll(fragment.ordering());
         }
-        return new IoTGoals(tenancyId, List.copyOf(merged.values()));
+        return new IoTGoals(tenancyId, List.copyOf(merged.values()), List.copyOf(allOrdering));
     }
 
 

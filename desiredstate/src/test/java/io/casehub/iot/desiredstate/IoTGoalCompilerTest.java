@@ -57,7 +57,7 @@ class IoTGoalCompilerTest {
         DesiredNode node = graph.nodes().get(NodeId.of("light-1"));
         assertThat(node).isNotNull();
         assertThat(node.requiresHuman()).isFalse();
-        assertThat(node.type().value()).isEqualTo("device-config");
+        assertThat(node.type()).isEqualTo(IoTNodeTypes.configType(DeviceClass.LIGHT));
     }
 
     @Test
@@ -90,5 +90,45 @@ class IoTGoalCompilerTest {
         assertThatThrownBy(() -> compiler.compile(goals, factory))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("dev-1");
+    }
+
+    @Test
+    void ordering_expandsToTwoOrderingConstraints() {
+        var goals = new IoTGoals("tenant-1", List.of(
+                new IoTDeviceGoal("lock-1", DeviceClass.LOCK, "Front Lock", false, Map.of("isLocked", true), List.of()),
+                new IoTDeviceGoal("light-1", DeviceClass.LIGHT, "Hall Light", false, Map.of("isOn", true), List.of())),
+                                 List.of(new IoTOrderingEntry(DeviceClass.LOCK, DeviceClass.LIGHT)));
+
+        DesiredStateGraph graph = ((CompilationResult.SingleGraph) compiler.compile(goals, factory)).graph();
+
+        assertThat(graph.orderingConstraints()).hasSize(2);
+        assertThat(graph.orderingConstraints()).contains(
+                new io.casehub.desiredstate.api.OrderingConstraint(IoTNodeTypes.configType(DeviceClass.LOCK), IoTNodeTypes.configType(DeviceClass.LIGHT)));
+        assertThat(graph.orderingConstraints()).contains(
+                new io.casehub.desiredstate.api.OrderingConstraint(IoTNodeTypes.physicalType(DeviceClass.LOCK), IoTNodeTypes.physicalType(DeviceClass.LIGHT)));
+    }
+
+    @Test
+    void ordering_noEntries_noConstraints() {
+        var goals = new IoTGoals("tenant-1", List.of(
+                new IoTDeviceGoal("s-1", DeviceClass.SWITCH, "S", false, Map.of(), List.of())));
+
+        DesiredStateGraph graph = ((CompilationResult.SingleGraph) compiler.compile(goals, factory)).graph();
+
+        assertThat(graph.orderingConstraints()).isEmpty();
+    }
+
+    @Test
+    void ordering_cycleDetection_throwsAtCompileTime() {
+        var goals = new IoTGoals("tenant-1", List.of(
+                new IoTDeviceGoal("lock-1", DeviceClass.LOCK, "Lock", false, Map.of(), List.of()),
+                new IoTDeviceGoal("light-1", DeviceClass.LIGHT, "Light", false, Map.of(), List.of())),
+                                 List.of(
+                                         new IoTOrderingEntry(DeviceClass.LOCK, DeviceClass.LIGHT),
+                                         new IoTOrderingEntry(DeviceClass.LIGHT, DeviceClass.LOCK)));
+
+        assertThatThrownBy(() -> compiler.compile(goals, factory))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("cycle");
     }
 }

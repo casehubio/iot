@@ -1,0 +1,10 @@
+tenancyId: test-tenant
+ordering:
+  - before: LOCK
+    after: LIGHT
+devices:
+  - deviceId: switch-1
+    deviceClass: SWITCH
+    label: Hallway Switch
+    config:
+      isOn: true

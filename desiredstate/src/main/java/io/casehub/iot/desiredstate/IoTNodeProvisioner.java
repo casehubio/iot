@@ -46,9 +46,7 @@ public class IoTNodeProvisioner implements NodeProvisioner {
     }
 
     @Override
-    public Set<NodeType> handledTypes() {
-        return Set.of(NodeType.of("physical-device"), NodeType.of("device-config"), NodeType.of("iot-review"));
-    }
+    public Set<NodeType> handledTypes() {return IoTNodeTypes.all();}
 
     @Override
     public Duration resyncInterval() {

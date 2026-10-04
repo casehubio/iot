@@ -102,4 +102,34 @@ class IoTGoalLoaderTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Inconsistent tenancyId");
     }
+
+    @Test
+    void load_withOrdering_deserializesEntries() {
+        IoTGoals goals = loader.load("iot-topology-with-ordering.yaml");
+        assertThat(goals.ordering()).hasSize(1);
+        assertThat(goals.ordering().get(0).before()).isEqualTo(DeviceClass.LOCK);
+        assertThat(goals.ordering().get(0).after()).isEqualTo(DeviceClass.LIGHT);
+    }
+
+    @Test
+    void load_withoutOrdering_defaultsToEmpty() {
+        IoTGoals goals = loader.load("iot-topology-simple.yaml");
+        assertThat(goals.ordering()).isEmpty();
+    }
+
+    @Test
+    void mergeGoals_unionsOrdering() {
+        var a = new IoTGoals("t", List.of(
+                new IoTDeviceGoal("d1", DeviceClass.SWITCH, "S", true, Map.of(), List.of())),
+                             List.of(new IoTOrderingEntry(DeviceClass.LOCK, DeviceClass.LIGHT)));
+        var b = new IoTGoals("t", List.of(
+                new IoTDeviceGoal("d2", DeviceClass.LIGHT, "L", true, Map.of(), List.of())),
+                             List.of(new IoTOrderingEntry(DeviceClass.SWITCH, DeviceClass.COVER)));
+
+        IoTGoals merged = IoTGoalLoader.mergeGoals(a, b);
+        assertThat(merged.ordering()).hasSize(2);
+        assertThat(merged.ordering()).contains(
+                new IoTOrderingEntry(DeviceClass.LOCK, DeviceClass.LIGHT),
+                new IoTOrderingEntry(DeviceClass.SWITCH, DeviceClass.COVER));
+    }
 }

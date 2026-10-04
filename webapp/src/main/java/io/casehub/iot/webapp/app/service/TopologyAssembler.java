@@ -15,6 +15,8 @@ import io.casehub.iot.webapp.rest.DriftStatus;
 import io.casehub.iot.webapp.rest.TopologyAggregate;
 import io.casehub.iot.webapp.rest.TopologyEdge;
 import io.casehub.iot.webapp.rest.TopologyNode;
+import io.casehub.iot.desiredstate.IoTNodeTypes;
+import io.casehub.iot.webapp.rest.TopologyOrderingConstraint;
 import io.casehub.iot.webapp.rest.TopologyResponse;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
@@ -73,6 +75,7 @@ public class TopologyAssembler {
             nodes.add(buildNode(device, graph, actualState, policy));
         }
 
+        List<TopologyOrderingConstraint> orderingConstraints = new ArrayList<>();
         if (graph != null) {
             for (var dep : graph.dependencies()) {
                 String from = dep.from().value();
@@ -83,10 +86,21 @@ public class TopologyAssembler {
                     edges.add(new TopologyEdge(from, to, "depends-on"));
                 }
             }
+
+            var seen = new java.util.LinkedHashSet<>();
+            for (var c : graph.orderingConstraints()) {
+                String before = IoTNodeTypes.extractDeviceClass(c.before());
+                String after = IoTNodeTypes.extractDeviceClass(c.after());
+                String key = before + "->" + after;
+                if (seen.add(key)) {
+                    orderingConstraints.add(new TopologyOrderingConstraint(before, after));
+                }
+            }
         }
 
         Map<String, TopologyAggregate> aggregates = computeAggregates(nodes);
-        return new TopologyResponse(List.copyOf(nodes), List.copyOf(edges), Map.copyOf(aggregates));
+        return new TopologyResponse(List.copyOf(nodes), List.copyOf(edges),
+            List.copyOf(orderingConstraints), Map.copyOf(aggregates));
     }
 
     public TopologyNode reassembleNode(String deviceId, String tenancyId) {

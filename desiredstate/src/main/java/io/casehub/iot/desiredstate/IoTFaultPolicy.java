@@ -19,13 +19,10 @@ public class IoTFaultPolicy implements FaultPolicy {
 
     static final int ESCALATION_THRESHOLD = 3;
 
-    private static final NodeType DEVICE_CONFIG = NodeType.of("device-config");
-    private static final NodeType IOT_REVIEW    = NodeType.of("iot-review");
-
     private final ThresholdFaultPolicy delegate = ThresholdFaultPolicy.builder()
         .faultTypes(Set.of(FaultType.PROVISION_FAILED))
-        .nodeTypes(Set.of(DEVICE_CONFIG))
-        .ignoreTypes(Set.of(IOT_REVIEW))
+        .nodeTypes(IoTNodeTypes.allConfig())
+        .ignoreTypes(Set.of(IoTNodeTypes.IOT_REVIEW))
         .tier(ESCALATION_THRESHOLD, FaultPolicy.addReviewNode(
                 (event, current) -> new IoTReviewSpec(event.node(), event.detail())))
         .build();

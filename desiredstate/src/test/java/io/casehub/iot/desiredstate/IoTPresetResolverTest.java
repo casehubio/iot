@@ -83,4 +83,18 @@ class IoTPresetResolverTest {
         assertThat(standalone.imports()).isEmpty();
         assertThat(standalone.deviceCount()).isEqualTo(1);
     }
+
+    @Test
+    void resolve_presetWithOrdering_propagatesOrderingEntries() throws IOException {
+        java.nio.file.Path tempDir = Files.createTempDirectory("presets-ordering");
+        Files.writeString(tempDir.resolve("base.yaml"),
+                          "tenancyId: t1\ndevices:\n  - deviceId: s1\n    deviceClass: SWITCH\n    label: S1\n    config:\n      isOn: true\n");
+        Files.writeString(tempDir.resolve("extended.yaml"),
+                          "import:\n  - base\ntenancyId: t1\nordering:\n  - before: LOCK\n    after: LIGHT\ndevices:\n  - deviceId: l1\n    deviceClass: LIGHT\n    label: L1\n    config:\n      isOn: false\n");
+        var      tempResolver = new IoTPresetResolver(new IoTGoalLoader(), tempDir.toString());
+        IoTGoals goals        = tempResolver.resolve("extended");
+        assertThat(goals.ordering()).hasSize(1);
+        assertThat(goals.ordering().get(0).before()).isEqualTo(io.casehub.iot.api.DeviceClass.LOCK);
+        assertThat(goals.ordering().get(0).after()).isEqualTo(io.casehub.iot.api.DeviceClass.LIGHT);
+    }
 }
