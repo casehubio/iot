@@ -507,6 +507,33 @@ Result accessible as `${result.check-lock.capabilities.isLocked}`.
 
 Available paths: `${device.<id>}`, `${device.<id>.capabilities}`, `${device.<id>.capabilities.<key>}`, `${device.<id>.deviceClass}`, `${device.<id>.providerId}`.
 
+### delivery: desired-state — converge devices to a desired state
+
+`DesiredStateDeliveryHandler` bridges the scenario engine to IoT desired-state reconciliation. Two input modes:
+
+**Inline config** — device ID to desired capabilities:
+
+```yaml
+- name: night-mode
+  delivery: desired-state
+  data:
+    light-living-1: { on: false }
+    thermostat-living-1: { mode: cool, target: 22 }
+```
+
+**Preset reference** — named preset resolved via `IoTPresetResolver`:
+
+```yaml
+- name: night-mode
+  delivery: desired-state
+  data:
+    preset: night-mode
+```
+
+Inline config resolves `deviceClass` and `label` from `DeviceRegistry` at runtime. All inline devices use `physical: false` (configuring existing devices, not provisioning hardware). Unknown device IDs fail the step immediately.
+
+Uses one-shot reconciliation (compile → read actual state → plan transitions → provision). Returns `StepOutcome.ok` with `provisioned` count on success. Any device provision failure fails the step with per-device failure details.
+
 ### Bundled scenarios
 
 Five orchestration scenarios ship in `META-INF/scenarios/`:
