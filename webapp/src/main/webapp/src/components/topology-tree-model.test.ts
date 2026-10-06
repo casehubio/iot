@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTree, formatAggregateSummary, type TopologyNode, type TopologyAggregate } from './topology-tree-model.js';
+import { buildTree, formatAggregateSummary, computeZoneHighlight, formatZoneHighlightSummary, applyBindingEvent, type TopologyNode, type TopologyAggregate, type HighlightState, type TreeBranch } from './topology-tree-model.js';
 
 function makeNode(overrides: Partial<TopologyNode> = {}): TopologyNode {
   return {
@@ -95,5 +95,109 @@ describe('formatAggregateSummary', () => {
       absent: 0, unknown: 0, unmonitored: 0,
     };
     expect(formatAggregateSummary(agg)).toBe('1 device');
+  });
+});
+
+function makeBranch(devices: TopologyNode[]): TreeBranch {
+  return { name: 'bedroom', path: 'home/bedroom', children: new Map(), devices };
+}
+
+describe('computeZoneHighlight', () => {
+  it('returns null when fewer than 2 devices highlighted', () => {
+    const branch = makeBranch([makeNode({ deviceId: 'light-1' }), makeNode({ deviceId: 'light-2' })]);
+    const map: Record<string, HighlightState> = {
+      'light-1': { status: 'active', executionId: 'e1', stepName: 's1' },
+    };
+    expect(computeZoneHighlight(branch, map)).toBeNull();
+  });
+
+  it('returns counts when 2+ devices highlighted', () => {
+    const branch = makeBranch([
+      makeNode({ deviceId: 'light-1' }),
+      makeNode({ deviceId: 'light-2' }),
+      makeNode({ deviceId: 'therm-1' }),
+    ]);
+    const map: Record<string, HighlightState> = {
+      'light-1': { status: 'active', executionId: 'e1', stepName: 's1' },
+      'light-2': { status: 'provisioned', executionId: 'e1', stepName: 's1' },
+      'therm-1': { status: 'failed', executionId: 'e1', stepName: 's1' },
+    };
+    const result = computeZoneHighlight(branch, map);
+    expect(result).not.toBeNull();
+    expect(result!.total).toBe(3);
+    expect(result!.counts.active).toBe(1);
+    expect(result!.counts.provisioned).toBe(1);
+    expect(result!.counts.failed).toBe(1);
+  });
+
+  it('returns null for empty highlight map', () => {
+    const branch = makeBranch([makeNode({ deviceId: 'light-1' }), makeNode({ deviceId: 'light-2' })]);
+    expect(computeZoneHighlight(branch, {})).toBeNull();
+  });
+});
+
+describe('formatZoneHighlightSummary', () => {
+  it('all active', () => {
+    expect(formatZoneHighlightSummary({ total: 3, counts: { active: 3, provisioned: 0, failed: 0 } }))
+      .toBe('3 active');
+  });
+
+  it('mixed statuses', () => {
+    expect(formatZoneHighlightSummary({ total: 3, counts: { active: 1, provisioned: 1, failed: 1 } }))
+      .toBe('1 active, 1 provisioned, 1 failed');
+  });
+});
+
+describe('applyBindingEvent', () => {
+  it('binding-start sets devices to active', () => {
+    const result = applyBindingEvent({}, {
+      operation: 'binding-start',
+      binding: { executionId: 'e1', stepName: 's1', deviceIds: ['light-1', 'therm-1'] },
+    });
+    expect(result['light-1']?.status).toBe('active');
+    expect(result['therm-1']?.status).toBe('active');
+  });
+
+  it('binding-update transitions active to provisioned', () => {
+    const map: Record<string, HighlightState> = {
+      'light-1': { status: 'active', executionId: 'e1', stepName: 's1' },
+    };
+    const result = applyBindingEvent(map, {
+      operation: 'binding-update',
+      binding: { executionId: 'e1', deviceId: 'light-1', status: 'PROVISIONED' },
+    });
+    expect(result['light-1']?.status).toBe('provisioned');
+  });
+
+  it('binding-update transitions active to failed', () => {
+    const map: Record<string, HighlightState> = {
+      'light-1': { status: 'active', executionId: 'e1', stepName: 's1' },
+    };
+    const result = applyBindingEvent(map, {
+      operation: 'binding-update',
+      binding: { executionId: 'e1', deviceId: 'light-1', status: 'FAILED' },
+    });
+    expect(result['light-1']?.status).toBe('failed');
+  });
+
+  it('binding-clear removes entries for matching executionId', () => {
+    const map: Record<string, HighlightState> = {
+      'light-1': { status: 'active', executionId: 'e1', stepName: 's1' },
+      'therm-1': { status: 'active', executionId: 'e2', stepName: 's2' },
+    };
+    const result = applyBindingEvent(map, {
+      operation: 'binding-clear',
+      binding: { executionId: 'e1' },
+    });
+    expect(result['light-1']).toBeUndefined();
+    expect(result['therm-1']?.status).toBe('active');
+  });
+
+  it('binding-update ignores unknown device', () => {
+    const result = applyBindingEvent({}, {
+      operation: 'binding-update',
+      binding: { executionId: 'e1', deviceId: 'unknown', status: 'PROVISIONED' },
+    });
+    expect(Object.keys(result)).toHaveLength(0);
   });
 });

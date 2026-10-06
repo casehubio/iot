@@ -78,3 +78,77 @@ export function formatAggregateSummary(aggregate: TopologyAggregate): string {
   if (aggregate.absent > 0) parts.push(`${aggregate.absent} absent`);
   return parts.join(', ');
 }
+
+export interface HighlightState {
+  status: 'active' | 'provisioned' | 'failed';
+  executionId: string;
+  stepName: string;
+}
+
+export interface ZoneHighlight {
+  total: number;
+  counts: { active: number; provisioned: number; failed: number };
+}
+
+export interface BindingEventData {
+  operation: string;
+  binding: Record<string, unknown>;
+}
+
+export function computeZoneHighlight(
+  branch: TreeBranch,
+  highlightMap: Record<string, HighlightState>,
+): ZoneHighlight | null {
+  const highlighted = branch.devices.filter(d => highlightMap[d.deviceId]);
+  if (highlighted.length < 2) return null;
+  const counts = { active: 0, provisioned: 0, failed: 0 };
+  for (const d of highlighted) {
+    counts[highlightMap[d.deviceId]!.status]++;
+  }
+  return { total: highlighted.length, counts };
+}
+
+export function formatZoneHighlightSummary(zone: ZoneHighlight): string {
+  const parts: string[] = [];
+  if (zone.counts.active > 0) parts.push(`${zone.counts.active} active`);
+  if (zone.counts.provisioned > 0) parts.push(`${zone.counts.provisioned} provisioned`);
+  if (zone.counts.failed > 0) parts.push(`${zone.counts.failed} failed`);
+  return parts.join(', ');
+}
+
+export function applyBindingEvent(
+  current: Record<string, HighlightState>,
+  data: BindingEventData,
+): Record<string, HighlightState> {
+  const next = { ...current };
+  const binding = data.binding;
+
+  switch (data.operation) {
+    case 'binding-start': {
+      const deviceIds = binding.deviceIds as string[];
+      const executionId = binding.executionId as string;
+      const stepName = binding.stepName as string;
+      for (const id of deviceIds) {
+        next[id] = { status: 'active', executionId, stepName };
+      }
+      break;
+    }
+    case 'binding-update': {
+      const deviceId = binding.deviceId as string;
+      const status = (binding.status as string) === 'PROVISIONED' ? 'provisioned' as const : 'failed' as const;
+      const existing = current[deviceId];
+      if (existing) {
+        next[deviceId] = { ...existing, status };
+      }
+      break;
+    }
+    case 'binding-clear': {
+      const executionId = binding.executionId as string;
+      for (const [id, hl] of Object.entries(next)) {
+        if (hl.executionId === executionId) delete next[id];
+      }
+      break;
+    }
+  }
+  return next;
+}

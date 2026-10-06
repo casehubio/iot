@@ -1,7 +1,8 @@
-import { LitElement, html, css, nothing } from 'lit';
+import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { TemplateResult } from 'lit';
-import { buildTree, formatAggregateSummary, DRIFT_COLORS, type TopologyNode, type TopologyAggregate, type TreeBranch } from './topology-tree-model.js';
+import { SSEManager, type SSEEvent } from '@casehubio/pages-data';
+import { buildTree, formatAggregateSummary, computeZoneHighlight, formatZoneHighlightSummary, applyBindingEvent, DRIFT_COLORS, type TopologyNode, type TopologyAggregate, type TreeBranch, type HighlightState } from './topology-tree-model.js';
 
 function emitPagesEvent<T>(target: EventTarget, topic: string, payload: T): void {
   target.dispatchEvent(new CustomEvent('pages-event', {
@@ -15,8 +16,34 @@ export class IoTTopologyTree extends LitElement {
   @property({ type: Array }) nodes: TopologyNode[] = [];
   @property({ type: Object }) locationAggregates: Record<string, TopologyAggregate> = {};
   @property({ attribute: 'selection-topic' }) selectionTopic = 'topology-device';
+  @property({ attribute: 'sse-endpoint' }) sseEndpoint?: string;
 
   @state() private _expanded = new Set<string>();
+  @state() private _highlightMap: Record<string, HighlightState> = {};
+
+  private _sseManager = new SSEManager();
+  private _sseHandler = (event: SSEEvent) => {
+    const data = event.data as { operation?: string; nodes?: TopologyNode[]; locationAggregates?: Record<string, TopologyAggregate>; binding?: Record<string, unknown> };
+    if (data.operation?.startsWith('binding-')) {
+      this._highlightMap = applyBindingEvent(this._highlightMap, {
+        operation: data.operation,
+        binding: data.binding ?? {},
+      });
+      if (data.operation === 'binding-complete') {
+        const executionId = (data.binding?.executionId as string) ?? '';
+        setTimeout(() => {
+          const cleared = { ...this._highlightMap };
+          for (const [id, hl] of Object.entries(cleared)) {
+            if (hl.executionId === executionId) delete cleared[id];
+          }
+          this._highlightMap = cleared;
+        }, 1500);
+      }
+    } else if (data.operation === 'snapshot' || data.operation === 'update') {
+      if (data.nodes) this.nodes = data.nodes;
+      if (data.locationAggregates) this.locationAggregates = data.locationAggregates;
+    }
+  };
 
   static override styles = css`
     :host { display: block; font-family: var(--pages-font-family, sans-serif); font-size: 13px; }
@@ -37,7 +64,34 @@ export class IoTTopologyTree extends LitElement {
     .drift-detail { font-size: 11px; color: var(--pages-text-tertiary, #999); font-style: italic; }
     .device-class { font-size: 11px; color: var(--pages-text-secondary, #666);
       background: var(--pages-accent-subtle, #e8f0fe); padding: 1px 6px; border-radius: 4px; }
+    .device-node.highlight-active {
+      animation: pulse-highlight 1.5s ease-in-out infinite;
+      border-left: 3px solid var(--pages-accent-color, #1a73e8);
+    }
+    .device-node.highlight-provisioned { border-left: 3px solid var(--pages-success-color, #22c55e); }
+    .device-node.highlight-failed { border-left: 3px solid var(--pages-error-color, #ef4444); }
+    .branch-node.zone-highlight { background: var(--pages-accent-color-subtle, #e8f0fe); }
+    .zone-badge { font-size: 11px; color: var(--pages-accent-color, #1a73e8); font-weight: 600; }
+    @keyframes pulse-highlight {
+      0%, 100% { border-left-color: var(--pages-accent-color, #1a73e8); opacity: 1; }
+      50% { border-left-color: var(--pages-accent-color, #1a73e8); opacity: 0.5; }
+    }
   `;
+
+  override disconnectedCallback(): void {
+    if (this.sseEndpoint) {
+      this._sseManager.unsubscribe(this.sseEndpoint, this._sseHandler);
+    }
+    super.disconnectedCallback();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has('sseEndpoint')) {
+      const old = changed.get('sseEndpoint') as string | undefined;
+      if (old) this._sseManager.unsubscribe(old, this._sseHandler);
+      if (this.sseEndpoint) this._sseManager.subscribe(this.sseEndpoint, this._sseHandler);
+    }
+  }
 
   private _toggle(path: string): void {
     const next = new Set(this._expanded);
@@ -53,10 +107,11 @@ export class IoTTopologyTree extends LitElement {
     const expanded = this._expanded.has(branch.path);
     const aggregate = this.locationAggregates[branch.path];
     const summary = aggregate ? formatAggregateSummary(aggregate) : '';
+    const zoneHighlight = computeZoneHighlight(branch, this._highlightMap);
 
     return html`
       <li role="treeitem" aria-expanded=${expanded}>
-        <div class="branch-node" tabindex="-1"
+        <div class="branch-node ${zoneHighlight ? 'zone-highlight' : ''}" tabindex="-1"
           @click=${() => this._toggle(branch.path)}
           @keydown=${(e: KeyboardEvent) => {
             if (e.key === 'Enter' || e.key === 'ArrowRight') { if (!expanded) this._toggle(branch.path); }
@@ -64,9 +119,11 @@ export class IoTTopologyTree extends LitElement {
           }}>
           <span class="toggle">${expanded ? '▼' : '▶'}</span>
           <span class="branch-name">${branch.name}</span>
-          ${!expanded && summary
-            ? html`<span class="aggregate">${summary}</span>`
-            : nothing}
+          ${zoneHighlight
+            ? html`<span class="zone-badge">${formatZoneHighlightSummary(zoneHighlight)}</span>`
+            : !expanded && summary
+              ? html`<span class="aggregate">${summary}</span>`
+              : nothing}
         </div>
         ${expanded ? html`
           <ul role="group">
@@ -81,9 +138,11 @@ export class IoTTopologyTree extends LitElement {
   private _renderDevice(node: TopologyNode): TemplateResult {
     const color = DRIFT_COLORS[node.driftStatus] ?? DRIFT_COLORS['UNKNOWN']!;
     const isUnmonitored = node.driftStatus === 'UNMONITORED';
+    const highlight = this._highlightMap[node.deviceId];
+    const highlightClass = highlight ? `highlight-${highlight.status}` : '';
     return html`
       <li role="treeitem" aria-selected="false">
-        <div class="device-node" tabindex="-1"
+        <div class="device-node ${highlightClass}" tabindex="-1"
           @click=${() => this._selectDevice(node)}
           @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') this._selectDevice(node); }}>
           <span class="drift-badge ${isUnmonitored ? 'unmonitored' : ''}"
