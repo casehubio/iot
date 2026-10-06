@@ -26,7 +26,7 @@
         </dependency>
         <dependency>
             <groupId>io.casehub</groupId>
-            <artifactId>casehub-pages-playbook/artifactId>
+            <artifactId>casehub-pages-playbook</artifactId>
             <version>${casehub.version}</version>
         </dependency>
         <dependency>

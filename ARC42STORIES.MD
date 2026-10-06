@@ -1477,7 +1477,7 @@ Not closed here: Drools integration for hybrid local automations (deployment top
 | No operational interface | Operators have no visibility into device state or situations | REST API + SSE + TypeScript dashboard |
 | No state change history | Past device states lost; no audit trail | IoTDeviceStateHistoryEntity persists every state change |
 | No tenant-scoped situation customization | All tenants share the same detection rules | JpaRuntimeSituationDefinitionProvider with database overrides |
-| SSE tenancy leak | Multi-tenant SSE broadcast exposes cross-tenant device state | Per-client tenancy filtering captured at connection time |
+| ~~SSE tenancy leak~~ | ~~Multi-tenant SSE broadcast exposes cross-tenant device state~~ | ~~Per-client tenancy filtering captured at connection time~~ — resolved in #132: tenancyId on TopologyStreamEvent (@JsonIgnore), broadcast filtered per subscriber |
 
 ---
 

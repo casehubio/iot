@@ -11,8 +11,12 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DefaultIoTTopologyApiTest {
 
@@ -67,5 +71,28 @@ class DefaultIoTTopologyApiTest {
 
         assertNotNull(response.locationAggregates().get("HQ"));
         assertEquals(2, response.locationAggregates().get("HQ").total());
+    }
+
+    @Test
+    void streamTopology_filters_broadcast_by_tenancyId() {
+        registry.addDevice(lightBuilder("l1", "t1").location("HQ/Room1").build());
+
+        var events = new ArrayList<TopologyStreamEvent>();
+        api.streamTopology("t1")
+           .subscribe().with(events::add);
+
+        // Broadcast an event for tenant t1 — should arrive
+        var node = assembler.reassembleNode("l1", "t1");
+        api.broadcaster.onNext(new TopologyStreamEvent("t1", "update", List.of(node)));
+
+        // Broadcast an event for tenant t2 — should be filtered out
+        registry.addDevice(lightBuilder("l2", "t2").location("Other").build());
+        var otherNode = assembler.reassembleNode("l2", "t2");
+        api.broadcaster.onNext(new TopologyStreamEvent("t2", "update", List.of(otherNode)));
+
+        // snapshot + 1 matching update = 2 events
+        assertEquals(2, events.size());
+        assertEquals("snapshot", events.get(0).operation());
+        assertEquals("update", events.get(1).operation());
     }
 }

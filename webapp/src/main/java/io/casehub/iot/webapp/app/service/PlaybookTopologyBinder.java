@@ -20,37 +20,31 @@ public class PlaybookTopologyBinder {
 
     void onBindingEvent(@Observes PlaybookBindingEvent event) {
         var streamEvent = switch (event) {
-            case PlaybookBindingEvent.StepStart ss ->
-                TopologyStreamEvent.binding("binding-start", Map.of(
+            case PlaybookBindingEvent.StepStart ss -> TopologyStreamEvent.binding(event.tenancyId(), "binding-start", Map.of(
                     "executionId", ss.executionId(),
                     "stepName", ss.stepName(),
                     "deviceIds", ss.deviceIds()));
-            case PlaybookBindingEvent.DeviceProvisioned dp ->
-                TopologyStreamEvent.binding("binding-update", Map.of(
+            case PlaybookBindingEvent.DeviceProvisioned dp -> TopologyStreamEvent.binding(event.tenancyId(), "binding-update", Map.of(
                     "executionId", dp.executionId(),
                     "deviceId", dp.deviceId(),
                     "status", "PROVISIONED"));
-            case PlaybookBindingEvent.DeviceFailed df ->
-                TopologyStreamEvent.binding("binding-update", Map.of(
+            case PlaybookBindingEvent.DeviceFailed df -> TopologyStreamEvent.binding(event.tenancyId(), "binding-update", Map.of(
                     "executionId", df.executionId(),
                     "deviceId", df.deviceId(),
                     "status", "FAILED"));
-            case PlaybookBindingEvent.StepComplete sc ->
-                TopologyStreamEvent.binding("binding-complete", Map.of(
+            case PlaybookBindingEvent.StepComplete sc -> TopologyStreamEvent.binding(event.tenancyId(), "binding-complete", Map.of(
                     "executionId", sc.executionId(),
                     "stepName", sc.stepName(),
                     "outcome", "OK",
                     "provisioned", sc.provisioned(),
                     "failed", sc.failed()));
-            case PlaybookBindingEvent.StepFailed sf ->
-                TopologyStreamEvent.binding("binding-complete", Map.of(
+            case PlaybookBindingEvent.StepFailed sf -> TopologyStreamEvent.binding(event.tenancyId(), "binding-complete", Map.of(
                     "executionId", sf.executionId(),
                     "stepName", sf.stepName(),
                     "outcome", "FAILED",
                     "provisioned", sf.provisioned(),
                     "failed", sf.failed()));
-            case PlaybookBindingEvent.Clear c ->
-                TopologyStreamEvent.binding("binding-clear", Map.of(
+            case PlaybookBindingEvent.Clear c -> TopologyStreamEvent.binding(event.tenancyId(), "binding-clear", Map.of(
                     "executionId", c.executionId()));
         };
         broadcaster.onNext(streamEvent);

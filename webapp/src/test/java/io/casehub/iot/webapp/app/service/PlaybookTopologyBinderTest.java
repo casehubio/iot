@@ -34,6 +34,7 @@ class PlaybookTopologyBinderTest {
 
         assertThat(captured).hasSize(1);
         var sse = captured.get(0);
+        assertThat(sse.tenancyId()).isEqualTo("tenant-1");
         assertThat(sse.operation()).isEqualTo("binding-start");
         assertThat(sse.nodes()).isEmpty();
         assertThat(sse.binding()).isNotNull();
@@ -53,6 +54,7 @@ class PlaybookTopologyBinderTest {
 
         assertThat(captured).hasSize(1);
         var sse = captured.get(0);
+        assertThat(sse.tenancyId()).isEqualTo("tenant-1");
         assertThat(sse.operation()).isEqualTo("binding-update");
         assertThat(sse.binding().get("deviceId")).isEqualTo("light-1");
         assertThat(sse.binding().get("status")).isEqualTo("PROVISIONED");
@@ -66,6 +68,7 @@ class PlaybookTopologyBinderTest {
         binder.onBindingEvent(event);
 
         var sse = captured.get(0);
+        assertThat(sse.tenancyId()).isEqualTo("tenant-1");
         assertThat(sse.operation()).isEqualTo("binding-update");
         assertThat(sse.binding().get("status")).isEqualTo("FAILED");
     }
@@ -78,6 +81,7 @@ class PlaybookTopologyBinderTest {
         binder.onBindingEvent(event);
 
         var sse = captured.get(0);
+        assertThat(sse.tenancyId()).isEqualTo("tenant-1");
         assertThat(sse.operation()).isEqualTo("binding-complete");
         assertThat(sse.binding().get("outcome")).isEqualTo("OK");
         assertThat(sse.binding().get("provisioned")).isEqualTo(3);
@@ -92,6 +96,7 @@ class PlaybookTopologyBinderTest {
         binder.onBindingEvent(event);
 
         var sse = captured.get(0);
+        assertThat(sse.tenancyId()).isEqualTo("tenant-1");
         assertThat(sse.operation()).isEqualTo("binding-complete");
         assertThat(sse.binding().get("outcome")).isEqualTo("FAILED");
     }
@@ -103,6 +108,7 @@ class PlaybookTopologyBinderTest {
         binder.onBindingEvent(event);
 
         var sse = captured.get(0);
+        assertThat(sse.tenancyId()).isEqualTo("tenant-1");
         assertThat(sse.operation()).isEqualTo("binding-clear");
         assertThat(sse.binding().get("executionId")).isEqualTo("exec-1");
     }
