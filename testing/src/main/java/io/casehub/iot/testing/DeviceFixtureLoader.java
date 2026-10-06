@@ -2,8 +2,8 @@ package io.casehub.iot.testing;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.casehub.iot.api.DeviceEntity;
+import io.casehub.yaml.jackson.YamlMappers;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,7 +13,7 @@ import java.util.List;
 
 public final class DeviceFixtureLoader {
 
-    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper YAML_MAPPER = YamlMappers.create();
 
     private final DeviceTypeRegistry registry;
 

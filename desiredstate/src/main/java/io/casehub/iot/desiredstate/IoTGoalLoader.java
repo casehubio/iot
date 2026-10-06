@@ -3,8 +3,8 @@ package io.casehub.iot.desiredstate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.casehub.yaml.jackson.YamlMappers;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.io.IOException;
@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 @ApplicationScoped
 public class IoTGoalLoader {
 
-    private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory())
+    private final ObjectMapper yamlMapper = YamlMappers.create()
         .registerModule(new JavaTimeModule())
         .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
