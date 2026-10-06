@@ -56,7 +56,7 @@ cd webapp/src/main/webapp && yarn test
 
 | Module | Artifact | Purpose |
 |--------|----------|---------|
-| `api` | `casehub-iot-api` | Core SPIs (blocking, virtual-thread-aligned per ADR-0005), typed device class hierarchy, `IoTCloudEventAdapter`, `IoTCommandAuditEvent`, and `DeviceStateHistoryProvider`. Depends on `casehub-platform-api`. **Public API, semver discipline** |
+| `api` | `casehub-iot-api` | Core SPIs (blocking, virtual-thread-aligned per ADR-0005), typed device class hierarchy, `IoTCloudEventAdapter`, `IoTCommandAuditEvent`, `DeviceStateHistoryProvider`, and `ScenarioBindingEvent` (sealed interface for scenario-topology binding lifecycle). Depends on `casehub-platform-api`. **Public API, semver discipline** |
 | `homeassistant` | `casehub-iot-homeassistant` | Home Assistant provider (REST + WebSocket) and HA supplement types |
 | `openhab` | `casehub-iot-openhab` | OpenHAB provider (REST + SSE, semantic model) and OpenHAB supplement types |
 | `testing` | `casehub-iot-testing` | MockDeviceProvider, fixture devices (Java `Fixtures` + YAML `DeviceFixtureLoader`), `DeviceTypeHandler` SPI, StateChangeEventPublisher, `IoTCorpusSeed` (platform simulation corpus seeder for `@SimulationEligible DeviceProvider`) — test scope only |

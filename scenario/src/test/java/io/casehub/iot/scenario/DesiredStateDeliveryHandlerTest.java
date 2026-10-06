@@ -4,6 +4,7 @@ import io.casehub.desiredstate.api.ActualState;
 import io.casehub.desiredstate.api.NodeId;
 import io.casehub.desiredstate.api.NodeStatus;
 import io.casehub.desiredstate.api.ProvisionResult;
+import io.casehub.iot.api.ScenarioBindingEvent;
 import io.casehub.iot.desiredstate.IoTActualStateAdapter;
 import io.casehub.iot.desiredstate.IoTGoalCompiler;
 import io.casehub.iot.desiredstate.IoTGoals;
@@ -17,6 +18,7 @@ import io.casehub.pages.scenario.StepOutcome;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,8 @@ class DesiredStateDeliveryHandlerTest {
     private IoTActualStateAdapter actualStateAdapter;
     private IoTNodeProvisioner provisioner;
     private DesiredStateDeliveryHandler handler;
+    private List<ScenarioBindingEvent>  capturedEvents;
+
 
     @BeforeEach
     void setUp() {
@@ -49,14 +53,16 @@ class DesiredStateDeliveryHandlerTest {
         registry = new MockDeviceRegistry();
         registry.addDevices(provider.discover());
 
-        presetResolver = mock(IoTPresetResolver.class);
-        compiler = new IoTGoalCompiler();
+        presetResolver     = mock(IoTPresetResolver.class);
+        compiler           = new IoTGoalCompiler();
         actualStateAdapter = mock(IoTActualStateAdapter.class);
-        provisioner = mock(IoTNodeProvisioner.class);
+        provisioner        = mock(IoTNodeProvisioner.class);
+
+        capturedEvents = new ArrayList<>();
 
         handler = new DesiredStateDeliveryHandler(
                 registry, presetResolver, compiler,
-                actualStateAdapter, provisioner, TENANCY_ID);
+                actualStateAdapter, provisioner, TENANCY_ID, capturedEvents::add);
     }
 
     @Test
@@ -155,4 +161,60 @@ class DesiredStateDeliveryHandlerTest {
         assertThat(outcome.success()).isFalse();
         assertThat(outcome.error()).contains("Preset not found");
     }
+
+    @Test
+    void emitsBindingEventsForSuccessfulReconciliation() {
+        when(actualStateAdapter.readActual(any(), eq(TENANCY_ID)))
+                .thenReturn(new ActualState(Map.of()));
+        when(provisioner.provision(any(), any()))
+                .thenReturn(new ProvisionResult.Success());
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("light-living-1", Map.of("on", false));
+        data.put("thermostat-living-1", Map.of("mode", "cool", "target", 22));
+
+        handler.execute("night-mode", data, CTX);
+
+        assertThat(capturedEvents).isNotEmpty();
+
+        assertThat(capturedEvents.get(0)).isInstanceOf(ScenarioBindingEvent.StepStart.class);
+        var start = (ScenarioBindingEvent.StepStart) capturedEvents.get(0);
+        assertThat(start.deviceIds()).containsExactlyInAnyOrder("light-living-1", "thermostat-living-1");
+        assertThat(start.stepName()).isEqualTo("night-mode");
+        assertThat(start.tenancyId()).isEqualTo(TENANCY_ID);
+
+        long provisionedCount = capturedEvents.stream()
+                                              .filter(e -> e instanceof ScenarioBindingEvent.DeviceProvisioned)
+                                              .count();
+        assertThat(provisionedCount).isEqualTo(2);
+
+        var last = capturedEvents.get(capturedEvents.size() - 1);
+        assertThat(last).isInstanceOf(ScenarioBindingEvent.StepComplete.class);
+        var complete = (ScenarioBindingEvent.StepComplete) last;
+        assertThat(complete.provisioned()).isEqualTo(2);
+        assertThat(complete.failed()).isZero();
+    }
+
+    @Test
+    void emitsClearOnReconciliationException() {
+        when(actualStateAdapter.readActual(any(), eq(TENANCY_ID)))
+                .thenReturn(new ActualState(Map.of()));
+        when(provisioner.provision(any(), any()))
+                .thenThrow(new RuntimeException("provider crash"));
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("light-living-1", Map.of("on", false));
+
+        StepOutcome outcome = handler.execute("crash-step", data, CTX);
+
+        assertThat(outcome.success()).isFalse();
+        assertThat(outcome.error()).contains("provider crash");
+
+        assertThat(capturedEvents.stream()
+                                 .anyMatch(e -> e instanceof ScenarioBindingEvent.StepStart)).isTrue();
+        assertThat(capturedEvents.stream()
+                                 .anyMatch(e -> e instanceof ScenarioBindingEvent.Clear)).isTrue();
+    }
+
+
 }

@@ -1,6 +1,7 @@
 package io.casehub.iot.scenario;
 
 import io.casehub.desiredstate.api.CompilationResult;
+import io.casehub.desiredstate.api.DesiredNode;
 import io.casehub.desiredstate.api.DesiredStateGraph;
 import io.casehub.desiredstate.api.OrderedStep;
 import io.casehub.desiredstate.api.ProvisionContext;
@@ -9,6 +10,7 @@ import io.casehub.desiredstate.api.StepAction;
 import io.casehub.desiredstate.runtime.DefaultDesiredStateGraphFactory;
 import io.casehub.desiredstate.runtime.TransitionPlanner;
 import io.casehub.iot.api.DeviceEntity;
+import io.casehub.iot.api.ScenarioBindingEvent;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.desiredstate.IoTActualStateAdapter;
 import io.casehub.iot.desiredstate.IoTDeviceGoal;
@@ -24,8 +26,13 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class DesiredStateDeliveryHandler implements DeliveryHandler {
@@ -36,6 +43,8 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
     private final IoTActualStateAdapter actualStateAdapter;
     private final IoTNodeProvisioner provisioner;
     private final String tenancyId;
+    private final Consumer<ScenarioBindingEvent> bindingEvent;
+
 
     private final DefaultDesiredStateGraphFactory graphFactory =
             new DefaultDesiredStateGraphFactory();
@@ -48,13 +57,27 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
             IoTGoalCompiler compiler,
             IoTActualStateAdapter actualStateAdapter,
             IoTNodeProvisioner provisioner,
-            @ConfigProperty(name = "casehub.iot.tenancy-id") String tenancyId) {
+            @ConfigProperty(name = "casehub.iot.tenancy-id") String tenancyId,
+            jakarta.enterprise.event.Event<ScenarioBindingEvent> bindingEvent) {
+        this(registry, presetResolver, compiler, actualStateAdapter, provisioner, tenancyId,
+                bindingEvent::fire);
+    }
+
+    DesiredStateDeliveryHandler(
+            DeviceRegistry registry,
+            IoTPresetResolver presetResolver,
+            IoTGoalCompiler compiler,
+            IoTActualStateAdapter actualStateAdapter,
+            IoTNodeProvisioner provisioner,
+            String tenancyId,
+            Consumer<ScenarioBindingEvent> bindingEvent) {
         this.registry = registry;
         this.presetResolver = presetResolver;
         this.compiler = compiler;
         this.actualStateAdapter = actualStateAdapter;
         this.provisioner = provisioner;
         this.tenancyId = tenancyId;
+        this.bindingEvent = bindingEvent;
     }
 
     @Override
@@ -65,6 +88,7 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
     @Override
     public StepOutcome execute(String stepName, Map<String, Object> data,
                                DeliveryContext ctx) {
+        String   executionId = UUID.randomUUID().toString();
         IoTGoals goals;
         try {
             goals = resolveGoals(data);
@@ -73,7 +97,7 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
         }
 
         try {
-            return reconcile(stepName, goals);
+            return reconcile(stepName, goals, executionId);
         } catch (Exception e) {
             return StepOutcome.fail(stepName, "Reconciliation failed: " + e.getMessage());
         }
@@ -113,48 +137,96 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
         return new IoTGoals(tenancyId, deviceGoals);
     }
 
-    private StepOutcome reconcile(String stepName, IoTGoals goals) {
+    private StepOutcome reconcile(String stepName, IoTGoals goals, String executionId) {
         var compilationResult = compiler.compile(goals, graphFactory);
         if (!(compilationResult instanceof CompilationResult.SingleGraph sg)) {
             return StepOutcome.fail(stepName,
-                    "Unexpected compilation result: "
-                            + compilationResult.getClass().getSimpleName());
+                                    "Unexpected compilation result: "
+                                    + compilationResult.getClass().getSimpleName());
         }
 
-        DesiredStateGraph graph = sg.graph();
-        var actual = actualStateAdapter.readActual(graph, tenancyId);
-        var plan = planner.plan(graph, actual);
+        DesiredStateGraph graph  = sg.graph();
+        var               actual = actualStateAdapter.readActual(graph, tenancyId);
+        var               plan   = planner.plan(graph, actual);
 
-        int provisioned = 0;
-        int failed = 0;
-        List<String> failedDetails = new ArrayList<>();
+        Set<String> planDeviceIds = plan.flatAdditions().stream()
+                                        .filter(s -> s.action() == StepAction.PROVISION)
+                                        .map(s -> extractDeviceId(s.node()))
+                                        .collect(Collectors.toSet());
 
-        for (OrderedStep step : plan.flatAdditions()) {
-            if (step.action() == StepAction.PROVISION) {
-                var result = provisioner.provision(
-                        step.node(), new ProvisionContext(tenancyId, graph));
-                if (result instanceof ProvisionResult.Success
+        boolean             stepStartFired = false;
+        Map<String, String> deviceOutcomes = new LinkedHashMap<>();
+        List<String>        failedDetails  = new ArrayList<>();
+
+        try {
+            if (!planDeviceIds.isEmpty()) {
+                bindingEvent.accept(new ScenarioBindingEvent.StepStart(
+                        executionId, tenancyId, stepName, planDeviceIds));
+                stepStartFired = true;
+            }
+
+            for (OrderedStep step : plan.flatAdditions()) {
+                if (step.action() == StepAction.PROVISION) {
+                    var result = provisioner.provision(
+                            step.node(), new ProvisionContext(tenancyId, graph));
+                    String deviceId = extractDeviceId(step.node());
+                    if (result instanceof ProvisionResult.Success
                         || result instanceof ProvisionResult.AlreadyConverged) {
-                    provisioned++;
-                } else if (result instanceof ProvisionResult.Failed f) {
-                    failed++;
-                    failedDetails.add(step.node().id().value() + ": " + f.reason());
-                } else {
-                    failed++;
-                    failedDetails.add(step.node().id().value() + ": "
-                            + result.getClass().getSimpleName());
+                        if (!deviceOutcomes.containsKey(deviceId)) {
+                            deviceOutcomes.put(deviceId, "provisioned");
+                            bindingEvent.accept(new ScenarioBindingEvent.DeviceProvisioned(
+                                    executionId, tenancyId, stepName, deviceId));
+                        }
+                    } else if (result instanceof ProvisionResult.Failed f) {
+                        deviceOutcomes.put(deviceId, "failed");
+                        failedDetails.add(deviceId + ": " + f.reason());
+                        bindingEvent.accept(new ScenarioBindingEvent.DeviceFailed(
+                                executionId, tenancyId, stepName, deviceId, f.reason()));
+                    } else {
+                        deviceOutcomes.put(deviceId, "failed");
+                        failedDetails.add(deviceId + ": " + result.getClass().getSimpleName());
+                        bindingEvent.accept(new ScenarioBindingEvent.DeviceFailed(
+                                executionId, tenancyId, stepName, deviceId,
+                                result.getClass().getSimpleName()));
+                    }
                 }
             }
-        }
 
-        if (failed > 0) {
-            return StepOutcome.fail(stepName,
-                    failed + " of " + (provisioned + failed)
-                            + " devices failed: " + failedDetails);
-        }
+            int provisioned = (int) deviceOutcomes.values().stream()
+                                                  .filter("provisioned"::equals).count();
+            int failed = (int) deviceOutcomes.values().stream()
+                                             .filter("failed"::equals).count();
 
-        return StepOutcome.ok(stepName, Map.of(
-                "provisioned", provisioned,
-                "converged", true));
+            if (stepStartFired) {
+                if (failed > 0) {
+                    bindingEvent.accept(new ScenarioBindingEvent.StepFailed(
+                            executionId, tenancyId, stepName, provisioned, failed, failedDetails));
+                } else {
+                    bindingEvent.accept(new ScenarioBindingEvent.StepComplete(
+                            executionId, tenancyId, stepName, provisioned, failed));
+                }
+            }
+
+            if (failed > 0) {
+                return StepOutcome.fail(stepName,
+                                        failed + " of " + (provisioned + failed)
+                                        + " devices failed: " + failedDetails);
+            }
+            return StepOutcome.ok(stepName, Map.of(
+                    "provisioned", provisioned,
+                    "converged", true));
+        } catch (Exception e) {
+            if (stepStartFired) {
+                bindingEvent.accept(new ScenarioBindingEvent.Clear(executionId, tenancyId));
+            }
+            throw e;
+        }
     }
+
+    private static String extractDeviceId(DesiredNode node) {
+        String id = node.id().value();
+        return id.endsWith("-config") ? id.substring(0, id.length() - 7) : id;
+    }
+
+
 }

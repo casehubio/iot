@@ -23,7 +23,7 @@ Consumer-relevant modules -- what to depend on and why:
 
 | Module | Artifact | When to use |
 |--------|----------|-------------|
-| `api` | `casehub-iot-api` | Always. Core SPIs, device class hierarchy, `StateChangeEvent`, `DeviceCommand`, `CommandResult`, `IoTCloudEventAdapter`, `IoTCommandAuditEvent`, `IoTSituationEvent` (subscription engine integration), enums. |
+| `api` | `casehub-iot-api` | Always. Core SPIs, device class hierarchy, `StateChangeEvent`, `ScenarioBindingEvent`, `DeviceCommand`, `CommandResult`, `IoTCloudEventAdapter`, `IoTCommandAuditEvent`, `IoTSituationEvent` (subscription engine integration), enums. |
 | `bridge-server` | `casehub-iot-bridge-server` | Cloud apps consuming remote (bridged) devices. `BridgeDeviceProvider implements DeviceProvider` -- remote devices look local. |
 | `mcp` | `casehub-iot-mcp` | LLM agent device access. Add with `quarkus-mcp-server-http` for `iot_get_devices`, `iot_get_state`, `iot_send_command`, `iot_get_history` tools. |
 | `scenario` | `casehub-iot-scenario` | Scenario orchestration plugins for IoT devices. `iot.command` dispatches device commands, `iot.state` reads device state, `IoTDeviceVariableSource` exposes `${device.*}` in YAML conditions. Add when your app uses the platform YAML scenario engine for device orchestration. |
@@ -125,6 +125,27 @@ Consumers observe with `@ObservesAsync StateChangeEvent`.
 The `deriveChangedCapabilities(DeviceEntity before, DeviceEntity after)` static method compares `capabilities()` maps to produce the diff set. Used internally by providers and by `StateChangeEventPublisher` in the testing module.
 
 **Important:** after receiving a `StateChangeEvent`, use `event.after()` for the current device state -- do not re-read from `DeviceRegistry`, as the registry update and event fire are not atomic.
+
+---
+
+## ScenarioBindingEvent
+
+CDI synchronous event fired during scenario step execution to track which devices are being affected. Sealed interface in `io.casehub.iot.api` with typed variants:
+
+| Variant | When fired | Key fields |
+|---------|-----------|------------|
+| `StepStart` | After plan computation, before provisioning | `stepName`, `deviceIds` (Set) |
+| `DeviceProvisioned` | After individual device provisioned successfully | `deviceId` |
+| `DeviceFailed` | After individual device provision fails | `deviceId`, `reason` |
+| `StepComplete` | After all devices provisioned successfully | `provisioned`, `failed` (counts) |
+| `StepFailed` | After provisioning completes with failures | `provisioned`, `failed`, `failedDetails` |
+| `Clear` | On exception after `StepStart` (abnormal termination) | — |
+
+All variants carry `executionId` (step-scoped UUID) and `tenancyId`. Consumers observe with `@Observes ScenarioBindingEvent` (synchronous, not async -- ordering is guaranteed: start → per-device updates → complete).
+
+Pattern matching on specific variants: `@Observes ScenarioBindingEvent.StepStart`.
+
+Currently emitted by `DesiredStateDeliveryHandler` in the `scenario` module. Command binding (`IoTCommandPlugin`) is tracked in #131.
 
 ---
 
@@ -230,7 +251,19 @@ Returns `TopologyResponse` with:
 
 ### SSE Stream: GET /api/topology/stream
 
-Server-sent events for live topology updates. Sends an initial `snapshot` event with all nodes, then `update` events when device state changes. Requires `iot-viewer` role.
+Server-sent events for live topology updates. Requires `iot-viewer` role. Two categories of events:
+
+**Device state operations:**
+- `snapshot` — initial event with all nodes
+- `update` — when device state changes
+
+**Scenario binding operations** (emitted during scenario step execution):
+- `binding-start` — step beginning, payload: `{executionId, stepName, deviceIds[]}`
+- `binding-update` — individual device provisioned/failed, payload: `{executionId, deviceId, status}` (status: `PROVISIONED` or `FAILED`)
+- `binding-complete` — step finished, payload: `{executionId, stepName, outcome, provisioned, failed}`
+- `binding-clear` — abnormal termination, payload: `{executionId}`
+
+Device state events carry `nodes` (list of `TopologyNode`). Binding events carry `binding` (map). Both use the `TopologyStreamEvent` record with `operation` field to distinguish.
 
 The `desiredstate` module is optional -- when absent, all devices appear as `UNMONITORED` with no edges.
 

@@ -10,7 +10,6 @@ import io.casehub.platform.api.mcp.PlatformStream;
 import io.casehub.platform.api.mcp.RestPath;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
@@ -24,12 +23,7 @@ import java.util.List;
 public class DefaultIoTTopologyApi {
 
     @Inject TopologyAssembler assembler;
-    BroadcastProcessor<TopologyStreamEvent> broadcaster;
-
-    @PostConstruct
-    void init() {
-        broadcaster = BroadcastProcessor.create();
-    }
+    @Inject BroadcastProcessor<TopologyStreamEvent> broadcaster;
 
     @PlatformQuery("Get device topology with drift status and dependency edges")
     @RestPath("/")
@@ -61,5 +55,5 @@ public class DefaultIoTTopologyApi {
         }
     }
 
-    public record TopologyStreamEvent(String operation, List<TopologyNode> nodes) {}
+
 }

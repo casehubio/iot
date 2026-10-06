@@ -26,7 +26,7 @@ class DefaultIoTTopologyApiTest {
         assembler = new TopologyAssembler(registry);
         api = new DefaultIoTTopologyApi();
         api.assembler = assembler;
-        api.init();
+        api.broadcaster = io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor.create();
     }
 
     private LightDevice.Builder lightBuilder(String id, String tenant) {
