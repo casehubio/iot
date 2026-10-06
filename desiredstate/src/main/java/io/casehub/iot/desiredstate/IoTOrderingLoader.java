@@ -2,8 +2,8 @@ package io.casehub.iot.desiredstate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.casehub.iot.api.DeviceClass;
+import io.casehub.yaml.jackson.YamlMappers;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 public class IoTOrderingLoader {
 
     private final String orderingDir;
-    private final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
+    private final ObjectMapper yamlMapper = YamlMappers.create();
 
     @Inject
     public IoTOrderingLoader(IoTOrderingConfig config) {
