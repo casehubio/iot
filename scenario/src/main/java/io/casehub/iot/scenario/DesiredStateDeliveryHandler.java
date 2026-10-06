@@ -10,7 +10,7 @@ import io.casehub.desiredstate.api.StepAction;
 import io.casehub.desiredstate.runtime.DefaultDesiredStateGraphFactory;
 import io.casehub.desiredstate.runtime.TransitionPlanner;
 import io.casehub.iot.api.DeviceEntity;
-import io.casehub.iot.api.ScenarioBindingEvent;
+import io.casehub.iot.api.PlaybookBindingEvent;
 import io.casehub.iot.api.spi.DeviceRegistry;
 import io.casehub.iot.desiredstate.IoTActualStateAdapter;
 import io.casehub.iot.desiredstate.IoTDeviceGoal;
@@ -18,9 +18,9 @@ import io.casehub.iot.desiredstate.IoTGoalCompiler;
 import io.casehub.iot.desiredstate.IoTGoals;
 import io.casehub.iot.desiredstate.IoTNodeProvisioner;
 import io.casehub.iot.desiredstate.IoTPresetResolver;
-import io.casehub.pages.scenario.DeliveryContext;
-import io.casehub.pages.scenario.DeliveryHandler;
-import io.casehub.pages.scenario.StepOutcome;
+import io.casehub.pages.playbook.DeliveryContext;
+import io.casehub.pages.playbook.DeliveryHandler;
+import io.casehub.pages.playbook.StepOutcome;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -43,7 +43,7 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
     private final IoTActualStateAdapter actualStateAdapter;
     private final IoTNodeProvisioner provisioner;
     private final String tenancyId;
-    private final Consumer<ScenarioBindingEvent> bindingEvent;
+    private final Consumer<PlaybookBindingEvent> bindingEvent;
 
 
     private final DefaultDesiredStateGraphFactory graphFactory =
@@ -58,7 +58,7 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
             IoTActualStateAdapter actualStateAdapter,
             IoTNodeProvisioner provisioner,
             @ConfigProperty(name = "casehub.iot.tenancy-id") String tenancyId,
-            jakarta.enterprise.event.Event<ScenarioBindingEvent> bindingEvent) {
+            jakarta.enterprise.event.Event<PlaybookBindingEvent> bindingEvent) {
         this(registry, presetResolver, compiler, actualStateAdapter, provisioner, tenancyId,
                 bindingEvent::fire);
     }
@@ -70,7 +70,7 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
             IoTActualStateAdapter actualStateAdapter,
             IoTNodeProvisioner provisioner,
             String tenancyId,
-            Consumer<ScenarioBindingEvent> bindingEvent) {
+            Consumer<PlaybookBindingEvent> bindingEvent) {
         this.registry = registry;
         this.presetResolver = presetResolver;
         this.compiler = compiler;
@@ -160,7 +160,7 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
 
         try {
             if (!planDeviceIds.isEmpty()) {
-                bindingEvent.accept(new ScenarioBindingEvent.StepStart(
+                bindingEvent.accept(new PlaybookBindingEvent.StepStart(
                         executionId, tenancyId, stepName, planDeviceIds));
                 stepStartFired = true;
             }
@@ -174,18 +174,18 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
                         || result instanceof ProvisionResult.AlreadyConverged) {
                         if (!deviceOutcomes.containsKey(deviceId)) {
                             deviceOutcomes.put(deviceId, "provisioned");
-                            bindingEvent.accept(new ScenarioBindingEvent.DeviceProvisioned(
+                            bindingEvent.accept(new PlaybookBindingEvent.DeviceProvisioned(
                                     executionId, tenancyId, stepName, deviceId));
                         }
                     } else if (result instanceof ProvisionResult.Failed f) {
                         deviceOutcomes.put(deviceId, "failed");
                         failedDetails.add(deviceId + ": " + f.reason());
-                        bindingEvent.accept(new ScenarioBindingEvent.DeviceFailed(
+                        bindingEvent.accept(new PlaybookBindingEvent.DeviceFailed(
                                 executionId, tenancyId, stepName, deviceId, f.reason()));
                     } else {
                         deviceOutcomes.put(deviceId, "failed");
                         failedDetails.add(deviceId + ": " + result.getClass().getSimpleName());
-                        bindingEvent.accept(new ScenarioBindingEvent.DeviceFailed(
+                        bindingEvent.accept(new PlaybookBindingEvent.DeviceFailed(
                                 executionId, tenancyId, stepName, deviceId,
                                 result.getClass().getSimpleName()));
                     }
@@ -199,10 +199,10 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
 
             if (stepStartFired) {
                 if (failed > 0) {
-                    bindingEvent.accept(new ScenarioBindingEvent.StepFailed(
+                    bindingEvent.accept(new PlaybookBindingEvent.StepFailed(
                             executionId, tenancyId, stepName, provisioned, failed, failedDetails));
                 } else {
-                    bindingEvent.accept(new ScenarioBindingEvent.StepComplete(
+                    bindingEvent.accept(new PlaybookBindingEvent.StepComplete(
                             executionId, tenancyId, stepName, provisioned, failed));
                 }
             }
@@ -217,7 +217,7 @@ public class DesiredStateDeliveryHandler implements DeliveryHandler {
                     "converged", true));
         } catch (Exception e) {
             if (stepStartFired) {
-                bindingEvent.accept(new ScenarioBindingEvent.Clear(executionId, tenancyId));
+                bindingEvent.accept(new PlaybookBindingEvent.Clear(executionId, tenancyId));
             }
             throw e;
         }

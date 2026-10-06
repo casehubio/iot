@@ -1,16 +1,16 @@
 package io.casehub.iot.webapp.push;
 
-import io.casehub.pages.scenario.runtime.ScenarioConfig;
+import io.casehub.pages.playbook.runtime.PlaybookConfig;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class IoTScenarioConfigProducerTest {
+class IoTPlaybookConfigProducerTest {
 
     @Test
     void producesConfigWithDefaults() {
-        var producer = new IoTScenarioConfigProducer();
-        ScenarioConfig config = producer.scenarioConfig(
+        var producer = new IoTPlaybookConfigProducer();
+        PlaybookConfig config = producer.scenarioConfig(
                 "http://localhost:8080/graphql",
                 "ws://localhost:8080/push");
 

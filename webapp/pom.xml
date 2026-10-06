@@ -172,7 +172,7 @@
         <!-- Pages scenario runtime — server-side scenario orchestration -->
         <dependency>
             <groupId>io.casehub</groupId>
-            <artifactId>casehub-pages-scenario-runtime</artifactId>
+            <artifactId>casehub-pages-playbook-runtime</artifactId>
             <version>0.2-SNAPSHOT</version>
         </dependency>
 

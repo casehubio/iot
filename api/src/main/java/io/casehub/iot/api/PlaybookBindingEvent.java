@@ -3,37 +3,37 @@ package io.casehub.iot.api;
 import java.util.List;
 import java.util.Set;
 
-public sealed interface ScenarioBindingEvent {
+public sealed interface PlaybookBindingEvent {
     String executionId();
     String tenancyId();
 
     record StepStart(
             String executionId, String tenancyId,
             String stepName, Set<String> deviceIds
-    ) implements ScenarioBindingEvent {}
+    ) implements PlaybookBindingEvent {}
 
     record DeviceProvisioned(
             String executionId, String tenancyId,
             String stepName, String deviceId
-    ) implements ScenarioBindingEvent {}
+    ) implements PlaybookBindingEvent {}
 
     record DeviceFailed(
             String executionId, String tenancyId,
             String stepName, String deviceId, String reason
-    ) implements ScenarioBindingEvent {}
+    ) implements PlaybookBindingEvent {}
 
     record StepComplete(
             String executionId, String tenancyId,
             String stepName, int provisioned, int failed
-    ) implements ScenarioBindingEvent {}
+    ) implements PlaybookBindingEvent {}
 
     record StepFailed(
             String executionId, String tenancyId,
             String stepName, int provisioned, int failed,
             List<String> failedDetails
-    ) implements ScenarioBindingEvent {}
+    ) implements PlaybookBindingEvent {}
 
     record Clear(
             String executionId, String tenancyId
-    ) implements ScenarioBindingEvent {}
+    ) implements PlaybookBindingEvent {}
 }

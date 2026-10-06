@@ -4,7 +4,7 @@ import io.casehub.desiredstate.api.ActualState;
 import io.casehub.desiredstate.api.NodeId;
 import io.casehub.desiredstate.api.NodeStatus;
 import io.casehub.desiredstate.api.ProvisionResult;
-import io.casehub.iot.api.ScenarioBindingEvent;
+import io.casehub.iot.api.PlaybookBindingEvent;
 import io.casehub.iot.desiredstate.IoTActualStateAdapter;
 import io.casehub.iot.desiredstate.IoTGoalCompiler;
 import io.casehub.iot.desiredstate.IoTGoals;
@@ -13,8 +13,8 @@ import io.casehub.iot.desiredstate.IoTPresetResolver;
 import io.casehub.iot.testing.Fixtures;
 import io.casehub.iot.testing.MockDeviceProvider;
 import io.casehub.iot.testing.MockDeviceRegistry;
-import io.casehub.pages.scenario.DeliveryContext;
-import io.casehub.pages.scenario.StepOutcome;
+import io.casehub.pages.playbook.DeliveryContext;
+import io.casehub.pages.playbook.StepOutcome;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +43,7 @@ class DesiredStateDeliveryHandlerTest {
     private IoTActualStateAdapter actualStateAdapter;
     private IoTNodeProvisioner provisioner;
     private DesiredStateDeliveryHandler handler;
-    private List<ScenarioBindingEvent>  capturedEvents;
+    private List<PlaybookBindingEvent>  capturedEvents;
 
 
     @BeforeEach
@@ -177,20 +177,20 @@ class DesiredStateDeliveryHandlerTest {
 
         assertThat(capturedEvents).isNotEmpty();
 
-        assertThat(capturedEvents.get(0)).isInstanceOf(ScenarioBindingEvent.StepStart.class);
-        var start = (ScenarioBindingEvent.StepStart) capturedEvents.get(0);
+        assertThat(capturedEvents.get(0)).isInstanceOf(PlaybookBindingEvent.StepStart.class);
+        var start = (PlaybookBindingEvent.StepStart) capturedEvents.get(0);
         assertThat(start.deviceIds()).containsExactlyInAnyOrder("light-living-1", "thermostat-living-1");
         assertThat(start.stepName()).isEqualTo("night-mode");
         assertThat(start.tenancyId()).isEqualTo(TENANCY_ID);
 
         long provisionedCount = capturedEvents.stream()
-                                              .filter(e -> e instanceof ScenarioBindingEvent.DeviceProvisioned)
+                                              .filter(e -> e instanceof PlaybookBindingEvent.DeviceProvisioned)
                                               .count();
         assertThat(provisionedCount).isEqualTo(2);
 
         var last = capturedEvents.get(capturedEvents.size() - 1);
-        assertThat(last).isInstanceOf(ScenarioBindingEvent.StepComplete.class);
-        var complete = (ScenarioBindingEvent.StepComplete) last;
+        assertThat(last).isInstanceOf(PlaybookBindingEvent.StepComplete.class);
+        var complete = (PlaybookBindingEvent.StepComplete) last;
         assertThat(complete.provisioned()).isEqualTo(2);
         assertThat(complete.failed()).isZero();
     }
@@ -211,9 +211,9 @@ class DesiredStateDeliveryHandlerTest {
         assertThat(outcome.error()).contains("provider crash");
 
         assertThat(capturedEvents.stream()
-                                 .anyMatch(e -> e instanceof ScenarioBindingEvent.StepStart)).isTrue();
+                                 .anyMatch(e -> e instanceof PlaybookBindingEvent.StepStart)).isTrue();
         assertThat(capturedEvents.stream()
-                                 .anyMatch(e -> e instanceof ScenarioBindingEvent.Clear)).isTrue();
+                                 .anyMatch(e -> e instanceof PlaybookBindingEvent.Clear)).isTrue();
     }
 
 

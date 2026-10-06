@@ -7,29 +7,29 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ScenarioBindingEventTest {
+class PlaybookBindingEventTest {
 
     @Test
     void stepStartCarriesDeviceIds() {
-        var event = new ScenarioBindingEvent.StepStart(
+        var event = new PlaybookBindingEvent.StepStart(
                 "exec-1", "tenant-1", "apply-nightmode", Set.of("light-1", "therm-1"));
         assertThat(event.executionId()).isEqualTo("exec-1");
         assertThat(event.tenancyId()).isEqualTo("tenant-1");
         assertThat(event.stepName()).isEqualTo("apply-nightmode");
         assertThat(event.deviceIds()).containsExactlyInAnyOrder("light-1", "therm-1");
-        assertThat(event).isInstanceOf(ScenarioBindingEvent.class);
+        assertThat(event).isInstanceOf(PlaybookBindingEvent.class);
     }
 
     @Test
     void deviceProvisionedCarriesSingleDevice() {
-        var event = new ScenarioBindingEvent.DeviceProvisioned(
+        var event = new PlaybookBindingEvent.DeviceProvisioned(
                 "exec-1", "tenant-1", "apply-nightmode", "light-1");
         assertThat(event.deviceId()).isEqualTo("light-1");
     }
 
     @Test
     void deviceFailedCarriesReason() {
-        var event = new ScenarioBindingEvent.DeviceFailed(
+        var event = new PlaybookBindingEvent.DeviceFailed(
                 "exec-1", "tenant-1", "apply-nightmode", "therm-1", "timeout");
         assertThat(event.deviceId()).isEqualTo("therm-1");
         assertThat(event.reason()).isEqualTo("timeout");
@@ -37,7 +37,7 @@ class ScenarioBindingEventTest {
 
     @Test
     void stepCompleteCarriesCounts() {
-        var event = new ScenarioBindingEvent.StepComplete(
+        var event = new PlaybookBindingEvent.StepComplete(
                 "exec-1", "tenant-1", "apply-nightmode", 3, 0);
         assertThat(event.provisioned()).isEqualTo(3);
         assertThat(event.failed()).isZero();
@@ -45,7 +45,7 @@ class ScenarioBindingEventTest {
 
     @Test
     void stepFailedCarriesDetails() {
-        var event = new ScenarioBindingEvent.StepFailed(
+        var event = new PlaybookBindingEvent.StepFailed(
                 "exec-1", "tenant-1", "apply-nightmode", 2, 1,
                 List.of("therm-1: timeout"));
         assertThat(event.failed()).isEqualTo(1);
@@ -54,14 +54,14 @@ class ScenarioBindingEventTest {
 
     @Test
     void patternMatchOnVariants() {
-        ScenarioBindingEvent event = new ScenarioBindingEvent.Clear("exec-1", "tenant-1");
+        PlaybookBindingEvent event = new PlaybookBindingEvent.Clear("exec-1", "tenant-1");
         String result = switch (event) {
-            case ScenarioBindingEvent.StepStart ss -> "start:" + ss.stepName();
-            case ScenarioBindingEvent.DeviceProvisioned dp -> "prov:" + dp.deviceId();
-            case ScenarioBindingEvent.DeviceFailed df -> "fail:" + df.deviceId();
-            case ScenarioBindingEvent.StepComplete sc -> "complete:" + sc.provisioned();
-            case ScenarioBindingEvent.StepFailed sf -> "failed:" + sf.failed();
-            case ScenarioBindingEvent.Clear c -> "clear:" + c.executionId();
+            case PlaybookBindingEvent.StepStart ss -> "start:" + ss.stepName();
+            case PlaybookBindingEvent.DeviceProvisioned dp -> "prov:" + dp.deviceId();
+            case PlaybookBindingEvent.DeviceFailed df -> "fail:" + df.deviceId();
+            case PlaybookBindingEvent.StepComplete sc -> "complete:" + sc.provisioned();
+            case PlaybookBindingEvent.StepFailed sf -> "failed:" + sf.failed();
+            case PlaybookBindingEvent.Clear c -> "clear:" + c.executionId();
         };
         assertThat(result).isEqualTo("clear:exec-1");
     }

@@ -1,6 +1,6 @@
 package io.casehub.iot.webapp.app.service;
 
-import io.casehub.iot.api.ScenarioBindingEvent;
+import io.casehub.iot.api.PlaybookBindingEvent;
 import io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,10 +11,10 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ScenarioTopologyBinderTest {
+class PlaybookTopologyBinderTest {
 
     private BroadcastProcessor<TopologyStreamEvent> broadcaster;
-    private ScenarioTopologyBinder binder;
+    private PlaybookTopologyBinder binder;
     private List<TopologyStreamEvent> captured;
 
     @BeforeEach
@@ -22,12 +22,12 @@ class ScenarioTopologyBinderTest {
         broadcaster = BroadcastProcessor.create();
         captured = new ArrayList<>();
         broadcaster.subscribe().with(captured::add);
-        binder = new ScenarioTopologyBinder(broadcaster);
+        binder = new PlaybookTopologyBinder(broadcaster);
     }
 
     @Test
     void stepStartProducesBindingStartEvent() {
-        var event = new ScenarioBindingEvent.StepStart(
+        var event = new PlaybookBindingEvent.StepStart(
                 "exec-1", "tenant-1", "apply-nightmode", Set.of("light-1", "therm-1"));
 
         binder.onBindingEvent(event);
@@ -46,7 +46,7 @@ class ScenarioTopologyBinderTest {
 
     @Test
     void deviceProvisionedProducesBindingUpdateEvent() {
-        var event = new ScenarioBindingEvent.DeviceProvisioned(
+        var event = new PlaybookBindingEvent.DeviceProvisioned(
                 "exec-1", "tenant-1", "apply-nightmode", "light-1");
 
         binder.onBindingEvent(event);
@@ -60,7 +60,7 @@ class ScenarioTopologyBinderTest {
 
     @Test
     void deviceFailedProducesBindingUpdateWithFailed() {
-        var event = new ScenarioBindingEvent.DeviceFailed(
+        var event = new PlaybookBindingEvent.DeviceFailed(
                 "exec-1", "tenant-1", "apply-nightmode", "therm-1", "timeout");
 
         binder.onBindingEvent(event);
@@ -72,7 +72,7 @@ class ScenarioTopologyBinderTest {
 
     @Test
     void stepCompleteProducesBindingCompleteOk() {
-        var event = new ScenarioBindingEvent.StepComplete(
+        var event = new PlaybookBindingEvent.StepComplete(
                 "exec-1", "tenant-1", "apply-nightmode", 3, 0);
 
         binder.onBindingEvent(event);
@@ -85,7 +85,7 @@ class ScenarioTopologyBinderTest {
 
     @Test
     void stepFailedProducesBindingCompleteFailed() {
-        var event = new ScenarioBindingEvent.StepFailed(
+        var event = new PlaybookBindingEvent.StepFailed(
                 "exec-1", "tenant-1", "apply-nightmode", 2, 1,
                 List.of("therm-1: timeout"));
 
@@ -98,7 +98,7 @@ class ScenarioTopologyBinderTest {
 
     @Test
     void clearProducesBindingClearEvent() {
-        var event = new ScenarioBindingEvent.Clear("exec-1", "tenant-1");
+        var event = new PlaybookBindingEvent.Clear("exec-1", "tenant-1");
 
         binder.onBindingEvent(event);
 
