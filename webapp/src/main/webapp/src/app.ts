@@ -19,6 +19,7 @@ import { workItemsPage } from "./pages/workitems";
 import { auditPage } from "./pages/audit";
 import { providersPage } from "./pages/providers";
 import { topologyPage } from "./pages/topology";
+import { scenariosPage } from "./pages/scenarios";
 import "./components/topology-tree";
 import "./components/topology-graph";
 
@@ -48,6 +49,7 @@ const app = page("IoT Console",
     ["Health", healthPage()],
     ["Devices", devicesPage()],
     ["Topology", topologyPage()],
+    ["Scenarios", scenariosPage()],
     ["Situations", situationsPage()],
     ["Cases", casesPage()],
     ["Work Items", workItemsPage()],

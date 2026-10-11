@@ -29,6 +29,7 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./",\
         "packageDependencies": [\
           ["@casehubio/iot-webapp", "workspace:."],\
+          ["@casehubio/pages-aria", "portal:./.casehub-packages/packages/pages-aria::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
           ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
           ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
           ["@casehubio/pages-runtime", "portal:./.casehub-packages/packages/pages-runtime::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
@@ -62,6 +63,7 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./",\
         "packageDependencies": [\
           ["@casehubio/iot-webapp", "workspace:."],\
+          ["@casehubio/pages-aria", "portal:./.casehub-packages/packages/pages-aria::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
           ["@casehubio/pages-component", "portal:./.casehub-packages/packages/pages-component::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
           ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
           ["@casehubio/pages-runtime", "portal:./.casehub-packages/packages/pages-runtime::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
@@ -72,6 +74,20 @@ const RAW_RUNTIME_STATE =
           ["typescript", "patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"],\
           ["vite", "virtual:34737541878ab4bf8701fdb0cdbed9b5b7635b5eb27e3149f61701852884d3280097e7112071e130e4160abf6b06d2ecec985265e5d7854f25460d945eb6e7c3#npm:5.4.21"],\
           ["vitest", "virtual:34737541878ab4bf8701fdb0cdbed9b5b7635b5eb27e3149f61701852884d3280097e7112071e130e4160abf6b06d2ecec985265e5d7854f25460d945eb6e7c3#npm:3.2.7"]\
+        ],\
+        "linkType": "SOFT"\
+      }]\
+    ]],\
+    ["@casehubio/pages-aria", [\
+      ["portal:./.casehub-packages/packages/pages-aria::locator=%40casehubio%2Fiot-webapp%40workspace%3A.", {\
+        "packageLocation": "./.casehub-packages/packages/pages-aria/",\
+        "packageDependencies": [\
+          ["@casehubio/pages-aria", "portal:./.casehub-packages/packages/pages-aria::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
+          ["@casehubio/pages-data", "portal:./.casehub-packages/packages/pages-data::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
+          ["@casehubio/pages-primitives", "portal:./.casehub-packages/packages/pages-primitives::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
+          ["@casehubio/yaml-core", "portal:./.casehub-packages/packages/yaml-core::locator=%40casehubio%2Fiot-webapp%40workspace%3A."],\
+          ["lit", "npm:3.3.3"],\
+          ["yaml", "npm:2.9.1"]\
         ],\
         "linkType": "SOFT"\
       }]\
@@ -2391,6 +2407,15 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "../../../../../../../.yarn/berry/cache/yallist-npm-5.0.0-8732dd9f1c-10c0.zip/node_modules/yallist/",\
         "packageDependencies": [\
           ["yallist", "npm:5.0.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["yaml", [\
+      ["npm:2.9.1", {\
+        "packageLocation": "../../../../../../../.yarn/berry/cache/yaml-npm-2.9.1-d61da744fe-10c0.zip/node_modules/yaml/",\
+        "packageDependencies": [\
+          ["yaml", "npm:2.9.1"]\
         ],\
         "linkType": "HARD"\
       }]\

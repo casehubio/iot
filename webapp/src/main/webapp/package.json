@@ -7,6 +7,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@casehubio/pages-aria": "*",
     "@casehubio/pages-component": "*",
     "@casehubio/pages-data": "*",
     "@casehubio/pages-runtime": "*",
@@ -14,6 +15,7 @@
     "@casehubio/pages-viz": "*"
   },
   "resolutions": {
+    "@casehubio/pages-aria": "portal:./.casehub-packages/packages/pages-aria",
     "@casehubio/pages-component": "portal:./.casehub-packages/packages/pages-component",
     "@casehubio/pages-data": "portal:./.casehub-packages/packages/pages-data",
     "@casehubio/pages-primitives": "portal:./.casehub-packages/packages/pages-primitives",
