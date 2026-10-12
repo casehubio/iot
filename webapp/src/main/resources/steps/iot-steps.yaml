@@ -1,0 +1,81 @@
+namespace: iot
+
+actions:
+  command:
+    description: Dispatches a command to an IoT device via DeviceProvider
+    inputs:
+      device:
+        type: STRING
+        required: true
+        description: Device identifier (e.g. light-living-1, lock-front)
+      action:
+        type: STRING
+        required: true
+        description: Command action (e.g. turn_on, turn_off, lock, unlock, set_temperature, set_brightness, arm, disarm)
+      params:
+        type: OBJECT
+        description: "Additional command parameters (e.g. { temperature: 22, unit: CELSIUS })"
+      correlation-id:
+        type: STRING
+        description: Correlation identifier for command tracking
+    outputs:
+      result:
+        type: STRING
+        description: "Command result: SENT, FAILED, or TIMEOUT"
+      device:
+        type: STRING
+        description: Device identifier echo
+      action:
+        type: STRING
+        description: Action echo
+      correlationId:
+        type: STRING
+        description: Correlation identifier used
+    invoke:
+      mcp: "iot_send_command"
+
+  state:
+    description: Reads current state of an IoT device from DeviceRegistry
+    inputs:
+      device:
+        type: STRING
+        required: true
+        description: Device identifier
+    outputs:
+      deviceId:
+        type: STRING
+        description: Device identifier
+      deviceClass:
+        type: STRING
+        description: Matter device class (e.g. LIGHT, THERMOSTAT, LOCK, CONTACT_SENSOR)
+      providerId:
+        type: STRING
+        description: Provider identifier (e.g. homeassistant, openhab)
+      capabilities:
+        type: OBJECT
+        description: Current device capabilities and state values
+      location:
+        type: STRING
+        description: Hierarchical location path (nullable)
+    invoke:
+      mcp: "iot_get_state"
+
+  desired-state:
+    description: >-
+      Applies a desired device state configuration via the desired-state
+      convergence engine. Used with 'delivery: desired-state' in playbooks.
+      Accepts either a named preset or inline per-device goal specifications.
+      When preset is not specified, remaining keys are treated as inline device
+      goals — each key is a device ID mapping to a desired capability state
+      object.
+    inputs:
+      preset:
+        type: STRING
+        description: Named preset to apply (e.g. nighttime, morning, away). Resolved via IoTPresetResolver with import composition and last-wins merge.
+    outputs:
+      provisioned:
+        type: INTEGER
+        description: Number of devices successfully provisioned
+      converged:
+        type: BOOLEAN
+        description: Whether all devices reached desired state

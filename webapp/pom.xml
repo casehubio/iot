@@ -247,7 +247,6 @@
             <artifactId>casehub-iot-mcp</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>io.casehub</groupId>
             <artifactId>casehub-pages-npm</artifactId>
