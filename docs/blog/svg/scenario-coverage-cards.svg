@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 720 290" xmlns="http://www.w3.org/2000/svg" style="max-width:720px;font-family:system-ui,sans-serif">
+  <!-- Cards -->
+  <rect x="10" y="10" width="210" height="120" rx="6" fill="#ffebee" stroke="#ef5350"/>
+  <text x="25" y="35" font-size="11" font-weight="700" fill="#c62828">arm-security</text>
+  <text x="25" y="55" font-size="9" fill="#555">Lock 3 doors in parallel</text>
+  <text x="25" y="70" font-size="9" fill="#555">Quorum: 2 of 3 must succeed</text>
+  <text x="25" y="85" font-size="9" fill="#555">Then arm alarm</text>
+  <text x="25" y="100" font-size="9" fill="#555">Catch: unlock on failure</text>
+  <rect x="25" y="108" width="55" height="14" rx="3" fill="#ffcdd2"/>
+  <text x="30" y="118" font-size="8" fill="#c62828">parallel</text>
+  <rect x="85" y="108" width="50" height="14" rx="3" fill="#ffcdd2"/>
+  <text x="90" y="118" font-size="8" fill="#c62828">quorum</text>
+  <rect x="140" y="108" width="55" height="14" rx="3" fill="#ffcdd2"/>
+  <text x="145" y="118" font-size="8" fill="#c62828">try/catch</text>
+
+  <rect x="250" y="10" width="210" height="120" rx="6" fill="#fff3e0" stroke="#ffa726"/>
+  <text x="265" y="35" font-size="11" font-weight="700" fill="#e65100">emergency-response</text>
+  <text x="265" y="55" font-size="9" fill="#555">Read smoke sensor state</text>
+  <text x="265" y="70" font-size="9" fill="#555">If smoke: unlock all + alarm</text>
+  <text x="265" y="85" font-size="9" fill="#555">Else if motion: lights on</text>
+  <rect x="265" y="108" width="40" height="14" rx="3" fill="#ffe0b2"/>
+  <text x="270" y="118" font-size="8" fill="#e65100">if/else</text>
+  <rect x="310" y="108" width="55" height="14" rx="3" fill="#ffe0b2"/>
+  <text x="315" y="118" font-size="8" fill="#e65100">parallel</text>
+
+  <rect x="490" y="10" width="210" height="120" rx="6" fill="#e8f5e9" stroke="#66bb6a"/>
+  <text x="505" y="35" font-size="11" font-weight="700" fill="#2e7d32">nighttime-mode</text>
+  <text x="505" y="55" font-size="9" fill="#555">Read occupancy mode</text>
+  <text x="505" y="70" font-size="9" fill="#555">Match: home / away / default</text>
+  <text x="505" y="85" font-size="9" fill="#555">Adjust lights + thermostat</text>
+  <rect x="505" y="108" width="45" height="14" rx="3" fill="#c8e6c9"/>
+  <text x="510" y="118" font-size="8" fill="#2e7d32">match</text>
+  <rect x="555" y="108" width="55" height="14" rx="3" fill="#c8e6c9"/>
+  <text x="560" y="118" font-size="8" fill="#2e7d32">parallel</text>
+
+  <rect x="10" y="150" width="210" height="120" rx="6" fill="#e3f2fd" stroke="#42a5f5"/>
+  <text x="25" y="175" font-size="11" font-weight="700" fill="#1565c0">hvac-cascade</text>
+  <text x="25" y="195" font-size="9" fill="#555">Select: channel vs signal</text>
+  <text x="25" y="210" font-size="9" fill="#555">Warning: adjust thermostat</text>
+  <text x="25" y="225" font-size="9" fill="#555">Critical: fan + thermostat</text>
+  <text x="25" y="240" font-size="9" fill="#555">Emergency: full shutdown</text>
+  <rect x="25" y="248" width="45" height="14" rx="3" fill="#bbdefb"/>
+  <text x="30" y="258" font-size="8" fill="#1565c0">select</text>
+  <rect x="75" y="248" width="55" height="14" rx="3" fill="#bbdefb"/>
+  <text x="80" y="258" font-size="8" fill="#1565c0">channel</text>
+  <rect x="135" y="248" width="45" height="14" rx="3" fill="#bbdefb"/>
+  <text x="140" y="258" font-size="8" fill="#1565c0">match</text>
+
+  <rect x="250" y="150" width="210" height="120" rx="6" fill="#f3e5f5" stroke="#ab47bc"/>
+  <text x="265" y="175" font-size="11" font-weight="700" fill="#6a1b9a">occupancy-driven</text>
+  <text x="265" y="195" font-size="9" fill="#555">State machine: home→away→vacation</text>
+  <text x="265" y="210" font-size="9" fill="#555">Depart: lights off, alarm on</text>
+  <text x="265" y="225" font-size="9" fill="#555">Arrive: alarm off, lights on</text>
+  <rect x="265" y="248" width="80" height="14" rx="3" fill="#e1bee7"/>
+  <text x="270" y="258" font-size="8" fill="#6a1b9a">state machine</text>
+  <rect x="350" y="248" width="65" height="14" rx="3" fill="#e1bee7"/>
+  <text x="355" y="258" font-size="8" fill="#6a1b9a">transition</text>
+</svg>

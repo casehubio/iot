@@ -45,54 +45,7 @@ in Java — in `casehub-platform/yaml-core`, a repo I hadn't searched.
 Every TypeScript concurrency type has a Java counterpart, and the Java
 versions are the source of truth.
 
-<svg viewBox="0 0 700 420" xmlns="http://www.w3.org/2000/svg" style="max-width:700px;font-family:system-ui,sans-serif">
-  <defs>
-    <marker id="arr3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#555" stroke-width="1.2"/>
-    </marker>
-  </defs>
-
-  <text x="350" y="22" font-size="14" font-weight="700" fill="#333" text-anchor="middle">Platform Step Execution Architecture</text>
-
-  <!-- YAML layer -->
-  <rect x="30" y="40" width="640" height="55" rx="6" fill="#fff8e1" stroke="#ffc107"/>
-  <text x="50" y="62" font-size="12" font-weight="600" fill="#f57f17">YAML Scenario</text>
-  <text x="50" y="80" font-size="10" fill="#666">parallel:, barrier:, quorum:, try:/catch:, if:/then:/else:, match:/cases:, select:</text>
-
-  <!-- StepWalker -->
-  <rect x="200" y="115" width="300" height="40" rx="6" fill="#e8eaf6" stroke="#5c6bc0"/>
-  <text x="260" y="140" font-size="12" font-weight="600" fill="#283593">StepWalker.resolve()</text>
-  <line x1="350" y1="95" x2="350" y2="115" stroke="#555" marker-end="url(#arr3)"/>
-
-  <!-- ResolvedStep types -->
-  <rect x="50" y="175" width="600" height="45" rx="6" fill="#e3f2fd" stroke="#42a5f5"/>
-  <text x="70" y="193" font-size="10" font-weight="600" fill="#1565c0">ResolvedStep sealed hierarchy</text>
-  <text x="70" y="208" font-size="9" fill="#555">ParallelStep | BarrierStep | QuorumStep | IfElseStep | MatchStep | TryCatchFinallyStep | SelectStep | PluginStep</text>
-  <line x1="350" y1="155" x2="350" y2="175" stroke="#555" marker-end="url(#arr3)"/>
-
-  <!-- StructuralStepEvaluator -->
-  <rect x="150" y="240" width="400" height="55" rx="6" fill="#e8f5e9" stroke="#66bb6a" stroke-width="2"/>
-  <text x="200" y="262" font-size="12" font-weight="700" fill="#2e7d32">StructuralStepEvaluator</text>
-  <text x="200" y="280" font-size="10" fill="#555">Virtual thread fan-out, OrcLatch, QuorumTracker, try/catch, select race</text>
-  <line x1="350" y1="220" x2="350" y2="240" stroke="#555" marker-end="url(#arr3)"/>
-
-  <!-- Orchestration primitives -->
-  <rect x="30" y="315" width="280" height="90" rx="6" fill="#f3e5f5" stroke="#ab47bc"/>
-  <text x="50" y="338" font-size="11" font-weight="600" fill="#6a1b9a">Orchestration Primitives (yaml-core)</text>
-  <text x="50" y="356" font-size="9" fill="#555">OrcLatch — countdown join gate</text>
-  <text x="50" y="370" font-size="9" fill="#555">OrcSemaphore — mutual exclusion</text>
-  <text x="50" y="384" font-size="9" fill="#555">OrcSignal / OrcChannel — pub/sub</text>
-  <text x="50" y="398" font-size="9" fill="#555">CorrelationScope — request/response tracking</text>
-  <line x1="250" y1="295" x2="170" y2="315" stroke="#ab47bc" stroke-dasharray="4,3"/>
-
-  <!-- Plugin dispatch -->
-  <rect x="390" y="315" width="280" height="90" rx="6" fill="#fce4ec" stroke="#ef5350"/>
-  <text x="410" y="338" font-size="11" font-weight="600" fill="#c62828">Plugin Dispatch (StepRunner)</text>
-  <text x="410" y="358" font-size="10" fill="#555">PluginStep → @Plugin record</text>
-  <text x="410" y="374" font-size="10" fill="#555">@Execute method → CDI services</text>
-  <text x="410" y="392" font-size="10" fill="#c62828" font-weight="600">iot.command → DeviceProvider.dispatch()</text>
-  <line x1="450" y1="295" x2="530" y2="315" stroke="#ef5350" stroke-dasharray="4,3"/>
-</svg>
+![Step Execution Architecture](svg/step-execution-architecture.svg)
 
 `StructuralStepEvaluator` in `yaml-step-runtime` handles the full set:
 `evaluateParallel()` spawns each child step on its own virtual thread
@@ -140,27 +93,7 @@ physically — dead battery, mechanical jam. But this verification problem
 has two fundamentally different solutions depending on what you're trying
 to do:
 
-<svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="max-width:700px;font-family:system-ui,sans-serif">
-  <!-- Imperative -->
-  <rect x="20" y="20" width="310" height="160" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="1.5"/>
-  <text x="100" y="45" font-size="13" font-weight="700" fill="#2e7d32">Imperative Orchestration</text>
-  <text x="40" y="70" font-size="10" fill="#555">Scenario step runtime</text>
-  <text x="40" y="88" font-size="10" fill="#555">"Lock doors, then arm alarm"</text>
-  <text x="40" y="110" font-size="10" fill="#2e7d32">Finite workflow — runs once</text>
-  <text x="40" y="128" font-size="10" fill="#2e7d32">Compensation via try/catch</text>
-  <text x="40" y="146" font-size="10" fill="#2e7d32">Verification via retry decorator</text>
-  <text x="40" y="164" font-size="10" fill="#2e7d32">Conditional routing (if/match)</text>
-
-  <!-- Declarative -->
-  <rect x="370" y="20" width="310" height="160" rx="8" fill="#e3f2fd" stroke="#42a5f5" stroke-width="1.5"/>
-  <text x="435" y="45" font-size="13" font-weight="700" fill="#1565c0">Declarative Convergence</text>
-  <text x="390" y="70" font-size="10" fill="#555">Desiredstate reconciliation loop</text>
-  <text x="390" y="88" font-size="10" fill="#555">"Keep all doors locked"</text>
-  <text x="390" y="110" font-size="10" fill="#1565c0">Continuous — runs forever</text>
-  <text x="390" y="128" font-size="10" fill="#1565c0">Escalation via FaultPolicy</text>
-  <text x="390" y="146" font-size="10" fill="#1565c0">Verification via reconciliation cycle</text>
-  <text x="390" y="164" font-size="10" fill="#1565c0">No conditional routing (static graph)</text>
-</svg>
+![Imperative vs Declarative](svg/imperative-vs-declarative.svg)
 
 If you need "lock all doors, wait, then arm alarm" as a one-shot
 operation — that's a scenario workflow. If you need "keep all doors
@@ -229,64 +162,7 @@ discovers all sources and enriches the `VariableResolver`.
 Five orchestration scenarios exercise every concurrency primitive the
 platform provides. Each one represents a real IoT use case:
 
-<svg viewBox="0 0 720 290" xmlns="http://www.w3.org/2000/svg" style="max-width:720px;font-family:system-ui,sans-serif">
-  <!-- Cards -->
-  <rect x="10" y="10" width="210" height="120" rx="6" fill="#ffebee" stroke="#ef5350"/>
-  <text x="25" y="35" font-size="11" font-weight="700" fill="#c62828">arm-security</text>
-  <text x="25" y="55" font-size="9" fill="#555">Lock 3 doors in parallel</text>
-  <text x="25" y="70" font-size="9" fill="#555">Quorum: 2 of 3 must succeed</text>
-  <text x="25" y="85" font-size="9" fill="#555">Then arm alarm</text>
-  <text x="25" y="100" font-size="9" fill="#555">Catch: unlock on failure</text>
-  <rect x="25" y="108" width="55" height="14" rx="3" fill="#ffcdd2"/>
-  <text x="30" y="118" font-size="8" fill="#c62828">parallel</text>
-  <rect x="85" y="108" width="50" height="14" rx="3" fill="#ffcdd2"/>
-  <text x="90" y="118" font-size="8" fill="#c62828">quorum</text>
-  <rect x="140" y="108" width="55" height="14" rx="3" fill="#ffcdd2"/>
-  <text x="145" y="118" font-size="8" fill="#c62828">try/catch</text>
-
-  <rect x="250" y="10" width="210" height="120" rx="6" fill="#fff3e0" stroke="#ffa726"/>
-  <text x="265" y="35" font-size="11" font-weight="700" fill="#e65100">emergency-response</text>
-  <text x="265" y="55" font-size="9" fill="#555">Read smoke sensor state</text>
-  <text x="265" y="70" font-size="9" fill="#555">If smoke: unlock all + alarm</text>
-  <text x="265" y="85" font-size="9" fill="#555">Else if motion: lights on</text>
-  <rect x="265" y="108" width="40" height="14" rx="3" fill="#ffe0b2"/>
-  <text x="270" y="118" font-size="8" fill="#e65100">if/else</text>
-  <rect x="310" y="108" width="55" height="14" rx="3" fill="#ffe0b2"/>
-  <text x="315" y="118" font-size="8" fill="#e65100">parallel</text>
-
-  <rect x="490" y="10" width="210" height="120" rx="6" fill="#e8f5e9" stroke="#66bb6a"/>
-  <text x="505" y="35" font-size="11" font-weight="700" fill="#2e7d32">nighttime-mode</text>
-  <text x="505" y="55" font-size="9" fill="#555">Read occupancy mode</text>
-  <text x="505" y="70" font-size="9" fill="#555">Match: home / away / default</text>
-  <text x="505" y="85" font-size="9" fill="#555">Adjust lights + thermostat</text>
-  <rect x="505" y="108" width="45" height="14" rx="3" fill="#c8e6c9"/>
-  <text x="510" y="118" font-size="8" fill="#2e7d32">match</text>
-  <rect x="555" y="108" width="55" height="14" rx="3" fill="#c8e6c9"/>
-  <text x="560" y="118" font-size="8" fill="#2e7d32">parallel</text>
-
-  <rect x="10" y="150" width="210" height="120" rx="6" fill="#e3f2fd" stroke="#42a5f5"/>
-  <text x="25" y="175" font-size="11" font-weight="700" fill="#1565c0">hvac-cascade</text>
-  <text x="25" y="195" font-size="9" fill="#555">Select: channel vs signal</text>
-  <text x="25" y="210" font-size="9" fill="#555">Warning: adjust thermostat</text>
-  <text x="25" y="225" font-size="9" fill="#555">Critical: fan + thermostat</text>
-  <text x="25" y="240" font-size="9" fill="#555">Emergency: full shutdown</text>
-  <rect x="25" y="248" width="45" height="14" rx="3" fill="#bbdefb"/>
-  <text x="30" y="258" font-size="8" fill="#1565c0">select</text>
-  <rect x="75" y="248" width="55" height="14" rx="3" fill="#bbdefb"/>
-  <text x="80" y="258" font-size="8" fill="#1565c0">channel</text>
-  <rect x="135" y="248" width="45" height="14" rx="3" fill="#bbdefb"/>
-  <text x="140" y="258" font-size="8" fill="#1565c0">match</text>
-
-  <rect x="250" y="150" width="210" height="120" rx="6" fill="#f3e5f5" stroke="#ab47bc"/>
-  <text x="265" y="175" font-size="11" font-weight="700" fill="#6a1b9a">occupancy-driven</text>
-  <text x="265" y="195" font-size="9" fill="#555">State machine: home→away→vacation</text>
-  <text x="265" y="210" font-size="9" fill="#555">Depart: lights off, alarm on</text>
-  <text x="265" y="225" font-size="9" fill="#555">Arrive: alarm off, lights on</text>
-  <rect x="265" y="248" width="80" height="14" rx="3" fill="#e1bee7"/>
-  <text x="270" y="258" font-size="8" fill="#6a1b9a">state machine</text>
-  <rect x="350" y="248" width="65" height="14" rx="3" fill="#e1bee7"/>
-  <text x="355" y="258" font-size="8" fill="#6a1b9a">transition</text>
-</svg>
+![Scenario Coverage Cards](svg/scenario-coverage-cards.svg)
 
 `arm-security` is the most interesting. Parallel dispatch to three
 locks, a quorum gate requiring 2 of 3 to succeed within 30 seconds,

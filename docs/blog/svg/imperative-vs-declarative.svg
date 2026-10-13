@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" style="max-width:700px;font-family:system-ui,sans-serif">
+  <!-- Imperative -->
+  <rect x="20" y="20" width="310" height="160" rx="8" fill="#e8f5e9" stroke="#66bb6a" stroke-width="1.5"/>
+  <text x="100" y="45" font-size="13" font-weight="700" fill="#2e7d32">Imperative Orchestration</text>
+  <text x="40" y="70" font-size="10" fill="#555">Scenario step runtime</text>
+  <text x="40" y="88" font-size="10" fill="#555">"Lock doors, then arm alarm"</text>
+  <text x="40" y="110" font-size="10" fill="#2e7d32">Finite workflow — runs once</text>
+  <text x="40" y="128" font-size="10" fill="#2e7d32">Compensation via try/catch</text>
+  <text x="40" y="146" font-size="10" fill="#2e7d32">Verification via retry decorator</text>
+  <text x="40" y="164" font-size="10" fill="#2e7d32">Conditional routing (if/match)</text>
+
+  <!-- Declarative -->
+  <rect x="370" y="20" width="310" height="160" rx="8" fill="#e3f2fd" stroke="#42a5f5" stroke-width="1.5"/>
+  <text x="435" y="45" font-size="13" font-weight="700" fill="#1565c0">Declarative Convergence</text>
+  <text x="390" y="70" font-size="10" fill="#555">Desiredstate reconciliation loop</text>
+  <text x="390" y="88" font-size="10" fill="#555">"Keep all doors locked"</text>
+  <text x="390" y="110" font-size="10" fill="#1565c0">Continuous — runs forever</text>
+  <text x="390" y="128" font-size="10" fill="#1565c0">Escalation via FaultPolicy</text>
+  <text x="390" y="146" font-size="10" fill="#1565c0">Verification via reconciliation cycle</text>
+  <text x="390" y="164" font-size="10" fill="#1565c0">No conditional routing (static graph)</text>
+</svg>

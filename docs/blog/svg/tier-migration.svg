@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" style="max-width:700px;font-family:system-ui,sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#666" stroke-width="1.2"/>
+    </marker>
+  </defs>
+  <!-- Tiers -->
+  <rect x="20" y="20" width="660" height="80" rx="8" fill="#f0f4ff" stroke="#9bb3e0" stroke-width="1.5"/>
+  <text x="40" y="50" font-size="13" font-weight="600" fill="#4a6fa5">Integration Tier (casehub-ops)</text>
+  <rect x="50" y="60" width="120" height="28" rx="4" fill="#fff" stroke="#9bb3e0"/>
+  <text x="65" y="79" font-size="11" fill="#333">ops/aml</text>
+  <rect x="185" y="60" width="120" height="28" rx="4" fill="#fff" stroke="#9bb3e0"/>
+  <text x="200" y="79" font-size="11" fill="#333">ops/clinical</text>
+  <rect x="320" y="60" width="120" height="28" rx="4" fill="#ffe0e0" stroke="#d44" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="340" y="79" font-size="11" fill="#c33" font-weight="600">ops/iot ✗</text>
+  <rect x="455" y="60" width="120" height="28" rx="4" fill="#fff" stroke="#9bb3e0"/>
+  <text x="465" y="79" font-size="11" fill="#333">ops/deployment</text>
+
+  <rect x="20" y="170" width="660" height="130" rx="8" fill="#f0fff4" stroke="#7bc47f" stroke-width="1.5"/>
+  <text x="40" y="200" font-size="13" font-weight="600" fill="#2d7a32">Foundation Tier (casehub-iot)</text>
+  <rect x="50" y="210" width="90" height="28" rx="4" fill="#fff" stroke="#7bc47f"/>
+  <text x="65" y="229" font-size="11" fill="#333">api</text>
+  <rect x="155" y="210" width="90" height="28" rx="4" fill="#fff" stroke="#7bc47f"/>
+  <text x="160" y="229" font-size="11" fill="#333">homeassist.</text>
+  <rect x="260" y="210" width="90" height="28" rx="4" fill="#fff" stroke="#7bc47f"/>
+  <text x="272" y="229" font-size="11" fill="#333">openhab</text>
+  <rect x="365" y="210" width="90" height="28" rx="4" fill="#fff" stroke="#7bc47f"/>
+  <text x="380" y="229" font-size="11" fill="#333">bridge</text>
+  <rect x="470" y="210" width="90" height="28" rx="4" fill="#fff" stroke="#7bc47f"/>
+  <text x="490" y="229" font-size="11" fill="#333">mcp</text>
+
+  <rect x="50" y="255" width="130" height="28" rx="4" fill="#d4f5d4" stroke="#2d7a32" stroke-width="2"/>
+  <text x="58" y="274" font-size="11" fill="#1a5c1f" font-weight="600">desiredstate ✓</text>
+
+  <!-- Arrow -->
+  <path d="M380,88 C380,140 110,140 110,252" fill="none" stroke="#d44" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arr)"/>
+  <text x="260" y="145" font-size="11" fill="#d44" font-weight="600">moved</text>
+</svg>
