@@ -72,6 +72,11 @@ public class HomeAssistantWebSocketClient {
         String url = config.url()
                            .orElseGet(() -> HomeAssistantDiscovery.resolve(config.discoveryTimeoutSeconds()));
         cancelReconnect();
+        WebSocketClientConnection old = connection;
+        if (old != null && !old.isClosed()) {
+            try { old.closeAndAwait(); } catch (Exception ignored) {}
+        }
+        cancelReconnect();
         return connectorProvider.get()
                                 .baseUri(URI.create(url))
                                 .connect()
