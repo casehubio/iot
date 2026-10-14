@@ -53,6 +53,8 @@ public class HomeAssistantWebSocketClient {
     private volatile boolean shuttingDown = false;
     private volatile ScheduledFuture<?> heartbeatFuture;
     private volatile ScheduledFuture<?> pongTimeoutFuture;
+    private volatile ScheduledFuture<?> reconnectFuture;
+
     private final AtomicInteger messageId = new AtomicInteger(0);
     private final AtomicInteger reconnectAttempt = new AtomicInteger(0);
     private final ScheduledExecutorService executor =
@@ -68,12 +70,13 @@ public class HomeAssistantWebSocketClient {
 
     public Uni<Void> connect() {
         String url = config.url()
-            .orElseGet(() -> HomeAssistantDiscovery.resolve(config.discoveryTimeoutSeconds()));
+                           .orElseGet(() -> HomeAssistantDiscovery.resolve(config.discoveryTimeoutSeconds()));
+        cancelReconnect();
         return connectorProvider.get()
-            .baseUri(URI.create(url))
-            .connect()
-            .invoke(c -> this.connection = c)
-            .replaceWithVoid();
+                                .baseUri(URI.create(url))
+                                .connect()
+                                .invoke(c -> this.connection = c)
+                                .replaceWithVoid();
     }
 
     public ProviderStatus currentStatus() {
@@ -152,6 +155,7 @@ public class HomeAssistantWebSocketClient {
         shuttingDown = true;
         cancelHeartbeat();
         cancelPongTimeout();
+        cancelReconnect();
         WebSocketClientConnection conn = connection;
         if (conn != null && !conn.isClosed()) {
             conn.closeAndAwait();
@@ -277,19 +281,19 @@ public class HomeAssistantWebSocketClient {
     }
 
     void scheduleReconnect() {
-        if (shuttingDown) return;
-        int attempt = reconnectAttempt.getAndIncrement();
-        double base = config.reconnectBaseSeconds() * Math.pow(2, attempt);
-        double capped = Math.min(base, config.reconnectMaxSeconds());
+        if (shuttingDown) {return;}
+        int    attempt  = reconnectAttempt.getAndIncrement();
+        double base     = config.reconnectBaseSeconds() * Math.pow(2, attempt);
+        double capped   = Math.min(base, config.reconnectMaxSeconds());
         double jittered = capped * (0.75 + 0.5 * ThreadLocalRandom.current().nextDouble());
         LOG.infof("Scheduling HA reconnect attempt %d in %.1fs", attempt + 1, jittered);
-        executor.schedule(() -> connect().subscribe().with(
-            v -> {},
-            e -> {
-                LOG.warnf(e, "HA reconnect attempt %d failed", attempt + 1);
-                scheduleReconnect();
-            }
-        ), (long) (jittered * 1000), TimeUnit.MILLISECONDS);
+        reconnectFuture = executor.schedule(() -> connect().subscribe().with(
+                v -> {},
+                e -> {
+                    LOG.warnf(e, "HA reconnect attempt %d failed", attempt + 1);
+                    scheduleReconnect();
+                }
+                                                                            ), (long) (jittered * 1000), TimeUnit.MILLISECONDS);
     }
 
     private void cancelHeartbeat() {
@@ -307,4 +311,13 @@ public class HomeAssistantWebSocketClient {
             pongTimeoutFuture = null;
         }
     }
+
+    private void cancelReconnect() {
+        ScheduledFuture<?> f = reconnectFuture;
+        if (f != null) {
+            f.cancel(false);
+            reconnectFuture = null;
+        }
+    }
+
 }
