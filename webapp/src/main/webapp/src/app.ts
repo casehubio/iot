@@ -19,7 +19,7 @@ import { workItemsPage } from "./pages/workitems";
 import { auditPage } from "./pages/audit";
 import { providersPage } from "./pages/providers";
 import { topologyPage } from "./pages/topology";
-import { scenariosPage } from "./pages/scenarios";
+import { playbooksPage } from "./pages/playbooks";
 import "./components/topology-tree";
 import "./components/topology-graph";
 
@@ -42,6 +42,8 @@ dataset("topology", "/api/topology");
 dataset("topology-events", "sse://api/topology/stream");
 
 registerPanel("event-trail", "pages-event-trail");
+registerPanel("playbook-controller", "pages-playbook-controller");
+registerPanel("playbook-yaml-viewer", "pages-playbook-yaml-viewer");
 
 // Build the application shell
 const app = page("IoT Console",
@@ -49,7 +51,7 @@ const app = page("IoT Console",
     ["Health", healthPage()],
     ["Devices", devicesPage()],
     ["Topology", topologyPage()],
-    ["Scenarios", scenariosPage()],
+    ["Playbooks", playbooksPage()],
     ["Situations", situationsPage()],
     ["Cases", casesPage()],
     ["Work Items", workItemsPage()],
