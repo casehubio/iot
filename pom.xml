@@ -13,14 +13,13 @@
 
     <groupId>io.casehub</groupId>
     <artifactId>casehub-iot-parent</artifactId>
-    <version>${revision}</version>
+    <version>0.4-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>CaseHub IoT Parent</name>
     <description>Typed device abstraction layer for Home Assistant, OpenHAB, and future IoT platforms</description>
 
     <properties>
-    <revision>0.4-SNAPSHOT</revision>
         <version.drools>10.1.0</version.drools>
         <quarkus-mcp-server.version>1.11.1</quarkus-mcp-server.version>
     </properties>
@@ -308,29 +307,4 @@
     </modules>
 
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>flatten-maven-plugin</artifactId>
-        <version>1.7.0</version>
-        <configuration>
-          <updatePomFile>true</updatePomFile>
-          <flattenMode>resolveCiFriendliesOnly</flattenMode>
-        </configuration>
-        <executions>
-          <execution>
-            <id>flatten</id>
-            <phase>validate</phase>
-            <goals><goal>flatten</goal></goals>
-          </execution>
-          <execution>
-            <id>flatten.clean</id>
-            <phase>clean</phase>
-            <goals><goal>clean</goal></goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>
