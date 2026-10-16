@@ -13,7 +13,7 @@
 
     <groupId>io.casehub</groupId>
     <artifactId>casehub-iot-parent</artifactId>
-    <version>0.4-SNAPSHOT</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <name>CaseHub IoT Parent</name>
