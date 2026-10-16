@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-parent</artifactId>
-        <version>0.4-SNAPSHOT</version>
+        <version>${revision}</version>
         <relativePath/>
     </parent>
 
@@ -20,6 +20,7 @@
     <description>Typed device abstraction layer for Home Assistant, OpenHAB, and future IoT platforms</description>
 
     <properties>
+    <revision>0.4-SNAPSHOT</revision>
         <version.drools>10.1.0</version.drools>
         <quarkus-mcp-server.version>1.11.1</quarkus-mcp-server.version>
     </properties>
