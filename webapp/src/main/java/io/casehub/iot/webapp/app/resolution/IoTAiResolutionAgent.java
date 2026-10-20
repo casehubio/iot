@@ -1,7 +1,6 @@
 package io.casehub.iot.webapp.app.resolution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.casehub.api.model.ai.Agent;
 import io.casehub.api.model.ai.AgentException;
 import io.casehub.api.model.cbr.CbrConfig;
 import io.casehub.api.spi.ActionRiskClassifier;
@@ -13,7 +12,6 @@ import io.casehub.engine.common.spi.cache.CaseInstanceCache;
 import io.casehub.engine.queue.model.CaseQueueEntry;
 import io.casehub.engine.queue.model.QueueEntryStatus;
 import io.casehub.engine.queue.service.CaseQueueService;
-
 import io.casehub.iot.webapp.cbr.IoTCbrRetrievalService;
 import io.casehub.iot.webapp.cbr.ResolutionSuggestion;
 import io.casehub.iot.webapp.resolution.AiEscalationContext;
@@ -22,11 +20,9 @@ import io.casehub.iot.webapp.resolution.AiResolutionPromptBuilder;
 import io.casehub.iot.webapp.resolution.ConversationTranscript;
 import io.casehub.iot.webapp.resolution.Decision;
 import io.casehub.iot.webapp.resolution.ExecutedActionResult;
-import io.casehub.iot.webapp.resolution.MultiTurnResponse;
 import io.casehub.iot.webapp.resolution.PlannedActionSpec;
 import io.casehub.iot.webapp.resolution.TurnSignal;
 import io.casehub.platform.agent.AgentEvent;
-import io.casehub.platform.agent.AgentMcpServer;
 import io.casehub.platform.agent.AgentProvider;
 import io.casehub.platform.agent.AgentSession;
 import io.casehub.platform.agent.AgentSessionInit;
@@ -87,7 +83,12 @@ public class IoTAiResolutionAgent {
 
     @Inject AgentProvider agentProvider;
 
-    Agent llmAgent;
+    private static final String SINGLE_SHOT_SYSTEM_PROMPT =
+            "You are an IoT resolution agent. Given a situation and past resolutions, "
+            + "decide whether to EXECUTE a resolution plan or ESCALATE to a human operator. "
+            + "Respond with a JSON object containing: decision (EXECUTE or ESCALATE), reasoning, "
+            + "actions (list of action specs with actionType, targetDeviceId, parameters, rationale), "
+            + "and escalationReason (if escalating).";
     Function<Map<String, Object>, WorkerResult<Map<String, Object>>> deviceCommandFn;
 
     private UUID aiResolutionViewId;
@@ -113,19 +114,6 @@ public class IoTAiResolutionAgent {
                                       .orElse(null);
         llmSemaphore           = new Semaphore(config.maxConcurrentLlmCalls());
         sessionSemaphore       = new Semaphore(config.maxConcurrentSessions());
-
-        if (llmAgent == null) {
-            llmAgent = Agent.builder()
-                            .systemPrompt("You are an IoT resolution agent. Given a situation and past resolutions, "
-                                          + "decide whether to EXECUTE a resolution plan or ESCALATE to a human operator. "
-                                          + "Respond with a JSON object containing: decision (EXECUTE or ESCALATE), reasoning, "
-                                          + "actions (list of action specs with actionType, targetDeviceId, parameters, rationale), "
-                                          + "and escalationReason (if escalating).")
-                            .userMessage("{{prompt}}")
-                            .model(config.modelType())
-                            .responseSchema(AiResolutionPlan.class)
-                            .build();
-        }
 
         if (deviceCommandFn == null) {
             deviceCommandFn = new io.casehub.iot.webapp.worker.DeviceCommandWorkerFunction(
@@ -230,24 +218,38 @@ public class IoTAiResolutionAgent {
     }
 
     private AiResolutionPlan callLlmWithRetry(CaseQueueEntry entry, CaseInstance instance,
-                                               List<ResolutionSuggestion> suggestions) {
+                                              List<ResolutionSuggestion> suggestions) {
         String prompt = AiResolutionPromptBuilder.build(
                 extractFeatures(instance), suggestions, AUTONOMOUS_ACTIONS);
 
         for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {
                 llmSemaphore.acquire();
-                io.micrometer.core.instrument.Timer.Sample llmSample = io.micrometer.core.instrument.Timer.start(registry);
                 try {
-                    WorkerResult<Map<String, Object>> result =
-                            llmAgent.execute(Map.of("prompt", prompt));
-                    llmSample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.llm.call.duration")
-                                                                      .tag("outcome", "success").register(registry));
-                    return objectMapper.convertValue(result.output(), AiResolutionPlan.class);
-                } catch (Exception e) {
-                    llmSample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.llm.call.duration")
-                                                                      .tag("outcome", "error").register(registry));
-                    throw e;
+                    io.micrometer.core.instrument.Timer.Sample llmSample = io.micrometer.core.instrument.Timer.start(registry);
+                    try (AgentSession session = agentProvider.openSession(new AgentSessionInit(
+                            SINGLE_SHOT_SYSTEM_PROMPT,
+                            List.of(),
+                            java.time.Duration.ofSeconds(config.timeoutSeconds()),
+                            "iot-resolution-single-" + entry.getCaseId(),
+                            null))) {
+                        var           collector = new AgentEventCollector(objectMapper);
+                        CollectedTurn collected = collector.collect(session.query(prompt));
+                        llmSample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.llm.call.duration")
+                                                                          .tag("outcome", "success").register(registry));
+                        if (collected.response() != null) {
+                            return new AiResolutionPlan(
+                                    collected.response().signal() == TurnSignal.ESCALATE ? Decision.ESCALATE : Decision.EXECUTE,
+                                    collected.rawText(),
+                                    collected.response().actions(),
+                                    collected.response().escalationReason());
+                        }
+                        return objectMapper.readValue(collected.rawText(), AiResolutionPlan.class);
+                    } catch (Exception e) {
+                        llmSample.stop(io.micrometer.core.instrument.Timer.builder("casehub.iot.ai.resolution.llm.call.duration")
+                                                                          .tag("outcome", "error").register(registry));
+                        throw e;
+                    }
                 } finally {
                     llmSemaphore.release();
                 }

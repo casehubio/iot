@@ -1,6 +1,5 @@
 package io.casehub.iot.webapp.app.resolution;
 
-import io.casehub.api.model.ai.ModelType;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
@@ -23,7 +22,7 @@ public interface IoTAiResolutionConfig {
 
     @WithName("model-type")
     @WithDefault("ANTHROPIC")
-    ModelType modelType();
+    String modelType();
 
     @WithName("agent-id")
     @WithDefault("iot-ai-agent")
@@ -44,5 +43,4 @@ public interface IoTAiResolutionConfig {
     @WithName("max-concurrent-sessions")
     @WithDefault("1")
     int maxConcurrentSessions();
-
 }
