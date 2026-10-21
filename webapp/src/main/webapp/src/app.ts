@@ -1,9 +1,9 @@
 import { page, sidebar, dataset } from "@casehubio/pages-ui";
 import { registerPanel } from "@casehubio/pages-runtime";
 import '@casehubio/pages-ui-components/event-trail';
-import "@casehubio/blocks-ui-kpi-metric-row";
-import "@casehubio/blocks-ui-work-item-detail";
-import "@casehubio/blocks-ui-detail-pane";
+import "@casehubio/mosaic-kpi-metric-row";
+import "@casehubio/mosaic-work-item-detail";
+import "@casehubio/mosaic-detail-pane";
 import "./components/device-state-tab";
 import "./components/device-history-tab";
 import "./components/device-actions-tab";
