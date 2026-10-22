@@ -24,7 +24,7 @@ export function workItemsPage() {
             lookup: lookup("workitems", sortBy("createdAt", "DESCENDING")),
             refresh: { interval: 15000 },
           })),
-          hostPanel("blocks-work-item-detail", {
+          hostPanel("agency-work-item-detail", {
             endpoint: "/api",
           }),
         ],
