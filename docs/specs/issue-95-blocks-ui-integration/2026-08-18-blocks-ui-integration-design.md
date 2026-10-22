@@ -63,9 +63,9 @@ registerPanel("work-item-detail", "blocks-work-item-detail");
 registerPanel("detail-pane", "blocks-detail-pane");
 
 // Import the components to register custom element definitions
-import "@casehubio/blocks-ui/kpi-metric-row";
-import "@casehubio/blocks-ui/work-item-detail";
-import "@casehubio/blocks-ui/detail-pane";
+import "@casehubio/agency-ui/kpi-metric-row";
+import "@casehubio/agency-ui/work-item-detail";
+import "@casehubio/agency-ui/detail-pane";
 ```
 
 ## blocks-ui Change: `configure()` on `blocks-detail-pane`

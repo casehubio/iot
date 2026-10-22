@@ -544,7 +544,7 @@ platform). Direct dependency on `AgentProvider`, `AgentSession`,
 
 ### Blocks dependency
 
-`casehub-blocks` — for `Patterns.loop()`, `LoopBuilder`,
+`casehub-agency` — for `Patterns.loop()`, `LoopBuilder`,
 `ExecutionBackend`, `ExecutionResult`. Already a SNAPSHOT dependency.
 
 ### No engine modifications required
