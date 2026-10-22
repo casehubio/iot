@@ -13,12 +13,12 @@ export function casesPage() {
         refresh: { interval: 30000 },
       })),
 
-      // Case detail sub-page — tabbed via blocks-detail-pane
+      // Case detail sub-page — tabbed via agency-detail-pane
       page("Case Detail",
         rows(
           title("Case Details"),
 
-          hostPanel("blocks-detail-pane", {
+          hostPanel("agency-detail-pane", {
             selectionTopic: "case",
             tabs: [
               { id: "timeline", label: "Timeline", tagName: "iot-case-timeline-tab", order: 0 },

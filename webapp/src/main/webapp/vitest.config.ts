@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.ts', '.casehub-packages/packages/blocks-topology-*/**/*.test.ts'],
+    include: ['src/**/*.test.ts', '.casehub-packages/packages/agency-topology-*/**/*.test.ts'],
     environment: 'jsdom',
   },
 });

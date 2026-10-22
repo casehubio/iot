@@ -6,7 +6,7 @@ export function devicesPage() {
   return page("Devices",
     rows(
       // KPI row — blocks-ui component via hostPanel
-      hostPanel("blocks-kpi-metric-row", {
+      hostPanel("agency-kpi-metric-row", {
         endpoint: "/api/devices/kpi",
         columns: 4,
         density: "comfortable",
@@ -27,12 +27,12 @@ export function devicesPage() {
       // Device table
       deviceTable("devices"),
 
-      // Device detail sub-page — tabbed via blocks-detail-pane
+      // Device detail sub-page — tabbed via agency-detail-pane
       page("Device Detail",
         rows(
           title("Device Details"),
 
-          hostPanel("blocks-detail-pane", {
+          hostPanel("agency-detail-pane", {
             selectionTopic: "device",
             tabs: [
               { id: "state", label: "State", tagName: "iot-device-state-tab", order: 0 },
