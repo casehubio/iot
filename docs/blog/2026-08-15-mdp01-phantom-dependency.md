@@ -8,7 +8,7 @@ projects: [casehub-iot]
 tags: [webapp, blocks-ui, pages-ui, ui-audit]
 ---
 
-The IoT webapp declares `casehub-blocks-ui-npm` as a Maven dependency, unpacks it to `.casehub-packages/`, configures portal resolutions in `package.json` — and then never imports a single component from it. All seven pages build their UI manually with pages-ui DSL primitives: `columns()`, `metric()`, `panel()`, `table()`. The blocks-ui web components sit in the unpacked directory, fully resolved, completely unused.
+The IoT webapp declares `casehub-mosaic-npm` as a Maven dependency, unpacks it to `.casehub-packages/`, configures portal resolutions in `package.json` — and then never imports a single component from it. All seven pages build their UI manually with pages-ui DSL primitives: `columns()`, `metric()`, `panel()`, `table()`. The blocks-ui web components sit in the unpacked directory, fully resolved, completely unused.
 
 I found this while checking whether the webapp was correctly wired against the latest pages and blocks-ui. The pages-ui integration is fine — every page uses the DSL correctly, design tokens flow from `@casehubio/pages-ui-tokens`, no custom CSS. But blocks-ui is a phantom: present on the dependency graph, absent from the source.
 
