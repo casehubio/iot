@@ -45,7 +45,7 @@
     "@casehubio/graph-stencil-htn": "portal:./.casehub-packages/packages/graph-stencil-htn",
     "@casehubio/graph-stencil-swf": "portal:./.casehub-packages/packages/graph-stencil-swf",
     "@casehubio/graph-work-registry": "portal:./.casehub-packages/packages/graph-work-registry",
-    "@casehubio/mosaic-blocks-timeline": "portal:./.casehub-packages/packages/blocks-timeline",
+    "@casehubio/mosaic-agency-timeline": "portal:./.casehub-packages/packages/agency-timeline",
     "@casehubio/mosaic-casehub-diagram": "portal:./.casehub-packages/packages/casehub-diagram",
     "@casehubio/mosaic-commitment-viz": "portal:./.casehub-packages/packages/commitment-viz",
     "@casehubio/mosaic-execution-monitor": "portal:./.casehub-packages/packages/execution-monitor",
