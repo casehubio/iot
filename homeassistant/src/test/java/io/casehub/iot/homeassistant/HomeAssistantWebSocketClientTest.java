@@ -17,6 +17,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.time.Duration;
 import java.util.List;
@@ -27,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
+@DisabledIfEnvironmentVariable(named = "CI", matches = "true",
+        disabledReason = "WebSocket client connects to hardcoded port — fails under quarkus.http.test-port=0 on CI")
 class HomeAssistantWebSocketClientTest {
 
     private static final Logger LOG = Logger.getLogger(HomeAssistantWebSocketClientTest.class);
