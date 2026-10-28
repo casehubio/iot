@@ -16,9 +16,10 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
+import io.quarkus.test.common.http.TestHTTPResource;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
+import java.net.URL;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -28,8 +29,6 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
-@DisabledIfEnvironmentVariable(named = "CI", matches = "true",
-        disabledReason = "WebSocket client connects to hardcoded port — fails under quarkus.http.test-port=0 on CI")
 class HomeAssistantWebSocketClientTest {
 
     private static final Logger LOG = Logger.getLogger(HomeAssistantWebSocketClientTest.class);
@@ -37,6 +36,7 @@ class HomeAssistantWebSocketClientTest {
     @Inject HomeAssistantWebSocketClient wsClient;
     @Inject FakeHaServer fakeServer;
     @Inject TestEventCollector collector;
+    @TestHTTPResource("/") URL testUrl;
 
     @Test
     void authHandshakeCompletes() throws Exception {
@@ -44,7 +44,7 @@ class HomeAssistantWebSocketClientTest {
         fakeServer.setMode(FakeHaServer.Mode.NORMAL);
         collector.reset();
 
-        wsClient.connect().await().atMost(Duration.ofSeconds(5));
+        wsClient.connect(testUrl.toString()).await().atMost(Duration.ofSeconds(5));
 
         // Wait for CONNECTED status event
         assertThat(collector.awaitStatus(ProviderStatus.CONNECTED, 5, TimeUnit.SECONDS))
@@ -58,7 +58,7 @@ class HomeAssistantWebSocketClientTest {
         fakeServer.setMode(FakeHaServer.Mode.NORMAL);
         collector.reset();
 
-        wsClient.connect().await().atMost(Duration.ofSeconds(5));
+        wsClient.connect(testUrl.toString()).await().atMost(Duration.ofSeconds(5));
         collector.awaitStatus(ProviderStatus.CONNECTED, 5, TimeUnit.SECONDS);
 
         // Server sends a state_changed event
@@ -86,7 +86,7 @@ class HomeAssistantWebSocketClientTest {
         fakeServer.setMode(FakeHaServer.Mode.NORMAL);
         collector.reset();
 
-        wsClient.connect().await().atMost(Duration.ofSeconds(5));
+        wsClient.connect(testUrl.toString()).await().atMost(Duration.ofSeconds(5));
         collector.awaitStatus(ProviderStatus.CONNECTED, 5, TimeUnit.SECONDS);
 
         // state_changed with null old_state (new entity)
@@ -114,7 +114,7 @@ class HomeAssistantWebSocketClientTest {
         fakeServer.setMode(FakeHaServer.Mode.NORMAL);
         collector.reset();
 
-        wsClient.connect().await().atMost(Duration.ofSeconds(5));
+        wsClient.connect(testUrl.toString()).await().atMost(Duration.ofSeconds(5));
         collector.awaitStatus(ProviderStatus.CONNECTED, 5, TimeUnit.SECONDS);
 
         // Send garbage — should not crash
@@ -139,7 +139,7 @@ class HomeAssistantWebSocketClientTest {
         fakeServer.setMode(FakeHaServer.Mode.AUTH_INVALID);
         collector.reset();
 
-        wsClient.connect().await().atMost(Duration.ofSeconds(5));
+        wsClient.connect(testUrl.toString()).await().atMost(Duration.ofSeconds(5));
 
         // Should go CONNECTING then get auth_invalid
         // The client fires CONNECTING on open, then schedules reconnect on auth_invalid

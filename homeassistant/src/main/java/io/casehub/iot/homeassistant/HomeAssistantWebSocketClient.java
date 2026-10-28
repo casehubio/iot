@@ -71,6 +71,10 @@ public class HomeAssistantWebSocketClient {
     public Uni<Void> connect() {
         String url = config.url()
                            .orElseGet(() -> HomeAssistantDiscovery.resolve(config.discoveryTimeoutSeconds()));
+        return connect(url);
+    }
+
+    public Uni<Void> connect(String url) {
         cancelReconnect();
         WebSocketClientConnection old = connection;
         if (old != null && !old.isClosed()) {
