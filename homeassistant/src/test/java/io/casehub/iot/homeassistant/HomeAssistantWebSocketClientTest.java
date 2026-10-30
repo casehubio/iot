@@ -3,6 +3,7 @@ package io.casehub.iot.homeassistant;
 import io.casehub.iot.api.ProviderStatus;
 import io.casehub.iot.api.ProviderStatusEvent;
 import io.casehub.iot.api.StateChangeEvent;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.websockets.next.OnOpen;
 import io.quarkus.websockets.next.OnTextMessage;
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
+@QuarkusTestResource(value = DynamicTestPortResource.class, restrictToAnnotatedClass = true)
 class HomeAssistantWebSocketClientTest {
 
     private static final Logger LOG = Logger.getLogger(HomeAssistantWebSocketClientTest.class);
