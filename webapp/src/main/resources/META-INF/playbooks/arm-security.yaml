@@ -10,17 +10,17 @@ sections:
     steps:
       - try:
         - parallel:
-          - step: lock-front
+          - name: lock-front
             iot.command: { device: lock-front, action: lock }
-          - step: lock-back
+          - name: lock-back
             iot.command: { device: lock-back, action: lock }
-          - step: lock-garage
+          - name: lock-garage
             iot.command: { device: lock-garage, action: lock }
         - quorum:
             required: 2
             of: [lock-front, lock-back, lock-garage]
             timeout: 30s
-        - step: arm-alarm
+        - name: arm-alarm
           iot.command: { device: alarm-1, action: arm }
         catch:
         - iot.command:

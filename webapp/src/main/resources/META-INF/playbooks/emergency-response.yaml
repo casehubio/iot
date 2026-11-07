@@ -8,7 +8,7 @@ meta:
 sections:
   - title: Assess & Respond
     steps:
-      - step: assess
+      - name: assess
         iot.state: { device: sensor-smoke-1 }
       - if: ${device.sensor-smoke-1.capabilities.smokeDetected}
         then:
