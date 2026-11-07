@@ -14,7 +14,7 @@ orchestration:
 sections:
   - title: Transition to Away
     steps:
-      - step: depart
+      - name: depart
         iot.state: { device: presence-front-1 }
         transition:
           machine: occupancy
@@ -28,7 +28,7 @@ sections:
 
   - title: Transition to Home
     steps:
-      - step: arrive
+      - name: arrive
         iot.state: { device: presence-front-1 }
         transition:
           machine: occupancy

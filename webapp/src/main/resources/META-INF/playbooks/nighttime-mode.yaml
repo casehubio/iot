@@ -8,7 +8,7 @@ meta:
 sections:
   - title: Set Nighttime Mode
     steps:
-      - step: check-occupancy
+      - name: check-occupancy
         iot.state: { device: presence-front-1 }
       - match: ${device.presence-front-1.capabilities.occupancyMode}
         cases:
