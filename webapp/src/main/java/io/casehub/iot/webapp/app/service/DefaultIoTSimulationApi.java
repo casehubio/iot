@@ -89,7 +89,7 @@ public class DefaultIoTSimulationApi {
     }
 
     @PlatformMutation("Stop the active simulation")
-    public void stop() {
+    public SimulationStatus stop() {
         lock.lock();
         try {
             if (activeDriver == null) {
@@ -99,19 +99,21 @@ public class DefaultIoTSimulationApi {
             LOG.info("Simulation stopped: profile=" + activeProfileName);
             activeDriver      = null;
             activeProfileName = null;
+            return SimulationStatus.IDLE;
         } finally {
             lock.unlock();
         }
     }
 
     @PlatformMutation("Change the speed of the active simulation")
-    public void setSpeed(double speed) {
+    public SimulationStatus setSpeed(double speed) {
         lock.lock();
         try {
             if (activeDriver == null) {
                 throw new IllegalStateException("No active simulation");
             }
             activeDriver.setSpeed(speed);
+            return buildStatus();
         } finally {
             lock.unlock();
         }

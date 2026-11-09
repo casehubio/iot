@@ -32,6 +32,7 @@ import jakarta.ws.rs.NotFoundException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @McpDomain(value = "iot/devices", app = "iot", basePath = "/api/devices", summary = "IoT device registry — list, query, status, metadata")
@@ -52,14 +53,14 @@ public class DefaultIoTDeviceApi {
 
     @PlatformQuery("List devices with optional filtering")
     @RestPath("/")
-    public List<DeviceResponse> listDevices(String deviceClass, String providerId,
-                                             Boolean available,
+    public List<DeviceResponse> listDevices(Optional<String> deviceClass, Optional<String> providerId,
+                                             Optional<Boolean> available,
                                              @ContextParam("tenancyId") String tenancyId) {
         return deviceRegistry.findAll().stream()
                 .filter(d -> d.tenancyId().equals(tenancyId))
-                .filter(d -> deviceClass == null || d.deviceClass().name().equals(deviceClass))
-                .filter(d -> providerId == null || d.providerId().equals(providerId))
-                .filter(d -> available == null || d.available() == available)
+                .filter(d -> deviceClass.isEmpty() || d.deviceClass().name().equals(deviceClass.get()))
+                .filter(d -> providerId.isEmpty() || d.providerId().equals(providerId.get()))
+                .filter(d -> available.isEmpty() || d.available() == available.get())
                 .map(this::toDeviceResponse)
                 .toList();
     }
@@ -106,10 +107,11 @@ public class DefaultIoTDeviceApi {
     @PlatformQuery("Get device state history")
     @RestPath("/{deviceId}/history")
     public List<StateHistoryView> getDeviceHistory(@PathParam String deviceId,
-                                                     Instant from, Instant to, Integer limit,
+                                                     Optional<Instant> from, Optional<Instant> to,
+                                                     Optional<Integer> limit,
                                                      @ContextParam("tenancyId") String tenancyId) {
-        int effectiveLimit = limit != null ? limit : 100;
-        return historyProvider.findHistory(deviceId, tenancyId, from, to, effectiveLimit).stream()
+        int effectiveLimit = limit.orElse(100);
+        return historyProvider.findHistory(deviceId, tenancyId, from.orElse(null), to.orElse(null), effectiveLimit).stream()
                 .map(h -> new StateHistoryView(
                         h.deviceId(), h.deviceClass(),
                         h.stateSnapshot(), h.changedCapabilities(), h.occurredAt()))

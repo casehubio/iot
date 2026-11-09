@@ -21,6 +21,7 @@ import jakarta.ws.rs.NotFoundException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @McpDomain(value = "iot/workitems", app = "iot", basePath = "/api/workitems", summary = "Workitems — claim, complete, get operations")
@@ -34,7 +35,7 @@ public class DefaultIoTWorkItemApi {
 
     @PlatformQuery("List pending work items with optional filters")
     @RolesAllowed("iot-viewer")
-    public List<WorkItemSummaryResponse> list(String status, UUID caseId) {
+    public List<WorkItemSummaryResponse> list(Optional<String> status, Optional<UUID> caseId) {
         return List.of();
     }
 

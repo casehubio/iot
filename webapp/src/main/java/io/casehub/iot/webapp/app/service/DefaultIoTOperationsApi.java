@@ -24,6 +24,7 @@ import jakarta.ws.rs.NotFoundException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @McpDomain(value = "iot/ops", app = "iot", basePath = "/api", summary = "Ops — get, list, query operations")
 @ApplicationScoped
@@ -91,21 +92,21 @@ public class DefaultIoTOperationsApi {
         return new BridgeConnectionsView(connectionRegistry.hasAnyConnection(), tenancies);
     }
 
-    @PlatformQuery("Query bridge audit trail")
+    @PlatformQuery("Query bridge audit trail. eventType: DEVICE_REGISTERED, DEVICE_UPDATED, STATE_CHANGE, COMMAND_DISPATCHED, COMMAND_RESULT, BRIDGE_CONNECTED, BRIDGE_DISCONNECTED, ERROR")
     @RestPath("/bridge/audit")
-    public AuditTrailView getBridgeAudit(String eventType, String deviceId, String correlationId,
-                                          Instant from, Instant to, Integer offset, Integer limit,
+    public AuditTrailView getBridgeAudit(Optional<String> eventType, Optional<String> deviceId,
+                                          Optional<String> correlationId,
+                                          Optional<Instant> from, Optional<Instant> to,
+                                          Optional<Integer> offset, Optional<Integer> limit,
                                           @ContextParam("tenancyId") String tenancyId) {
         var queryBuilder = BridgeAuditQuery.builder().tenancyId(tenancyId);
-        if (eventType != null) {
-            queryBuilder.eventType(BridgeAuditEventType.valueOf(eventType.toUpperCase()));
-        }
-        if (deviceId != null) queryBuilder.deviceId(deviceId);
-        if (correlationId != null) queryBuilder.correlationId(correlationId);
-        if (from != null) queryBuilder.from(from);
-        if (to != null) queryBuilder.to(to);
-        int effectiveOffset = offset != null ? offset : 0;
-        int effectiveLimit = limit != null ? Math.min(limit, 500) : 100;
+        eventType.ifPresent(et -> queryBuilder.eventType(BridgeAuditEventType.valueOf(et.toUpperCase())));
+        deviceId.ifPresent(queryBuilder::deviceId);
+        correlationId.ifPresent(queryBuilder::correlationId);
+        from.ifPresent(queryBuilder::from);
+        to.ifPresent(queryBuilder::to);
+        int effectiveOffset = offset.orElse(0);
+        int effectiveLimit = limit.map(l -> Math.min(l, 500)).orElse(100);
         queryBuilder.offset(effectiveOffset).limit(effectiveLimit);
 
         var events = auditStore.query(queryBuilder.build());

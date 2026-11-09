@@ -22,6 +22,7 @@ import jakarta.ws.rs.NotFoundException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @McpDomain(value = "iot/situations/suppressions", app = "iot", basePath = "/api/situations/suppressions", summary = "List suppression history; Override a suppression; Get suppression statistics for a situation")
@@ -34,14 +35,15 @@ public class DefaultIoTSuppressionApi {
 
     @PlatformQuery("List suppression history")
     @RestPath("/")
-    public List<SuppressionHistoryResponse> listSuppressions(String situationId, Instant since,
-                                                              Boolean includeOverridden,
+    public List<SuppressionHistoryResponse> listSuppressions(Optional<String> situationId,
+                                                              Optional<Instant> since,
+                                                              Optional<Boolean> includeOverridden,
                                                               @ContextParam("tenancyId") String tenancyId) {
-        Instant effectiveSince = since != null ? since : Instant.now().minus(Duration.ofHours(24));
-        boolean includeOvr = includeOverridden != null && includeOverridden;
+        Instant effectiveSince = since.orElseGet(() -> Instant.now().minus(Duration.ofHours(24)));
+        boolean includeOvr = includeOverridden.orElse(false);
 
         String jpql = "SELECT s FROM SuppressionLogEntry s WHERE s.tenancyId = :tenancyId AND s.suppressedAt >= :since";
-        if (situationId != null) {
+        if (situationId.isPresent()) {
             jpql += " AND s.situationId = :situationId";
         }
         if (!includeOvr) {
@@ -52,9 +54,7 @@ public class DefaultIoTSuppressionApi {
         var query = em.createQuery(jpql, SuppressionLogEntry.class)
                 .setParameter("tenancyId", tenancyId)
                 .setParameter("since", effectiveSince);
-        if (situationId != null) {
-            query.setParameter("situationId", situationId);
-        }
+        situationId.ifPresent(sid -> query.setParameter("situationId", sid));
 
         return query.getResultList().stream()
                 .map(e -> new SuppressionHistoryResponse(
@@ -67,7 +67,7 @@ public class DefaultIoTSuppressionApi {
     @PlatformMutation("Override a suppression")
     @RestPath("/{id}/override")
     @Transactional
-    public void overrideSuppression(@PathParam UUID id,
+    public SuppressionHistoryResponse overrideSuppression(@PathParam UUID id,
                                      @ContextParam("tenancyId") String tenancyId) {
         var entry = em.find(SuppressionLogEntry.class, id);
         if (entry == null) {
@@ -80,6 +80,10 @@ public class DefaultIoTSuppressionApi {
         dismissalRecorder.recordCaseOutcome(
                 entry.situationId(), entry.correlationKey(), entry.tenancyId(),
                 null, "override-actioned");
+        return new SuppressionHistoryResponse(
+                entry.id(), entry.situationId(), entry.correlationKey(),
+                entry.tier().name(), entry.dismissalRate(), entry.matchedCaseCount(),
+                entry.suppressedAt(), true);
     }
 
     @PlatformQuery("Get suppression statistics for a situation")

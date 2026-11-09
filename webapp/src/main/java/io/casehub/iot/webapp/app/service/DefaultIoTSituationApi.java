@@ -128,16 +128,21 @@ public class DefaultIoTSituationApi {
     @RestMethod(HttpMethod.DELETE)
     @RestPath("/definitions/{situationId}")
     @Transactional
-    public void deleteDefinition(@PathParam String situationId,
+    public SituationDefinitionView deleteDefinition(@PathParam String situationId,
                                   @ContextParam("tenancyId") String tenancyId) {
-        int deleted = em.createQuery(
-                        "DELETE FROM IoTSituationDefinitionEntity s WHERE s.situationId = :situationId AND s.tenancyId = :tenancyId")
+        var existing = em.createQuery(
+                        "SELECT s FROM IoTSituationDefinitionEntity s WHERE s.situationId = :situationId AND s.tenancyId = :tenancyId",
+                        IoTSituationDefinitionEntity.class)
                 .setParameter("situationId", situationId)
                 .setParameter("tenancyId", tenancyId)
-                .executeUpdate();
-        if (deleted == 0) {
-            throw new NotFoundException("Situation definition not found: " + situationId);
-        }
+                .getResultStream()
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Situation definition not found: " + situationId));
+        var view = new SituationDefinitionView(
+                existing.getSituationId(), existing.getTenancyId(),
+                existing.getDefinition(), existing.getCreatedAt(), existing.getUpdatedAt(), "runtime");
+        em.remove(existing);
+        return view;
     }
 
     @PlatformQuery("List active situations")
@@ -187,7 +192,7 @@ public class DefaultIoTSituationApi {
     @PlatformMutation("Dismiss an active situation")
     @RestPath("/active/{correlationKey}/dismiss")
     @Transactional
-    public void dismissSituation(@PathParam String correlationKey,
+    public DismissResult dismissSituation(@PathParam String correlationKey,
                                   DismissRequest request,
                                   @ContextParam("tenancyId") String tenancyId) {
         if (request.situationId() == null || request.situationId().isBlank()) {
@@ -202,7 +207,10 @@ public class DefaultIoTSituationApi {
                     tenancyId, request.situationId(), correlationKey,
                     SituationChangeEvent.ChangeType.DISMISSED, context));
         }
+        return new DismissResult(request.situationId(), correlationKey, context != null);
     }
+
+    public record DismissResult(String situationId, String correlationKey, boolean wasActive) {}
 
     private static SituationDefinition mapRequestToDomain(SituationDefinitionRequest request) {
         var chainMode = mapChainMode(request.chainMode());

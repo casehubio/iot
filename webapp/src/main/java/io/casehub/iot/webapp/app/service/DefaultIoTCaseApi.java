@@ -74,8 +74,8 @@ public class DefaultIoTCaseApi {
 
     @PlatformQuery("List cases with optional filtering")
     @RestPath("/")
-    public List<CaseSummaryView> listCases(String status, String situationId,
-                                            java.time.Instant from, java.time.Instant to,
+    public List<CaseSummaryView> listCases(Optional<String> status, Optional<String> situationId,
+                                            Optional<java.time.Instant> from, Optional<java.time.Instant> to,
                                             @ContextParam("tenancyId") String tenancyId) {
         throw new io.casehub.iot.webapp.NotImplementedException("listCases");
     }
@@ -111,7 +111,7 @@ public class DefaultIoTCaseApi {
 
     @PlatformMutation("Accept a resolution suggestion for a case")
     @RestPath("/{caseId}/suggestions/{pastCaseId}/accept")
-    public void acceptSuggestion(@PathParam UUID caseId, @PathParam String pastCaseId,
+    public SuggestionView acceptSuggestion(@PathParam UUID caseId, @PathParam String pastCaseId,
                                   @ContextParam("tenancyId") String tenancyId) {
         CaseInstance instance = caseInstanceCache.get(caseId);
         if (instance == null) {
@@ -122,7 +122,7 @@ public class DefaultIoTCaseApi {
         var accepted = (java.util.Set<String>) context.getOrDefault(
                 "acceptedSuggestions", new HashSet<String>());
         if (accepted.contains(pastCaseId)) {
-            return;
+            return getCaseSuggestions(caseId, tenancyId);
         }
         String caseType = instance.getCaseMetaModel().getName();
         var defOpt = caseDefinitionRegistry.findByName(caseType);
@@ -151,30 +151,31 @@ public class DefaultIoTCaseApi {
         var newAccepted = new HashSet<>(accepted);
         newAccepted.add(pastCaseId);
         context.set("acceptedSuggestions", newAccepted);
+        return getCaseSuggestions(caseId, tenancyId);
     }
 
-    @PlatformQuery("List resolution queue entries")
+    @PlatformQuery("List resolution queue entries. view: ai-resolution, operator-assisted")
     @RestPath("/resolution/queue")
-    public List<QueueEntrySummary> listResolutionQueue(String view, String status,
+    public List<QueueEntrySummary> listResolutionQueue(Optional<String> view, Optional<String> status,
                                                         @ContextParam("tenancyId") String tenancyId) {
-        List<UUID> viewIds = resolveViewIds(view);
+        List<UUID> viewIds = resolveViewIds(view.orElse(null));
         if (viewIds.isEmpty()) {
             return List.of();
         }
         List<CaseQueueEntry> entries = new ArrayList<>();
         for (UUID viewId : viewIds) {
-            if ("PENDING".equals(status)) {
+            if (status.map("PENDING"::equals).orElse(false)) {
                 entries.addAll(queueService.findPending(viewId, tenancyId));
             } else {
                 entries.addAll(queueService.findByView(viewId, tenancyId));
             }
         }
-        if (status != null && !"PENDING".equals(status)) {
-            QueueEntryStatus filterStatus = QueueEntryStatus.valueOf(status);
+        if (status.filter(s -> !"PENDING".equals(s)).isPresent()) {
+            QueueEntryStatus filterStatus = QueueEntryStatus.valueOf(status.get());
             entries = entries.stream()
                     .filter(e -> e.getStatus() == filterStatus)
                     .toList();
-        } else if (status == null) {
+        } else if (status.isEmpty()) {
             entries = entries.stream()
                     .filter(e -> e.getStatus() != QueueEntryStatus.REVOKED)
                     .toList();
