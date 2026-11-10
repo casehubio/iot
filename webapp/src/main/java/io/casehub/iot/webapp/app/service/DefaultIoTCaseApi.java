@@ -72,21 +72,6 @@ public class DefaultIoTCaseApi {
         }
     }
 
-    @PlatformQuery("List cases with optional filtering")
-    @RestPath("/")
-    public List<CaseSummaryView> listCases(Optional<String> status, Optional<String> situationId,
-                                            Optional<java.time.Instant> from, Optional<java.time.Instant> to,
-                                            @ContextParam("tenancyId") String tenancyId) {
-        throw new io.casehub.iot.webapp.NotImplementedException("listCases");
-    }
-
-    @PlatformQuery("Get case by ID")
-    @RestPath("/{caseId}")
-    public CaseDetailView getCase(@PathParam UUID caseId,
-                                   @ContextParam("tenancyId") String tenancyId) {
-        throw new io.casehub.iot.webapp.NotImplementedException("getCase");
-    }
-
     @PlatformQuery("Get case resolution suggestions")
     @RestPath("/{caseId}/suggestions")
     public SuggestionView getCaseSuggestions(@PathParam UUID caseId,

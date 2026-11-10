@@ -145,12 +145,6 @@ public class DefaultIoTSituationApi {
         return view;
     }
 
-    @PlatformQuery("List active situations")
-    @RestPath("/active")
-    public List<ActiveSituationView> listActive(@ContextParam("tenancyId") String tenancyId) {
-        throw new io.casehub.iot.webapp.NotImplementedException("listActive");
-    }
-
     @PlatformQuery("Get resolution suggestions for a situation")
     @RestPath("/{situationId}/suggestions")
     public SituationSuggestionsResponse getSuggestions(@PathParam String situationId,
